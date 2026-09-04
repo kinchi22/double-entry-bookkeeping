@@ -83,6 +83,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | Owned by the use case. Repositories never begin a transaction.         |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
+| Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
 | Dynamic imports      | Forbidden outside `apps/web/server/container.ts`.                      |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 

@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "db:generate": "node --env-file-if-exists=../../.env node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "node --env-file-if-exists=../../.env node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate": "node --env-file-if-exists=../../.env node_modules/drizzle-kit/bin.cjs migrate",
+    "db:check": "node node_modules/drizzle-kit/bin.cjs check"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.0",

@@ -63,6 +63,7 @@ dependency-cruiser config, jscpd config, and Vitest unit project all exclude it.
 | `violations/apps/web/server/deep-import.ts`      | typecheck (exports)   |
 | `server-only/client-imports-server.tsx`          | build (server-only)   |
 | `mutation/`                                       | Stryker threshold     |
+| `migration/schema-with-a-table.ts`               | migration drift (`pnpm db:drift`) |
 
 ## Rules with no fixture
 
@@ -78,6 +79,14 @@ rather than unwritten:
   `node_modules` of its own, so external imports resolve up into the repo root
   `node_modules`, which the shipped config excludes from the graph. The
   dependency is dropped before the rule sees it.
+
+## Fixtures that are planted, not linted
+
+`server-only/client-imports-server.tsx` and `migration/schema-with-a-table.ts`
+are copied into `apps/web` and `packages/db` respectively, checked, and removed
+again in a `finally` block. Both have to run from inside the real package,
+because what they break is a build rather than a lint pass, and both tools
+resolve their imports from wherever the file sits.
 
 ## Support files
 

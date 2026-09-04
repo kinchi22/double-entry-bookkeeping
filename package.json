@@ -12,6 +12,8 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "db:check": "pnpm --filter @repo/db db:check",
+    "db:drift": "node tools/check-migration-drift.mjs",
     "typecheck": "turbo run typecheck && tsc -p tsconfig.json",
     "lint": "eslint .",
     "dep-cruise": "depcruise packages apps --config .dependency-cruiser.cjs",
@@ -24,8 +26,9 @@
     "jscpd": "jscpd",
     "verify:gates": "vitest run --config vitest.gates.config.ts",
     "verify:gates:build": "node tools/verify-server-only-gate.mjs",
-    "gates": "pnpm typecheck && pnpm lint && pnpm dep-cruise && pnpm test:unit && pnpm test:integration && pnpm test:mutation && pnpm build && pnpm jscpd && pnpm verify:gates && pnpm verify:gates:build && pnpm verify:gates:mutation",
-    "verify:gates:mutation": "node tools/verify-mutation-gate.mjs"
+    "gates": "pnpm typecheck && pnpm lint && pnpm dep-cruise && pnpm db:drift && pnpm db:check && pnpm test:unit && pnpm test:integration && pnpm test:mutation && pnpm build && pnpm jscpd && pnpm verify:gates && pnpm verify:gates:build && pnpm verify:gates:mutation && pnpm verify:gates:migration",
+    "verify:gates:mutation": "node tools/verify-mutation-gate.mjs",
+    "verify:gates:migration": "node tools/verify-migration-gate.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

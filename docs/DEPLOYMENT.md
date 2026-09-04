@@ -22,6 +22,30 @@ no third-party action holding a token in this repository.
 Until Vercel is connected, the `deployment_status` event never fires, so the E2E
 job simply does not run. The other gates are unaffected.
 
+## Migrations
+
+Migrations are applied by the `migrate` job in `.github/workflows/ci.yml`, on
+push to `main`, after the gates and integration jobs pass. They are deliberately
+not applied from the Vercel build: a build runs for every preview and must never
+touch the production database, and Vercel offers no hook that runs exactly once
+per production deploy.
+
+To turn the job on, add a repository secret `PRODUCTION_DATABASE_URL` pointing
+at the production database. Until it exists the step reports that it is unset
+and succeeds, so the pipeline is green before the database is provisioned. A
+protected GitHub environment on that job is worth adding at the same time, so
+applying a migration requires an approval.
+
+Because Vercel deploys on merge independently of this job, the two can land in
+either order. Migrations must therefore be backwards compatible with the
+currently deployed code: add columns and tables first, remove them in a later
+release once nothing reads them. That is the one deployment rule this repository
+cannot enforce with a gate.
+
+Preview deployments share whatever database `DATABASE_URL` names in the Vercel
+Preview environment. Point it at a preview database, never at production, and
+apply migrations to it manually or from a branch job if a preview needs them.
+
 ## Local development database
 
 `docker-compose.yml` at the repo root runs Postgres 17 for local work only. It

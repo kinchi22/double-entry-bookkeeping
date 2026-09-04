@@ -64,6 +64,14 @@ jobs:
           path: reports/dependency-graph.svg
           if-no-files-found: warn
 
+      # Gate 3b. A schema change that arrives without a migration is caught here
+      # rather than at deploy time, when the only options left are bad ones.
+      - name: 3b. migrations match the schema
+        run: pnpm db:drift
+
+      - name: 3c. migration journal is consistent
+        run: pnpm db:check
+
       - name: 4. test:unit
         run: pnpm test:unit
 
@@ -139,6 +147,40 @@ jobs:
 
       - name: Mutation threshold fixture
         run: pnpm verify:gates:mutation
+
+      - name: Migration drift fixture
+        run: pnpm verify:gates:migration
+
+  # Migrations are applied from CI, not from the Vercel build: a build runs for
+  # every preview and must never touch the production database, and Vercel gives
+  # no hook that runs once per production deploy.
+  #
+  # Until PRODUCTION_DATABASE_URL exists the step reports that it is unset and
+  # succeeds, the same way the E2E job simply does not run until Vercel is
+  # connected. See docs/DEPLOYMENT.md.
+  migrate:
+    name: Apply migrations
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [gates, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo 'PRODUCTION_DATABASE_URL is not set. Skipping; see docs/DEPLOYMENT.md.'
+            exit 0
+          fi
+          pnpm --filter @repo/db db:migrate
 
   # Section 6, gate 7. Runs against the Vercel preview deployment, which is why
   # it is driven by deployment_status rather than by the push itself.

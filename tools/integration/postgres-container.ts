@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 
 /**
@@ -19,11 +21,40 @@ const IMAGE = 'postgres:17-alpine';
  * connection string would truncate the wrong database, so the name is distinct
  * and nothing falls back to the ambient one.
  */
+const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
+const DB_PACKAGE = path.join(REPO_ROOT, 'packages', 'db');
+const DRIZZLE_KIT = path.join(DB_PACKAGE, 'node_modules', 'drizzle-kit', 'bin.cjs');
+
 let container: StartedPostgreSqlContainer | undefined;
+
+/**
+ * Applies the committed migrations with the same command a deployment runs.
+ *
+ * Calling drizzle-kit rather than reproducing what it does is the point: every
+ * integration run then exercises the real migration path, so a migration that
+ * cannot be applied fails here instead of during a deploy. DATABASE_URL is set
+ * only for this child process, so nothing else can see the container.
+ */
+function migrate(databaseUrl: string): void {
+  const result = spawnSync(process.execPath, [DRIZZLE_KIT, 'migrate'], {
+    cwd: DB_PACKAGE,
+    encoding: 'utf8',
+    shell: false,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Applying migrations to the test container failed.\n${result.stdout}\n${result.stderr}`,
+    );
+  }
+}
 
 export async function setup(): Promise<void> {
   container = await new PostgreSqlContainer(IMAGE).start();
-  process.env['TEST_DATABASE_URL'] = container.getConnectionUri();
+  const databaseUrl = container.getConnectionUri();
+  migrate(databaseUrl);
+  process.env['TEST_DATABASE_URL'] = databaseUrl;
 }
 
 export async function teardown(): Promise<void> {

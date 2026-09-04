@@ -28,6 +28,24 @@ The app also renders without a database: the probe reports `postgres` as
 unreachable and the status degrades rather than erroring. That is deliberate, so
 a preview deployment with no database still passes E2E.
 
+### Migrations
+
+```bash
+pnpm --filter @repo/db db:generate   # schema change -> new migration
+pnpm --filter @repo/db db:migrate    # apply to the database in DATABASE_URL
+pnpm db:drift                        # fails if the schema has no matching migration
+```
+
+Generated SQL is committed in the same PR as the schema change that caused it.
+`pnpm db:drift` regenerates into a scratch copy and fails if that would produce
+anything new, so a schema edit cannot reach main without its migration. Every
+integration run applies the committed migrations to its container with the same
+command a deployment uses, so a migration that will not apply fails in CI rather
+than during a deploy.
+
+`packages/db/drizzle/` is currently just an empty journal. Phase 1 adds the
+first migration alongside the acceptance criterion that justifies the table.
+
 ### Local database
 
 ```bash
@@ -54,6 +72,8 @@ Run in this order; any failure blocks a merge.
 | 1 | `pnpm typecheck`             | TypeScript strict; `any` forbidden; no deep imports    |
 | 2 | `pnpm lint`                  | Boundaries matrix, layer purity, no-throw, ASCII-only  |
 | 3 | `pnpm dep-cruise`            | Cycles, orphans, layer violations in the module graph  |
+| 3b| `pnpm db:drift`              | Schema changed without a migration                     |
+| 3c| `pnpm db:check`              | Migration journal is consistent                        |
 | 4 | `pnpm test:unit`             | Vitest, no IO                                          |
 | 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
 | 5 | `pnpm test:mutation`         | Stryker on `core/*/domain/**`, break threshold 90      |
@@ -91,6 +111,7 @@ these commands assert each one still fails:
 pnpm verify:gates            # lint, typecheck, dep-cruise, supply-chain policy
 pnpm verify:gates:build      # server-only, via a real next build
 pnpm verify:gates:mutation   # Stryker threshold, via a mock-only test
+pnpm verify:gates:migration  # migration drift, via an unmigrated schema change
 ```
 
 They run in CI on every PR. See `fixtures/README.md`.
