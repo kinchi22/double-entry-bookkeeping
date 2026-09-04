@@ -63,6 +63,17 @@ when starting the container, and `pnpm dev` / `pnpm --filter @repo/db db:*` load
 it through Node's built-in `--env-file-if-exists`. No dotenv dependency.
 It is gitignored; `.env.example` holds the placeholders.
 
+## How the app is wired
+
+A page is a React Server Component that calls a tRPC procedure in-process
+through `createCaller`, with no HTTP hop. Writes go through Server Actions in
+`app/**/actions.ts`, which call the same procedures and then invalidate what
+they made stale. `/api/trpc` exists for clients outside this app; nothing in
+`apps/web` uses it.
+
+Contracts are JSON-safe: an instant crosses as an ISO 8601 string and becomes a
+`Date` only inside `core`. See "Dates on the wire" in `docs/ARCHITECTURE.md`.
+
 ## Gates
 
 Run in this order; any failure blocks a merge.

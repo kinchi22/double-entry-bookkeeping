@@ -1,5 +1,5 @@
-import { type DomainError, type HealthStatus, type Result } from '@repo/contracts';
-import { evaluateHealth, type ComponentReport } from '../domain/status';
+import { type DomainError, type Result } from '@repo/contracts';
+import { evaluateHealth, type ComponentReport, type HealthReport } from '../domain/status';
 import { type HealthProbe } from '../ports/health-probe';
 
 export type GetHealthDependencies = {
@@ -7,7 +7,7 @@ export type GetHealthDependencies = {
   readonly now: () => Date;
 };
 
-export type GetHealth = () => Promise<Result<HealthStatus, DomainError>>;
+export type GetHealth = () => Promise<Result<HealthReport, DomainError>>;
 
 /**
  * The use case owns orchestration and the transaction boundary. It talks to
@@ -15,7 +15,7 @@ export type GetHealth = () => Promise<Result<HealthStatus, DomainError>>;
  * that knows about Postgres even if someone tried.
  */
 export function createGetHealth({ probes, now }: GetHealthDependencies): GetHealth {
-  return async (): Promise<Result<HealthStatus, DomainError>> => {
+  return async (): Promise<Result<HealthReport, DomainError>> => {
     const reports: ComponentReport[] = await Promise.all(
       probes.map(async (probe): Promise<ComponentReport> => {
         const reachable = await probe.check();

@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { RefreshButton } from '../../components/refresh-button';
 import { createContext } from '../../server/context';
 import { createCaller } from '../../server/root-router';
+import { recheckHealth } from './actions';
 
 // The page performs IO, so it must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,19 @@ export default async function HomePage(): Promise<ReactNode> {
               </li>
             ))}
           </ul>
-          <RefreshButton />
+          {/*
+            The instant arrives as an ISO string, because that is what the
+            contract carries. Rendering it raw keeps the page free of a
+            formatting policy nobody has decided yet.
+          */}
+          <time
+            className="text-xs text-neutral-500"
+            dateTime={health.checkedAt}
+            data-testid="checked-at"
+          >
+            checked at {health.checkedAt}
+          </time>
+          <RefreshButton action={recheckHealth} />
         </div>
       </Panel>
     </main>

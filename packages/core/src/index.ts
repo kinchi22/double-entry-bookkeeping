@@ -8,6 +8,7 @@ export {
   evaluateHealth,
   createGetHealth,
   type ComponentReport,
+  type HealthReport,
   type GetHealth,
   type GetHealthDependencies,
   type HealthProbe,

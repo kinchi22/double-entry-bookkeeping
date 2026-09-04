@@ -91,6 +91,8 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
 | Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
 | Dynamic imports      | Forbidden outside `apps/web/server/container.ts`.                      |
+| Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
+| Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 
 ## Testing layers
@@ -113,7 +115,38 @@ real database by accident.
 
 tRPC procedures and Server Actions do three things: parse input, invoke a use
 case, map the response. A lint rule caps procedure bodies at 20 lines and
-complexity at 4, so anything longer has to move into `core`.
+complexity at 4, so anything longer has to move into `core`. The cap covers
+`server/routers/**`, `app/api/**` and `app/**/actions.ts`, because a rule that
+applied to one write path and not the other would just tell logic where to
+accumulate.
+
+## How the browser writes
+
+Writes go through Server Actions, not through a tRPC client. The action calls
+`createCaller`, so it goes through the same router the HTTP endpoint uses and
+the same use case underneath; only the transport differs. `/api/trpc` stays for
+clients outside this app.
+
+The reason is reversibility rather than preference. A tRPC client can be added
+later on top of routers that already exist, and it costs a provider and a
+hydration boundary to remove again. Until something needs a client-side cache or
+a second consumer, the actions path adds no dependency and no wiring that gates
+cannot see.
+
+`useFormStatus` and `useActionState` cover pending state and form errors, so a
+client component that needs them needs nothing installed.
+
+## Dates on the wire
+
+`checkedAt` is a `Date` in `core` and an ISO 8601 string in `packages/contracts`,
+and the router converts between them. A contract describes what crosses a wire,
+JSON has no date type, and a `Date` in a contract types the value as something
+the transport cannot carry: over HTTP the client is handed a string while the
+type promises an object, and nothing notices until the first `.getTime()`.
+
+The alternative -- a superjson transformer that reconstructs `Date` on the other
+side -- was rejected because it makes the contract type mean "correct for a
+JavaScript client that shares this transformer" rather than "correct".
 
 ## Human review budget
 

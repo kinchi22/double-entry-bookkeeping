@@ -22,6 +22,27 @@ test('renders pipeline health for every checked component', async ({ page }) => 
   );
 });
 
+/**
+ * Given the health panel is rendered
+ * When the visitor asks for a re-check
+ * Then the probes run again and the page reports a newer instant
+ *
+ * This is the write path the app uses -- a Server Action, not the tRPC HTTP
+ * endpoint -- so it is asserted rather than assumed. Comparing the timestamp
+ * proves the action actually invalidated the render instead of the button
+ * merely being clickable.
+ */
+test('re-checks health through the server action', async ({ page }) => {
+  await page.goto('/');
+
+  const checkedAt = page.getByTestId('checked-at');
+  const before = await checkedAt.textContent();
+
+  await page.getByRole('button', { name: 'Re-check' }).click();
+
+  await expect(checkedAt).not.toHaveText(before ?? '');
+});
+
 test('serves the health procedure over the tRPC endpoint', async ({ request }) => {
   const response = await request.get('/api/trpc/health.get');
 
@@ -35,6 +56,9 @@ test('serves the health procedure over the tRPC endpoint', async ({ request }) =
         components: expect.arrayContaining([
           expect.objectContaining({ name: 'postgres' }),
         ]),
+        // The contract carries an ISO string, not a Date. Asserted here because
+        // this is the boundary where a Date would have silently become one.
+        checkedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/),
       },
     },
   });

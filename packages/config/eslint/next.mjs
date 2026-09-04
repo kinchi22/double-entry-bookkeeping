@@ -31,13 +31,31 @@ export const nextConfigs = [
     // use case, map the response. Anything longer is a design violation, so the
     // gate is a size limit rather than a style preference.
     name: 'repo/thin-route-handlers',
-    files: ['apps/web/server/routers/**/*.ts', 'apps/web/app/api/**/*.ts'],
+    files: [
+      'apps/web/server/routers/**/*.ts',
+      'apps/web/app/api/**/*.ts',
+      // Server Actions are the other half of the same rule: an action parses
+      // input, invokes a use case and maps the response, exactly like a
+      // procedure. Without this glob the size cap would apply to one write path
+      // and not the other, which is how logic finds somewhere to accumulate.
+      'apps/web/app/**/actions.ts',
+    ],
     rules: {
       'max-lines-per-function': [
         'error',
         { max: 20, skipBlankLines: true, skipComments: true },
       ],
       complexity: ['error', 4],
+    },
+  },
+  {
+    // A Server Action must be declared async because the framework requires it,
+    // not because it awaits anything, so require-await's premise does not hold
+    // in these files. The rule stays on everywhere else.
+    name: 'repo/server-actions',
+    files: ['apps/web/app/**/actions.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
     },
   },
 ];

@@ -3,7 +3,7 @@ import {
   err,
   ok,
   type DomainError,
-  type HealthStatus,
+  type HealthState,
   type Result,
 } from '@repo/contracts';
 
@@ -17,6 +17,19 @@ export type ComponentReport = {
 };
 
 /**
+ * What the domain concluded, in domain terms.
+ *
+ * Deliberately not the contract type. `checkedAt` is an instant here and a
+ * string on the wire, and keeping the two apart is what lets the transport
+ * format change without the domain noticing.
+ */
+export type HealthReport = {
+  readonly status: HealthState;
+  readonly components: readonly ComponentReport[];
+  readonly checkedAt: Date;
+};
+
+/**
  * Pure. No clock, no IO, no environment. `checkedAt` is passed in so this
  * function has exactly one possible output for a given input, which is what
  * makes the mutation-testing gate meaningful.
@@ -24,7 +37,7 @@ export type ComponentReport = {
 export function evaluateHealth(
   reports: readonly ComponentReport[],
   checkedAt: Date,
-): Result<HealthStatus, DomainError> {
+): Result<HealthReport, DomainError> {
   if (reports.length === 0) {
     return err(
       domainError('INVALID_INPUT', 'Health cannot be evaluated with no components checked.'),

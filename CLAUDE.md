@@ -38,6 +38,7 @@ packages/db/src/schema.ts          tables + migration
 apps/web/server/routers/x.ts       parse input -> invoke use case -> map response
 apps/web/server/container.ts       wiring (human-reviewed)
 apps/web/app/(app)/x/page.tsx      composition only
+apps/web/app/(app)/x/actions.ts    Server Actions: parse, invoke, revalidate
 ```
 
 Add the feature to the `exports` field of `packages/core/package.json`. Do not

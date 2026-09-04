@@ -17,6 +17,7 @@ it here in the same commit that introduces it.
 | Public surface   | The entry points a package lists in its `exports` field.                     |
 | Shared kernel    | Vocabulary several features depend on, held in `core/src/<name>/domain` with no ports or adapters. `money` is the only one. |
 | Result           | `Ok<T>` or `Err<E>`. The return type of any domain operation that can fail. |
+| Server Action    | The app's write path. Parses input, invokes a use case through `createCaller`, invalidates what it made stale. |
 | Use case         | One application operation. Owns orchestration and the transaction boundary.  |
 
 ## Naming rules
