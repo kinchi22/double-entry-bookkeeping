@@ -10,5 +10,12 @@ export { ok, err, isOk, isErr } from './result';
 export type { DomainError, DomainErrorCode } from './errors';
 export { DOMAIN_ERROR_CODES, domainError } from './errors';
 
+export type { Brand } from './brand';
+
+export type { Money } from './money';
+export { moneySchema } from './money';
+
+export { uuidV7Schema } from './id';
+
 export type { HealthComponent, HealthStatus } from './health';
 export { healthComponentSchema, healthStatusSchema } from './health';

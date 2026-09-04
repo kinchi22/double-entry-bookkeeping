@@ -12,3 +12,13 @@ export {
   type GetHealthDependencies,
   type HealthProbe,
 } from './health/index';
+
+export {
+  MONEY_ZERO,
+  addMoney,
+  isZeroMoney,
+  money,
+  moneyToMinorUnits,
+  negateMoney,
+  sumMoney,
+} from './money/index';

@@ -25,6 +25,12 @@ packages/ui       design system, domain-agnostic.
 packages/config    eslint / ts / tailwind / dependency-cruiser presets.
 ```
 
+`packages/core/src/money/` is a shared kernel rather than a product feature: it
+holds the vocabulary any feature that touches an amount depends on, so it has
+`domain/` and nothing else. An amount has no ports, no adapters, and nothing to
+orchestrate. It is the only directory under `core/src` that is allowed to be
+shaped that way, and a second one needs a reason in review.
+
 `packages/infra` deliberately does not exist yet. Adapters live in
 `core/src/<feature>/adapters/` and are promoted to their own package once there
 are two or more external integrations.
@@ -77,8 +83,8 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | -------------------- | --------------------------------------------------------------------- |
 | Error model          | Domain returns `Result<T, DomainError>`. No throwing.                  |
 | HTTP mapping         | Only in tRPC routers, via `apps/web/server/domain-error.ts`.           |
-| IDs                  | uuid v7, branded types.                                                |
-| Money                | Integer minor units, branded `Money`. No raw `number` arithmetic.      |
+| IDs                  | uuid v7, branded per entity from `uuidV7Schema`. Generators are injected, never imported into a pure layer. |
+| Money                | Integer minor units, branded `Money` in contracts. Arithmetic only through `@repo/core/money`, which returns `Result`. |
 | Dates                | Store UTC, `timestamptz`. Convert only at display.                     |
 | Transaction boundary | Owned by the use case. Repositories never begin a transaction.         |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|

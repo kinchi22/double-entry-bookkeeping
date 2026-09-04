@@ -80,6 +80,10 @@ export const layerConfigs = [
               'Core must stay renderer-agnostic. UI concerns live in packages/ui or apps/web.',
             ),
             forbiddenImport(
+              ['uuid', 'uuid/*', 'nanoid', 'crypto', 'node:crypto'],
+              'Generating an id reads a clock and a random source, so it is an effect. A use case takes a generator the way createGetHealth takes `now`, and the composition root supplies it.',
+            ),
+            forbiddenImport(
               ['server-only', 'client-only'],
               'These markers describe a React runtime. Core does not have one.',
             ),

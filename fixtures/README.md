@@ -28,7 +28,8 @@ dependency-cruiser config, jscpd config, and Vitest unit project all exclude it.
 | `violations/.../domain/imports-adapters.ts`      | `boundaries/dependencies`                        |
 | `violations/.../adapters/imports-web.ts`         | `boundaries/dependencies`                        |
 | `violations/.../domain/imports-unknown.ts`       | `boundaries/no-unknown-dependencies`             |
-| `violations/.../domain/imports-drizzle.ts`       | `no-restricted-imports`                          |
+| `violations/.../domain/imports-drizzle.ts`       | `no-restricted-imports` (ORM)                    |
+| `violations/.../domain/imports-uuid.ts`          | `no-restricted-imports` (id generation)          |
 | `violations/.../domain/uses-fetch.ts`            | `no-restricted-globals`                          |
 | `violations/.../domain/uses-process-env.ts`      | `no-restricted-properties`                       |
 | `violations/.../domain/throws.ts`                | `no-restricted-syntax` (throw)                   |

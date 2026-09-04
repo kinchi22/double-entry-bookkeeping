@@ -29,6 +29,7 @@ export const LINT_FIXTURES: readonly LintFixture[] = [
   ['packages/core/src/ledger/adapters/imports-web.ts', 'boundaries/dependencies'],
   ['packages/core/src/ledger/domain/imports-unknown.ts', 'boundaries/no-unknown-dependencies'],
   ['packages/core/src/ledger/domain/imports-drizzle.ts', 'no-restricted-imports'],
+  ['packages/core/src/ledger/domain/imports-uuid.ts', 'no-restricted-imports'],
   ['packages/core/src/ledger/domain/uses-fetch.ts', 'no-restricted-globals'],
   ['packages/core/src/ledger/domain/uses-process-env.ts', 'no-restricted-properties'],
   ['packages/core/src/ledger/domain/throws.ts', 'no-restricted-syntax'],

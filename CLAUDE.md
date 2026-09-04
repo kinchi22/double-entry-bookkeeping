@@ -47,6 +47,17 @@ create directories outside this shape, and never create `lib/`, `utils/`,
 `packages/core/src/health/` is the reference implementation. Copy its shape.
 Do not delete it.
 
+Amounts of money and entity ids already have types. Use them, do not re-invent
+them:
+
+- `Money` and `moneySchema` in `packages/contracts/src/money.ts`; every
+  operation on an amount comes from `@repo/core/money` and returns a `Result`.
+- `uuidV7Schema` in `packages/contracts/src/id.ts`. Each entity brands its own
+  id beside its own schema. Generating an id is an effect: a use case takes a
+  generator in its dependencies the way `createGetHealth` takes `now`, and
+  `apps/web/server/container.ts` supplies it. A lint rule stops `uuid` being
+  imported into `domain`, `application`, or `ports`.
+
 ## Before opening a PR
 
 ```bash
