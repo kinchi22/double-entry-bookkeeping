@@ -1,0 +1,37 @@
+{
+  "name": "@repo/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared eslint / typescript / tailwind / dependency-cruiser presets. Structured so it can be published to npm unchanged.",
+  "files": [
+    "eslint",
+    "typescript",
+    "dep-cruiser",
+    "tailwind"
+  ],
+  "exports": {
+    "./eslint": {
+      "types": "./eslint/index.d.mts",
+      "default": "./eslint/index.mjs"
+    },
+    "./eslint/plugin": "./eslint/plugin.mjs",
+    "./typescript/base.json": "./typescript/base.json",
+    "./typescript/library.json": "./typescript/library.json",
+    "./typescript/nextjs.json": "./typescript/nextjs.json",
+    "./dep-cruiser": "./dep-cruiser/index.cjs",
+    "./tailwind": "./tailwind/index.js"
+  },
+  "peerDependencies": {
+    "eslint": ">=9",
+    "typescript": ">=5.4 <6.1"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.0",
+    "@next/eslint-plugin-next": "^16.0.0",
+    "eslint-plugin-boundaries": "^7.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "globals": "^17.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}

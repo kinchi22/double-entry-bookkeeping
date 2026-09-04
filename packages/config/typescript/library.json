@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Repo library package",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": true
+  }
+}

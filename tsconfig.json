@@ -1,0 +1,8 @@
+{
+  "extends": "@repo/config/typescript/base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["tools/**/*.ts", "e2e/**/*.ts", "*.config.ts"],
+  "exclude": ["node_modules", "fixtures", "packages", "apps"]
+}

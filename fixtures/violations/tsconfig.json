@@ -1,0 +1,11 @@
+{
+  "extends": "@repo/config/typescript/base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "jsx": "preserve",
+    "lib": ["ES2023", "DOM"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx"]
+}

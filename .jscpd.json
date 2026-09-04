@@ -1,0 +1,17 @@
+{
+  "threshold": 3,
+  "minTokens": 50,
+  "minLines": 5,
+  "reporters": ["console"],
+  "absolute": true,
+  "gitignore": true,
+  "format": ["typescript", "tsx"],
+  "path": ["packages", "apps"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/*.test.ts",
+    "**/fixtures/**"
+  ]
+}

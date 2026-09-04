@@ -1,0 +1,151 @@
+/**
+ * Shared dependency-cruiser preset.
+ *
+ * This overlaps deliberately with eslint-plugin-boundaries. The two tools fail
+ * differently: boundaries reasons about import statements, dependency-cruiser
+ * reasons about the resolved module graph, so it catches cycles and reaches
+ * that the linter's per-file view cannot see.
+ *
+ * tsPreCompilationDeps is on, so a type-only import counts as a dependency.
+ * `core` knowing an adapter's types is a design leak even when nothing is
+ * emitted at runtime. packages/contracts is the intended exception: it exists
+ * to be depended on for types, and every rule below allows it explicitly.
+ */
+
+const DOMAIN = '^packages/core/src/[^/]+/domain/';
+const APPLICATION = '^packages/core/src/[^/]+/application/';
+const PORTS = '^packages/core/src/[^/]+/ports/';
+const ADAPTERS = '^packages/core/src/[^/]+/adapters/';
+const CORE = '^packages/core/';
+const DB = '^packages/db/';
+const CONTRACTS = '^packages/contracts/';
+const UI = '^packages/ui/';
+const WEB = '^apps/web/';
+
+module.exports = {
+  forbidden: [
+    {
+      name: 'no-circular',
+      severity: 'error',
+      comment:
+        'A cycle means the two modules are really one module with a seam drawn in the wrong place.',
+      from: {},
+      to: { circular: true },
+    },
+    {
+      name: 'no-orphans',
+      severity: 'error',
+      comment: 'A module nothing imports is either dead or wired up wrong.',
+      from: {
+        orphan: true,
+        pathNot: [
+          // Dotfiles and *.config.* files are entry points for a tool, not for
+          // the module graph. Nothing importing them is correct, not orphaned.
+          '(^|/)[.][^/]+[.](?:js|cjs|mjs|ts|json)$',
+          '[.]config[.](?:js|cjs|mjs|ts)$',
+          '[.]d[.]ts$',
+          '(^|/)tsconfig[.]json$',
+          '(^|/)(?:package|package-lock)[.]json$',
+          // Package public surfaces are imported by name, not by path.
+          '(^|/)src/index[.]ts$',
+          '(^|/)src/server[.]ts$',
+          // Tests are entry points for the runner.
+          '[.]test[.]tsx?$',
+          '^packages/config/',
+        ],
+      },
+      to: {},
+    },
+    {
+      name: 'domain-is-pure',
+      severity: 'error',
+      comment:
+        'core/*/domain must not import application, ports, or adapters. Dependencies point inward.',
+      from: { path: DOMAIN },
+      to: { path: [APPLICATION, PORTS, ADAPTERS] },
+    },
+    {
+      name: 'application-not-to-adapters',
+      severity: 'error',
+      comment:
+        'Use cases depend on ports, never on the implementation behind a port.',
+      from: { path: APPLICATION },
+      to: { path: ADAPTERS },
+    },
+    {
+      name: 'only-adapters-touch-db',
+      severity: 'error',
+      comment:
+        'Persistence is an adapter concern. Everything else in core stays runtime-agnostic.',
+      from: { path: CORE, pathNot: ADAPTERS },
+      to: { path: DB },
+    },
+    {
+      name: 'core-not-to-app',
+      severity: 'error',
+      comment:
+        'core must never depend on the delivery mechanism, or an AWS migration stops being a swap of apps/.',
+      from: { path: CORE },
+      to: { path: WEB },
+    },
+    {
+      name: 'contracts-is-a-leaf',
+      severity: 'error',
+      comment:
+        'packages/contracts has zero internal dependencies. That is the property that makes it safe for everyone to depend on.',
+      from: { path: CONTRACTS },
+      to: { path: [CORE, DB, UI, WEB] },
+    },
+    {
+      name: 'ui-is-domain-agnostic',
+      severity: 'error',
+      comment:
+        'The design system must not learn the domain, or it cannot be reused or extracted.',
+      from: { path: UI },
+      to: { path: [CORE, DB, CONTRACTS, WEB] },
+    },
+    {
+      name: 'web-not-to-db',
+      severity: 'error',
+      comment:
+        'apps/web reaches the database only through core adapters, wired in the composition root.',
+      from: { path: WEB },
+      to: { path: DB },
+    },
+    {
+      name: 'not-to-unresolvable',
+      severity: 'error',
+      comment: 'An import that does not resolve is a broken gate waiting to happen.',
+      from: {},
+      to: { couldNotResolve: true },
+    },
+    {
+      name: 'no-dev-dep-in-src',
+      severity: 'error',
+      comment: 'Runtime code must not import a devDependency.',
+      from: { path: ['^packages/[^/]+/src/', WEB], pathNot: ['[.]test[.]tsx?$', '[.]spec[.]tsx?$'] },
+      to: { dependencyTypes: ['npm-dev'] },
+    },
+  ],
+
+  options: {
+    tsPreCompilationDeps: true,
+    tsConfig: { fileName: 'tsconfig.json' },
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['import', 'require', 'node', 'default', 'types'],
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'],
+      mainFields: ['module', 'main', 'types'],
+    },
+    doNotFollow: { path: '(^|/)node_modules/' },
+    exclude: {
+      // next-env.d.ts is generated by `next build` and references types that
+      // only exist inside Next's own resolution, so it is not part of the graph.
+      path: '(^|/)node_modules/|[.]next/|/dist/|/[.]turbo/|(^|/)fixtures/|(^|/)next-env[.]d[.]ts$',
+    },
+    reporterOptions: {
+      dot: { collapsePattern: '(^|/)node_modules/(@[^/]+/[^/]+|[^/]+)' },
+      archi: { collapsePattern: '^(packages|apps)/[^/]+' },
+    },
+  },
+};

@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # Vercel reports its preview deployment through this event, which is what the
+  # E2E job waits for. Using the event directly avoids granting a third-party
+  # polling action a token in this repository.
+  deployment_status:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  # Section 6, gates 1-4, 6 and 8, in the order the brief specifies. Any failure
+  # blocks the merge.
+  gates:
+    if: github.event_name != 'deployment_status'
+    name: Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
+      # --frozen-lockfile: CI never resolves dependencies on its own. Combined
+      # with minimumReleaseAge in pnpm-workspace.yaml, the set of code that runs
+      # here is exactly the set a human reviewed in the lockfile diff.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: 1. typecheck
+        run: pnpm typecheck
+
+      - name: 2. lint
+        run: pnpm lint
+
+      - name: 3. dep-cruise
+        run: pnpm dep-cruise
+
+      - name: Dependency graph
+        if: always()
+        run: mkdir -p reports && pnpm dep-cruise:graph
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-graph
+          path: reports/dependency-graph.svg
+          if-no-files-found: warn
+
+      - name: 4. test:unit
+        run: pnpm test:unit
+
+      - name: 6. build
+        run: pnpm build
+
+      - name: 8. jscpd
+        run: pnpm jscpd
+
+  # Section 6, gate 5. Split out because it is slow and independent of the rest.
+  mutation:
+    if: github.event_name != 'deployment_status'
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 5. test:mutation
+        run: pnpm test:mutation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-report
+          path: reports/mutation
+          if-no-files-found: warn
+
+  # Section 9. Kept in CI permanently: a rule that dies later must surface here,
+  # not months afterwards when someone notices the gate never fired.
+  gate-liveness:
+    if: github.event_name != 'deployment_status'
+    name: Gate liveness
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint, typecheck, dep-cruise and supply-chain fixtures
+        run: pnpm verify:gates
+
+      - name: server-only build fixture
+        run: pnpm verify:gates:build
+
+      - name: Mutation threshold fixture
+        run: pnpm verify:gates:mutation
+
+  # Section 6, gate 7. Runs against the Vercel preview deployment, which is why
+  # it is driven by deployment_status rather than by the push itself.
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Vercel fires deployment_status when the preview finishes building. Reading
+    # environment_url straight off the event means no polling, no extra token,
+    # and no third-party action in the supply chain.
+    if: >-
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment_url != ''
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.deployment.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: 7. test:e2e
+        run: pnpm test:e2e
+        env:
+          E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: warn

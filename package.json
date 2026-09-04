@@ -1,0 +1,46 @@
+{
+  "name": "double-entry-bookkeeping",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.8.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env node_modules/turbo/bin/turbo run dev --filter @repo/web",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "dep-cruise": "depcruise packages apps --config .dependency-cruiser.cjs",
+    "dep-cruise:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot | dot -T svg > reports/dependency-graph.svg",
+    "test:unit": "vitest run",
+    "test:mutation": "stryker run",
+    "build": "turbo run build",
+    "test:e2e": "playwright test",
+    "jscpd": "jscpd",
+    "verify:gates": "vitest run --config vitest.gates.config.ts",
+    "verify:gates:build": "node tools/verify-server-only-gate.mjs",
+    "gates": "pnpm typecheck && pnpm lint && pnpm dep-cruise && pnpm test:unit && pnpm test:mutation && pnpm build && pnpm jscpd && pnpm verify:gates && pnpm verify:gates:build && pnpm verify:gates:mutation",
+    "verify:gates:mutation": "node tools/verify-mutation-gate.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@repo/config": "workspace:*",
+    "@repo/contracts": "workspace:*",
+    "@repo/core": "workspace:*",
+    "@repo/db": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@types/node": "^26.0.0",
+    "dependency-cruiser": "^18.0.0",
+    "eslint": "^10.0.0",
+    "jscpd": "^5.0.0",
+    "turbo": "^2.0.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.0"
+  }
+}

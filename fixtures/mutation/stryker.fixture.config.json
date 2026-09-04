@@ -1,0 +1,11 @@
+{
+  "packageManager": "pnpm",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "testRunner": "vitest",
+  "vitest": { "configFile": "fixtures/mutation/vitest.fixture.config.ts" },
+  "mutate": ["fixtures/mutation/subject.ts"],
+  "coverageAnalysis": "perTest",
+  "reporters": ["clear-text"],
+  "thresholds": { "high": 100, "low": 90, "break": 90 },
+  "tempDirName": ".stryker-tmp-fixture"
+}

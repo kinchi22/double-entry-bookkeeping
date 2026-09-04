@@ -1,0 +1,112 @@
+# Double Entry Bookkeeping
+
+Full-stack web app for double-entry bookkeeping.
+
+**Status: Phase 0 complete.** The pipeline is built and every gate is verified
+alive. No product feature code exists yet beyond the `health` slice, which is a
+pipeline probe rather than a feature and should not be deleted.
+
+## Requirements
+
+- Node 24+
+- pnpm 11 (`corepack enable`)
+- Docker with Compose v2+ (local Postgres only; not needed to build or test)
+
+## Getting started
+
+```bash
+pnpm install
+cp .env.example .env
+pnpm db:up                     # local Postgres in Docker, waits until healthy
+pnpm build
+pnpm dev                       # http://localhost:3000
+```
+
+The health panel should report `postgres: reachable`.
+
+The app also renders without a database: the probe reports `postgres` as
+unreachable and the status degrades rather than erroring. That is deliberate, so
+a preview deployment with no database still passes E2E.
+
+### Local database
+
+```bash
+pnpm db:up      # start, wait for healthy
+pnpm db:down    # stop, keep data
+pnpm db:reset   # stop, DESTROY the volume, start again
+```
+
+It listens on host port **5433**, not 5432, so it does not collide with another
+project's Postgres. Data lives in a named Docker volume, so `db:down` keeps it
+and only `db:reset` throws it away.
+
+`.env` is the single source of configuration: `docker compose` interpolates it
+when starting the container, and `pnpm dev` / `pnpm --filter @repo/db db:*` load
+it through Node's built-in `--env-file-if-exists`. No dotenv dependency.
+It is gitignored; `.env.example` holds the placeholders.
+
+## Gates
+
+Run in this order; any failure blocks a merge.
+
+| # | Command                      | What it enforces                                      |
+| - | ---------------------------- | ----------------------------------------------------- |
+| 1 | `pnpm typecheck`             | TypeScript strict; `any` forbidden; no deep imports    |
+| 2 | `pnpm lint`                  | Boundaries matrix, layer purity, no-throw, ASCII-only  |
+| 3 | `pnpm dep-cruise`            | Cycles, orphans, layer violations in the module graph  |
+| 4 | `pnpm test:unit`             | Vitest                                                 |
+| 5 | `pnpm test:mutation`         | Stryker on `core/*/domain/**`, break threshold 90      |
+| 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
+| 7 | `pnpm test:e2e`              | Playwright against the preview deployment              |
+| 8 | `pnpm jscpd`                 | Duplication threshold                                  |
+
+`pnpm gates` runs everything except E2E.
+
+### Gate liveness
+
+A rule that is written but not running is worse than no rule, because it buys
+false confidence. `fixtures/` contains a deliberate violation of every rule, and
+these commands assert each one still fails:
+
+```bash
+pnpm verify:gates            # lint, typecheck, dep-cruise, supply-chain policy
+pnpm verify:gates:build      # server-only, via a real next build
+pnpm verify:gates:mutation   # Stryker threshold, via a mock-only test
+```
+
+They run in CI on every PR. See `fixtures/README.md`.
+
+## Supply chain
+
+`pnpm-workspace.yaml` sets `minimumReleaseAge: 10080` (7 days): pnpm refuses to
+install any package version published less than a week ago. Most malicious
+publishes are caught and unpublished well inside that window, so the cooling-off
+period turns them into a resolution that never happens.
+
+Practical consequences:
+
+- `pnpm add <pkg>@latest` resolves to the newest version that is already 7 days
+  old. Exact pins on a fresh release fail to install; use a range instead and let
+  the lockfile record the resolution.
+- `pnpm install` reports things like `eslint 10.8.1 (10.9.0 is available)`. That
+  gap is the policy working, not a stale lockfile.
+- Postinstall scripts are denied by default. `onlyBuiltDependencies` lists the
+  version-qualified exceptions, so a new version must be re-approved rather than
+  inheriting trust.
+- To ship a same-day security patch, add the package to
+  `minimumReleaseAgeExclude` and say why in the commit message. Keep the list
+  empty otherwise.
+
+CI installs with `--frozen-lockfile`, so the code that runs there is exactly the
+code reviewed in the lockfile diff.
+
+## Documentation
+
+- `docs/ARCHITECTURE.md` -- dependency matrix, layer rules, fixed decisions
+- `docs/GLOSSARY.md` -- one canonical name per concept
+- `fixtures/README.md` -- which fixture proves which gate
+- `CLAUDE.md` -- working agreement for AI agents
+
+## Remaining setup (needs a human)
+
+Vercel is not connected yet. See "Connecting Vercel" in `docs/DEPLOYMENT.md`.
