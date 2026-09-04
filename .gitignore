@@ -1,21 +1,54 @@
+# Grouped by what writes the file. Anything a tool generates that must still
+# survive review is listed at the bottom rather than here.
+
+# Dependencies
 node_modules/
+
+# Build output
 .next/
 out/
 dist/
 build/
+*.tsbuildinfo
+
+# Tool caches
 .turbo/
+
+# Test, mutation and analysis reports
 coverage/
 reports/
-.stryker-tmp/
 playwright-report/
-test-results/
 blob-report/
-*.tsbuildinfo
+test-results/
+
+# Scratch space for the gate-liveness scripts in tools/.
+# Each is planted, checked, and deleted again in a finally block, so these
+# entries only matter for a run that was killed before that block ran. The
+# server-only probe is a page: left behind it breaks the next build, which is
+# loud. Committing it would be quiet, and quiet is the worse failure.
+.stryker-tmp/
+.stryker-tmp-fixture/
+.next-server-only-probe/
+apps/web/app/(app)/server-only-probe/
+
+# Secrets and per-machine configuration
 .env
 .env.*
 !.env.example
-.DS_Store
-.vercel
-.stryker-tmp-fixture/
-.next-server-only-probe/
+.vercel/
+.claude/settings.local.json
 CLAUDE.local.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Deliberately NOT ignored, though a tool writes them:
+#
+#   packages/db/drizzle/    drizzle-kit generates it, but it is the migration
+#                           ledger. Ignoring it would throw away the record of
+#                           what has been applied to a database.
+#   .env.example            matches `.env.*` above, so it is un-ignored there.
+#   .claude/settings.json   shared project settings. Only the settings.local.json
+#                           beside it is per-machine.
