@@ -3,7 +3,10 @@ packages:
   - 'packages/*'
 
 allowBuilds:
+  cpu-features: set this to true or false
   esbuild: true
+  protobufjs: set this to true or false
+  ssh2: set this to true or false
 
 # --- Supply-chain policy -----------------------------------------------------
 # Refuse to install any package version published less than 7 days ago.
@@ -32,3 +35,18 @@ onlyBuiltDependencies:
   - 'esbuild@0.25.12'
   - 'esbuild@0.28.2'
   - sharp
+
+# Postinstall scripts that are deliberately NOT run. Listing them here is an
+# acknowledgement, not an approval: pnpm refuses to install while an ignored
+# build is unaccounted for, so every one of these had to be looked at.
+#
+# All three arrive under @testcontainers/postgresql -> dockerode -> ssh2, and
+# none of them is needed. ssh2 and cpu-features build an optional native addon
+# that only speeds up SSH crypto, which is used for talking to a remote Docker
+# host over SSH -- not something this repo does. protobufjs postinstall only
+# generates CLI helper files. Skipping all three leaves the JavaScript
+# fallbacks in place.
+ignoredBuiltDependencies:
+  - cpu-features@0.0.10
+  - protobufjs@7.6.6
+  - ssh2@1.17.0

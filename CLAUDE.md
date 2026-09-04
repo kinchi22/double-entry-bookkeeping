@@ -15,6 +15,9 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   called will be rejected by the mutation threshold, and the fixture in
   `fixtures/mutation/` shows exactly that failure.
 - **Repositories are integration-tested against a real Postgres**, not mocked.
+  Name the file `*.integration.test.ts` and put it beside the adapter. It runs
+  under `pnpm test:integration`, which starts the container; `pnpm test:unit`
+  excludes it and must stay runnable without Docker.
 - **One PR per acceptance criterion.** Trunk-based, feature flags for anything
   incomplete.
 - **Review in a fresh session**, separate from the one that wrote the code,

@@ -54,13 +54,32 @@ Run in this order; any failure blocks a merge.
 | 1 | `pnpm typecheck`             | TypeScript strict; `any` forbidden; no deep imports    |
 | 2 | `pnpm lint`                  | Boundaries matrix, layer purity, no-throw, ASCII-only  |
 | 3 | `pnpm dep-cruise`            | Cycles, orphans, layer violations in the module graph  |
-| 4 | `pnpm test:unit`             | Vitest                                                 |
+| 4 | `pnpm test:unit`             | Vitest, no IO                                          |
+| 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
 | 5 | `pnpm test:mutation`         | Stryker on `core/*/domain/**`, break threshold 90      |
 | 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
 | 7 | `pnpm test:e2e`              | Playwright against the preview deployment              |
 | 8 | `pnpm jscpd`                 | Duplication threshold                                  |
 
 `pnpm gates` runs everything except E2E.
+
+### Integration tests
+
+Anything named `*.integration.test.ts` under `packages/*/src/**` runs against a
+throwaway Postgres that `tools/integration/postgres-container.ts` starts with
+testcontainers, on the same `postgres:17-alpine` image docker-compose uses.
+
+```bash
+pnpm test:integration    # needs a running Docker daemon
+```
+
+The container is started by the suite rather than reused from `pnpm db:up`, so
+the gate never depends on a developer having remembered to start the local
+database, and a test can never point at a real one: the connection string
+arrives as `TEST_DATABASE_URL` and nothing falls back to `DATABASE_URL`.
+
+Repository and adapter tests belong here, not in `test:unit`. A mocked database
+client only proves the adapter calls the methods it calls.
 
 ### Gate liveness
 

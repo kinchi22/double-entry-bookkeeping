@@ -86,6 +86,22 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Dynamic imports      | Forbidden outside `apps/web/server/container.ts`.                      |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 
+## Testing layers
+
+| Layer                        | How it is tested                                      |
+| ---------------------------- | ----------------------------------------------------- |
+| `domain/**`                  | Unit tests, pure. Mutation threshold 90.               |
+| `application/**`             | Unit tests against stub ports, never spies.            |
+| `adapters/**`                | `*.integration.test.ts` against a real Postgres.       |
+| `apps/web`                   | Playwright, against a deployed preview.                |
+
+Adapters are integration-tested with testcontainers rather than against the
+docker-compose database. A shared development database makes the gate
+conditional on a developer having remembered `pnpm db:up`, and a conditional
+gate is the failure mode this repository exists to avoid. The container URL
+travels as `TEST_DATABASE_URL`, never `DATABASE_URL`, so a test cannot reach a
+real database by accident.
+
 ## Route handler rule
 
 tRPC procedures and Server Actions do three things: parse input, invoke a use

@@ -73,6 +73,25 @@ jobs:
       - name: 8. jscpd
         run: pnpm jscpd
 
+  # Section 6, gate 4b. Split out because it is the only gate that needs Docker:
+  # the suite starts a throwaway Postgres with testcontainers rather than
+  # reusing a shared database, so it either gets a real server or fails.
+  integration:
+    if: github.event_name != 'deployment_status'
+    name: Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 4b. test:integration
+        run: pnpm test:integration
+
   # Section 6, gate 5. Split out because it is slow and independent of the rest.
   mutation:
     if: github.event_name != 'deployment_status'
