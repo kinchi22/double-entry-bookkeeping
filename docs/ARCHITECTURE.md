@@ -37,6 +37,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | ADR | Status |
 | --- | ------ |
 | [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
+| [ADR-0002: Land the specs first, under human review](adr/0002-land-the-specs-first-under-human-review.md) | Accepted |
 
 ## Package layout
 
@@ -114,7 +115,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
 | Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
-| Dynamic imports      | Forbidden outside `apps/web/server/container.ts`.                      |
+| Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
@@ -172,8 +173,70 @@ The alternative -- a superjson transformer that reconstructs `Date` on the other
 side -- was rejected because it makes the contract type mean "correct for a
 JavaScript client that shares this transformer" rather than "correct".
 
-## Human review budget
+## Human review surface
 
-Reserved for: schema changes, auth and permission logic, money, data migrations,
-and `apps/web/server/container.ts`. Everything else is gates plus line-level
-review.
+Every pull request into `main` needs one approval. An agent cannot land anything
+there alone -- a document, a gate, a dependency bump included -- and the place it
+works unattended is a milestone branch.
+
+Three paths are owned on top of that:
+
+| Path                     | Why                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `e2e/**`                 | The requirements, as executable specs. An agent that may edit them can make a failing requirement pass by rewriting it. |
+| `packages/db/drizzle/**` | An applied migration is the one change a later fix cannot undo.                                                        |
+| `.github/**`             | The gates, and the ownership list itself: how everything else on this page stops being a promise.                      |
+
+`.github/CODEOWNERS` declares exactly these three: this table and that file are
+the same list said twice, and `tools/gates/review-surface-gate.test.ts` fails
+when they stop agreeing. They disagreed until ADR-0002, and what fell through
+the gap was `e2e/`.
+
+Ownership does two different jobs depending on where a pull request lands. Into
+`main`, where an approval is required anyway, it decides *whose*: a change under
+an owned path needs the code owner's. Into `milestone/**`, where no approval is
+required, it is the entire rule -- a spec change is reviewed, and everything else
+merges unattended, behind the gates.
+
+Schema changes, auth and permission logic, money and `apps/web/server/container.ts`
+were on this list and came off it. ADR-0002 says why, and ends the lint exemption
+the composition root carried on the strength of being read by a person.
+
+## How a criterion ships
+
+A specification lands before the behaviour it describes. A spec can only be
+green after the behaviour exists, so it needs somewhere to be red in the
+meantime, and that is a milestone branch: one branch per acceptance criterion,
+branched from `main`, named `milestone/<name>`.
+
+| Pull request                | Approved by | E2E    | Isolation |
+| --------------------------- | ----------- | ------ | --------- |
+| specs -> `milestone/x`      | the owner, as code owner | red, and not required | e2e only |
+| feature -> `milestone/x`    | nobody      | red until the behaviour lands | no specs |
+| `main` -> `milestone/x`     | the owner if the sync carries an owned path | - | exempt |
+| `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
+
+A feature branch merges with no approval at all: what it may do was settled when
+the spec was approved, and the one thing it must not do -- edit the spec -- is
+checked rather than reviewed. A spec that turns out to be wrong is corrected in
+its own pull request onto the milestone, reviewed like the first one.
+
+Nothing forces product code through this route. A pull request straight into
+`main` is allowed and sometimes right -- a spec correction, a tooling change, a
+fix with no criterion behind it. What stops a behaviour from arriving with no
+specification is the approval on that pull request, not a rule about paths.
+
+`tools/check-pr-isolation.ts` decides the isolation column from the pull
+request's file list and the two branch names, and the `Spec isolation` job fails
+when both sides moved. It reads a pull request, so it has no local equivalent
+and `pnpm gates` does not run it.
+
+The E2E column is step 6's to build: there is no job today that runs the suite
+on a pull request, so "green, required" is a decision, not yet a gate. Required
+checks belong to a ruleset, and one ruleset covers both `main` and
+`milestone/**` today, so requiring the suite on one and not the other needs a
+second ruleset scoped to the default branch.
+
+This is what "one PR per acceptance criterion" in `CLAUDE.md` now means: one
+milestone per criterion, and as many feature pull requests underneath it as the
+work takes.

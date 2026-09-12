@@ -1,16 +1,20 @@
 # The human review surface. See docs/ARCHITECTURE.md.
 #
-# Everything else in this repository is written and reviewed by agents, behind
-# the gates in .github/workflows/ci.yml. These three paths are the exception,
-# and each is here for its own reason:
+# Every pull request into main needs an approval, so this file does not decide
+# whether a person looks at a change. It decides which person, and on a
+# milestone/** branch, where no approval is required, it is the whole rule:
+# an owned path in the diff is what pulls a reviewer in, and everything else
+# merges unattended behind the gates in .github/workflows/ci.yml.
+#
+# Three paths, each here for its own reason:
 #
 #   e2e/                  the requirements themselves, stated as executable
 #                         specs. An agent that may edit these can make a
 #                         failing requirement pass by rewriting it.
 #   packages/db/drizzle/  applied migrations: the one change a later fix
 #                         cannot undo.
-#   .github/              the gates, and this file. Both are how the rest of
-#                         this list stops being true.
+#   .github/              the gates, and this file. Both are what make
+#                         everything above enforceable rather than stated.
 
 /e2e/                      @kinchi22
 /packages/db/drizzle/      @kinchi22

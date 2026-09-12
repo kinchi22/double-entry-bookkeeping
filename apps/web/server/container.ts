@@ -3,14 +3,14 @@ import { createGetHealth, type GetHealth } from '@repo/core';
 import { createPostgresHealthProbe } from '@repo/core/server';
 
 /**
- * DI composition root. HUMAN-REVIEWED FILE.
+ * DI composition root.
  *
  * This is the only place in the repo allowed to choose a concrete
- * implementation, and the only place exempt from the dynamic-import ban. That
- * exemption is the whole point: it confines the region static analysis cannot
- * see to one small file a person reads.
+ * implementation. It is not exempt from anything: it used to be excused from
+ * the dynamic-import ban because a person read it, and ADR-0002 reserved human
+ * review for the specs and the applied migrations instead.
  *
- * Everything above this line is wiring. No business rules belong here.
+ * Everything below this line is wiring. No business rules belong here.
  */
 export type Container = {
   readonly getHealth: GetHealth;

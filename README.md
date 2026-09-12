@@ -94,6 +94,18 @@ Run in this order; any failure blocks a merge.
 
 `pnpm gates` runs everything except E2E.
 
+CI runs one more check that has no local form. `Spec isolation` fails a pull
+request that changes `e2e/` and anything else in the same change: the specs are
+the requirements, they land before the behaviour, and editing one beside the code
+it judges is how a failing requirement gets rewritten into a passing one. It
+needs a pull request to read, so `pnpm gates` cannot run it.
+
+Every pull request into `main` needs an approval, whatever it changes. Work
+proceeds unattended on a milestone branch instead, one per acceptance criterion:
+the specs land on `milestone/<name>` first and the owner reviews them, feature
+branches merge into it unreviewed, and it goes to `main` when the suite is
+green. See "How a criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
+
 ### Integration tests
 
 Anything named `*.integration.test.ts` under `packages/*/src/**` runs against a
