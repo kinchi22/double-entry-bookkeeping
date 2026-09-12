@@ -166,9 +166,15 @@ jobs:
       pull-requests: read
     steps:
       - uses: actions/checkout@v5
+      # package-manager-cache defaults to true, and setup-node then reads
+      # `packageManager` out of package.json and shells out to pnpm to find its
+      # store. This job installs nothing, so pnpm is not on PATH and the step
+      # fails before the check runs. Turning the cache off is the whole fix:
+      # there is nothing to cache.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
 
       # The file list comes from the pull request itself rather than from a git
       # diff: a diff needs the merge base, so it needs the right base ref and a
