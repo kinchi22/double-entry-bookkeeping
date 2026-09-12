@@ -14,6 +14,27 @@ an explicit exemption in `tools/gates/fixture-map.ts` carrying a reason why a
 fixture is impossible rather than merely absent; there are two today, both listed
 in `fixtures/README.md`.
 
+## Decision records
+
+`docs/adr/` holds one record per decision: the problem, what was chosen, what it
+costs, and what was rejected. This file states the rule as it stands today; the
+record states why it stands, and whether it is in force yet.
+
+A record marked `Deferred` is a decision taken and deliberately not built. It is
+not a rule, so nothing here enforces it, and `CLAUDE.md` says not to start
+building one without an acceptance criterion. It is also not an open question,
+so it is not something to decide again. Adopting one edits that record in place
+rather than opening a new one.
+
+`tools/gates/adr-gate.test.ts` checks the numbering, the status vocabulary, the
+required sections, a trigger on every deferred record, and that this index and
+the directory name each other. Decisions taken before ADR-0001 stay in this file
+and in the commit that made them; ADR-0001 says why they were not backfilled.
+
+| Record | Status |
+| ------ | ------ |
+| [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
+
 ## Package layout
 
 ```
