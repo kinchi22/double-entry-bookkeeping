@@ -139,7 +139,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
-      - name: Lint, typecheck, dep-cruise and supply-chain fixtures
+      # Every gate that runs under vitest: the lint, typecheck and dep-cruise
+      # fixtures, and the gates that are functions over values -- supply chain,
+      # ADR shape, review surface, spec isolation.
+      - name: Fixture and shape gates
         run: pnpm verify:gates
 
       - name: server-only build fixture
@@ -153,9 +156,11 @@ jobs:
 
   # ADR-0002. The specs are the requirements, so a change that edits a spec and
   # the code the spec judges, in one pull request, can make a failing requirement
-  # pass by rewriting it. This is the mechanism behind "one PR per acceptance
-  # criterion" in CLAUDE.md, and it needs a pull request to have something to
-  # check, so it is the one gate `pnpm gates` cannot run.
+  # pass by rewriting it. This checks the half of "one PR per acceptance
+  # criterion" in CLAUDE.md that a check can decide -- a spec is kept apart from
+  # the code it judges, and nothing here limits how much else a pull request
+  # does. It needs a pull request to read, so it is the one gate `pnpm gates`
+  # cannot run.
   isolation:
     name: Spec isolation
     if: github.event_name == 'pull_request'

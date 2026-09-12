@@ -173,7 +173,7 @@ The alternative -- a superjson transformer that reconstructs `Date` on the other
 side -- was rejected because it makes the contract type mean "correct for a
 JavaScript client that shares this transformer" rather than "correct".
 
-## Human review budget
+## Human review surface
 
 Reserved for three paths, and nothing else:
 
@@ -191,10 +191,11 @@ agents, behind the gates.
 
 A pull request changes `e2e/**` or it changes the rest of the repository, never
 both. `tools/check-pr-isolation.ts` decides that from the pull request's file
-list and the `Spec isolation` job fails when both sides moved, which is what
-turns "one PR per acceptance criterion" in `CLAUDE.md` from a habit into a rule.
-The job reads the pull request, so it has no local equivalent and `pnpm gates`
-does not run it.
+list and the `Spec isolation` job fails when both sides moved. That is the part
+of "one PR per acceptance criterion" in `CLAUDE.md` a check can decide: it keeps
+a spec away from the code the spec judges, and says nothing about how much else
+a pull request does. The job reads the pull request, so it has no local
+equivalent and `pnpm gates` does not run it.
 
 Schema changes, auth and permission logic, money and `apps/web/server/container.ts`
 were on this list and came off it. ADR-0002 says why, and ends the lint exemption

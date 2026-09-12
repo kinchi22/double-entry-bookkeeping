@@ -83,11 +83,10 @@ rather than unwritten:
 
 ## Gates with no fixture
 
-Four gates have no fixture. Three are pure functions rather than tool runs, so
-their deliberate breakages are inputs in their own test file instead of files
-here; nothing resolves a path in any of them, which is what a fixture directory
-exists to catch. The fourth compares two real files, and there is no third copy
-of them to break:
+Four gates are pure functions rather than tool runs, so their deliberate
+breakages are inputs in their own test file instead of files here. Nothing
+resolves a path in any of them, which is what a fixture directory exists to
+catch:
 
 - `tools/gates/adr-shape.ts` -- the shape of `docs/adr/`, broken twenty ways in
   `adr-gate.test.ts`.
@@ -99,8 +98,9 @@ of them to break:
   runs the file as a command, because CI depends on its exit status rather than
   on what it returns.
 - `tools/gates/review-surface-gate.test.ts` -- that `docs/ARCHITECTURE.md` and
-  `.github/CODEOWNERS` name the same review surface. Deleting a row from either
-  is the breakage, and it fails that way.
+  `.github/CODEOWNERS` name the same review surface. Its two readers are
+  functions over file content, broken in the same file by a comment line, an
+  unowned path, a table under the wrong heading, and a renamed section.
 
 ## Fixtures that are planted, not linted
 

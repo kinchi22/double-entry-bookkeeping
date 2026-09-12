@@ -85,6 +85,20 @@ run locally and `pnpm gates` does not include it: CI passing is a stronger claim
 than `pnpm gates` passing. It also does not see a direct push to `main` -- the
 `main` ruleset does, by refusing them.
 
+Three limits worth stating rather than discovering:
+
+- The job reports, and it blocks only once `Spec isolation` is added to the
+  `main` ruleset's required checks. That is a repository setting, not a file in
+  this diff, and only the owner can make it.
+- `GET /pulls/{number}/files` returns at most 3000 files. A pull request past
+  that would be checked against a truncated list, which the empty-list guard
+  does not catch. Nothing here is near it, and the fix if anything ever is would
+  be to compare the list against the pull request's own `changed_files` count.
+- The check itself lives in `tools/`, which no one owns, so an agent can weaken
+  it in a pull request that needs no approval. What stands behind it is
+  `.github/**`: the job that runs it is owned, and a check that stops running is
+  a diff in an owned file. The code it runs is not.
+
 The rule is about paths, not intent. A typo fix in a spec comment needs the
 owner, and a pull request that changes ten unrelated things is fine as long as
 none of them is a spec. Isolation is not the same as small.
@@ -115,7 +129,7 @@ directly, with renames, and has no checkout depth to get wrong.
 
 **A step inside the `Gates` job.** `Gates` also runs on push to `main`, where
 there is no pull request number. A check that must not run on push is clearer as
-its own job, and as its own required check.
+its own job, which is also what lets the ruleset require it by name.
 
 **Making `e2e/` read-only to agents.** Requirements change, and a rule that
 forbids the change outright would be routed around by writing the new

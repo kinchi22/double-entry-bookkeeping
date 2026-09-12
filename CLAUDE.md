@@ -26,9 +26,11 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   incomplete.
 - **A PR touches `e2e/` or everything else, never both.** The specs are the
   requirements, so changing one beside the code it judges is how a failing
-  requirement gets made to pass. The `Spec isolation` job enforces it, a spec
-  change needs the owner's approval, and the behaviour ships before the spec
-  that asserts it. See ADR-0002.
+  requirement gets made to pass. The `Spec isolation` job enforces this, and a
+  spec change also needs the owner's approval, because `e2e/` is in CODEOWNERS.
+  In practice that means a behaviour ships before the spec asserting it: a spec
+  that lands first is red against an app that has not implemented it. See
+  ADR-0002.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 
