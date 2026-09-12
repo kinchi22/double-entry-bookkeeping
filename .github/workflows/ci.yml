@@ -154,11 +154,11 @@ jobs:
       - name: Migration drift fixture
         run: pnpm verify:gates:migration
 
-  # ADR-0002. The specs are the requirements, so a change that edits a spec and
-  # the code the spec judges, in one pull request, can make a failing requirement
-  # pass by rewriting it. This checks the half of "one PR per acceptance
-  # criterion" in CLAUDE.md that a check can decide -- a spec is kept apart from
-  # the code it judges, and nothing here limits how much else a pull request
+  # ADR-0002. The specs are the requirements and they land first, so a change
+  # that edits a spec and the code the spec judges, in one pull request, can make
+  # a failing requirement pass by rewriting it. The branch names decide the one
+  # exemption: a milestone meeting the trunk carries both halves, because both
+  # were reviewed on the way in. Nothing here limits how much else a pull request
   # does. It needs a pull request to read, so it is the one gate `pnpm gates`
   # cannot run.
   isolation:
@@ -197,7 +197,8 @@ jobs:
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             --jq '.[] | .filename, (.previous_filename // empty)' \
-            | node tools/check-pr-isolation.ts
+            | node tools/check-pr-isolation.ts \
+                '${{ github.head_ref }}' '${{ github.base_ref }}'
 
   # Migrations are applied from CI, not from the Vercel build: a build runs for
   # every preview and must never touch the production database, and Vercel gives

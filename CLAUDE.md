@@ -22,15 +22,17 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   Name the file `*.integration.test.ts` and put it beside the adapter. It runs
   under `pnpm test:integration`, which starts the container; `pnpm test:unit`
   excludes it and must stay runnable without Docker.
-- **One PR per acceptance criterion.** Trunk-based, feature flags for anything
-  incomplete.
+- **One milestone branch per acceptance criterion.** `milestone/<name>`, branched
+  from `main`. The specs land on it first, reviewed by the owner; feature
+  branches then target the milestone and merge with no review; the milestone goes
+  to `main` once every spec is green. Feature flags are for anything incomplete
+  that reaches `main`, not for work in progress on a milestone.
 - **A PR touches `e2e/` or everything else, never both.** The specs are the
-  requirements, so changing one beside the code it judges is how a failing
-  requirement gets made to pass. The `Spec isolation` job enforces this, and a
-  spec change also needs the owner's approval, because `e2e/` is in CODEOWNERS.
-  In practice that means a behaviour ships before the spec asserting it: a spec
-  that lands first is red against an app that has not implemented it. See
-  ADR-0002.
+  requirements, and they land before the behaviour. Changing a spec beside the
+  code it judges is how a failing requirement gets made to pass, so the
+  `Spec isolation` job fails it. The exception is a milestone meeting `main`,
+  which carries both halves. A spec that is wrong is corrected in its own PR onto
+  the milestone. See ADR-0002.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 

@@ -37,7 +37,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | ADR | Status |
 | --- | ------ |
 | [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
-| [ADR-0002: Reserve human review for the specs and the applied migrations](adr/0002-reserve-human-review-for-specs-and-migrations.md) | Accepted |
+| [ADR-0002: Land the specs first, under human review](adr/0002-land-the-specs-first-under-human-review.md) | Accepted |
 
 ## Package layout
 
@@ -189,14 +189,40 @@ when they stop agreeing. They disagreed until ADR-0002, and what fell through
 the gap was `e2e/`. Everything else in the repository is written and reviewed by
 agents, behind the gates.
 
-A pull request changes `e2e/**` or it changes the rest of the repository, never
-both. `tools/check-pr-isolation.ts` decides that from the pull request's file
-list and the `Spec isolation` job fails when both sides moved. That is the part
-of "one PR per acceptance criterion" in `CLAUDE.md` a check can decide: it keeps
-a spec away from the code the spec judges, and says nothing about how much else
-a pull request does. The job reads the pull request, so it has no local
-equivalent and `pnpm gates` does not run it.
-
 Schema changes, auth and permission logic, money and `apps/web/server/container.ts`
 were on this list and came off it. ADR-0002 says why, and ends the lint exemption
 the composition root carried on the strength of being read by a person.
+
+## How a criterion ships
+
+A specification lands before the behaviour it describes. A spec can only be
+green after the behaviour exists, so it needs somewhere to be red in the
+meantime, and that is a milestone branch: one branch per acceptance criterion,
+branched from `main`, named `milestone/<name>`.
+
+| Pull request                | Reviewed by | E2E    | Isolation |
+| --------------------------- | ----------- | ------ | --------- |
+| specs -> `milestone/x`      | the owner   | red, and not required | e2e only   |
+| feature -> `milestone/x`    | nobody      | red until the behaviour lands | no specs |
+| `main` -> `milestone/x`     | the owner if the sync carries specs | - | exempt |
+| `milestone/x` -> `main`     | the owner   | green, required | exempt |
+
+A feature branch merges with no approval at all: what it may do was settled when
+the spec was approved, and the one thing it must not do -- edit the spec -- is
+checked rather than reviewed. A spec that turns out to be wrong is corrected in
+its own pull request onto the milestone, reviewed like the first one.
+
+`tools/check-pr-isolation.ts` decides the isolation column from the pull
+request's file list and the two branch names, and the `Spec isolation` job fails
+when both sides moved. It reads a pull request, so it has no local equivalent
+and `pnpm gates` does not run it.
+
+The E2E column is step 6's to build: there is no job today that runs the suite
+on a pull request, so "green, required" is a decision, not yet a gate. Required
+checks belong to a ruleset, and one ruleset covers both `main` and
+`milestone/**` today, so requiring the suite on one and not the other needs a
+second ruleset scoped to the default branch.
+
+This is what "one PR per acceptance criterion" in `CLAUDE.md` now means: one
+milestone per criterion, and as many feature pull requests underneath it as the
+work takes.

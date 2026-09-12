@@ -14,6 +14,7 @@ it here in the same commit that introduces it.
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`. Declared in `.github/CODEOWNERS`, justified in ADR-0002. |
+| Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
 | Minor units      | The integer smallest denomination of a currency. JPY has no minor unit split.|
 | Money            | A branded integer count of minor units. Built and combined only through `@repo/core/money`. |
 | Port             | An interface stated in domain terms that the application layer depends on.   |

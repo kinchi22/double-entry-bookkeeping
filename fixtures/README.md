@@ -94,9 +94,9 @@ catch:
   the scaffold pnpm writes, a bare package name, a range, and an empty map.
 - `tools/check-pr-isolation.ts` -- the `e2e/` isolation rule of ADR-0002, broken
   in `pr-isolation-gate.test.ts` by a spec changed beside the code it judges, a
-  spec moved out of `e2e/`, and a file list that never arrived. That test also
-  runs the file as a command, because CI depends on its exit status rather than
-  on what it returns.
+  spec moved out of `e2e/`, a file list that never arrived, and four branch names
+  that look like a milestone and are not. That test also runs the file as a
+  command, because CI depends on its exit status rather than on what it returns.
 - `tools/gates/review-surface-gate.test.ts` -- that `docs/ARCHITECTURE.md` and
   `.github/CODEOWNERS` name the same review surface. Its two readers are
   functions over file content, broken in the same file by a comment line, an
