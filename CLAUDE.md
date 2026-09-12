@@ -78,3 +78,10 @@ weaken a rule to make a change pass without saying so explicitly in the PR.
   type-aware lint rule, because `typescript-eslint@8` does not support it.
 - `pnpm add <pkg>@latest` will fail for a release under 7 days old. That is
   `minimumReleaseAge` doing its job. Use a range, not an exact pin.
+- Build-script approvals live in `allowBuilds` in `pnpm-workspace.yaml`, keyed
+  `name@version`, and a new dependency with a postinstall script fails the
+  install until it has an entry. `onlyBuiltDependencies` and
+  `ignoredBuiltDependencies` are the pnpm 10 names for it and pnpm 11 reads
+  neither. Adding an entry locally proves nothing on its own: an existing
+  `node_modules` already records the answers in `.modules.yaml`, so only a cold
+  install asks, and the refusal lands in CI.
