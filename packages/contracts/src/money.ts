@@ -8,9 +8,10 @@ import { type Brand } from './brand';
  * arithmetic drifts and then fails to balance by amounts nobody can explain.
  * Minor units make every representable amount exact.
  *
- * JPY has no minor unit split, so one minor unit is one yen. That is a property
- * of the currency, not of this type: the integer is a count of whatever the
- * currency's smallest denomination is.
+ * Every amount is scale 0: one minor unit is one whole unit, there are no
+ * decimal places, and nothing here carries a currency symbol -- grouping is
+ * applied when an amount is displayed. If a decimal currency ever appears, a
+ * per-book scale is the additive path, and existing values are already scale 0.
  *
  * The brand is what stops a bare `number` being passed where an amount belongs.
  * Construction and arithmetic live in `@repo/core/money`, because both can fail

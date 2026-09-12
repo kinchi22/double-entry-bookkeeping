@@ -22,8 +22,8 @@ export const healthStatusSchema = z.object({
    * here would type the value as something the transport cannot carry: over
    * HTTP the router would hand a client a string while the type promised an
    * object, and the mismatch would only surface at the first `.getTime()`.
-   * `Date` exists inside core, the string exists on the wire, and the router
-   * converts between them.
+   * `Date` exists inside core, the string exists on the wire, and
+   * `toHealthStatus` below is the one place that converts between them.
    */
   checkedAt: z.iso.datetime(),
 });
@@ -31,3 +31,34 @@ export const healthStatusSchema = z.object({
 export type HealthState = z.infer<typeof healthStateSchema>;
 export type HealthComponent = z.infer<typeof healthComponentSchema>;
 export type HealthStatus = z.infer<typeof healthStatusSchema>;
+
+/**
+ * A health report as core holds it, in the wire form the contract promises.
+ *
+ * The conversion belongs to the contract rather than to the router. What
+ * `checkedAt` has to be is a fact about what JSON can carry, not about tRPC,
+ * and the router that used to do it inline is a place no unit test can reach:
+ * it imports `./trpc` -> `./context` -> `./container`, and the composition root
+ * imports `server-only`, whose `default` export throws anywhere but a React
+ * server runtime. Here it is a pure function with a test beside it, which is
+ * what the widened unit surface is for. See ADR-0003.
+ *
+ * The parameter is structural rather than imported. `packages/contracts` has
+ * zero internal dependencies -- that property is what makes it safe for every
+ * other package to depend on -- so this states the shape it serialises instead
+ * of naming core's `HealthReport`, which satisfies it.
+ */
+export function toHealthStatus(report: {
+  readonly status: HealthState;
+  readonly components: readonly HealthComponent[];
+  readonly checkedAt: Date;
+}): HealthStatus {
+  return {
+    status: report.status,
+    components: report.components.map((component) => ({
+      name: component.name,
+      reachable: component.reachable,
+    })),
+    checkedAt: report.checkedAt.toISOString(),
+  };
+}

@@ -20,6 +20,8 @@ instead of passing unnoticed.
 
 Nothing here is part of the product build: the root ESLint config, tsconfig,
 dependency-cruiser config, jscpd config, and Vitest unit project all exclude it.
+`mutation/subject.test.ts` is run by the Stryker fixture with its own config, so
+the test-collection gate excludes this directory too.
 
 ## ESLint
 

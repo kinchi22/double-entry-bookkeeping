@@ -18,4 +18,9 @@ export { moneySchema } from './money';
 export { uuidV7Schema } from './id';
 
 export type { HealthComponent, HealthState, HealthStatus } from './health';
-export { healthComponentSchema, healthStateSchema, healthStatusSchema } from './health';
+export {
+  healthComponentSchema,
+  healthStateSchema,
+  healthStatusSchema,
+  toHealthStatus,
+} from './health';

@@ -85,7 +85,7 @@ Run in this order; any failure blocks a merge.
 | 3 | `pnpm dep-cruise`            | Cycles, orphans, layer violations in the module graph  |
 | 3b| `pnpm db:drift`              | Schema changed without a migration                     |
 | 3c| `pnpm db:check`              | Migration journal is consistent                        |
-| 4 | `pnpm test:unit`             | Vitest, no IO                                          |
+| 4 | `pnpm test:unit`             | Vitest over `packages` and `apps`, no IO               |
 | 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
 | 5 | `pnpm test:mutation`         | Stryker on `core/*/domain/**`, break threshold 90      |
 | 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
@@ -105,6 +105,27 @@ proceeds unattended on a milestone branch instead, one per acceptance criterion:
 the specs land on `milestone/<name>` first and the owner reviews them, feature
 branches merge into it unreviewed, and it goes to `main` when the suite is
 green. See "How a criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
+
+### Unit tests
+
+```bash
+pnpm test:unit    # no Docker, no network
+```
+
+One project collects `{packages,apps}/**/*.test.ts`. A test sits beside the code
+it covers, and `*.integration.test.ts` is excluded by name.
+
+There are no component tests, so nothing here needs jsdom or a testing library:
+`packages/ui` is presentational and the one client component is covered by the
+E2E suite. A `*.test.tsx` file is therefore collected by no project, and
+`pnpm verify:gates` fails it rather than letting it sit there never running --
+which is the same check that catches a test file any other glob has stopped
+matching. See ADR-0003.
+
+`apps/web/server` is a special case: the composition root imports `server-only`,
+which throws outside a React server runtime, so nothing that imports a router or
+the container can be unit tested. Logic that needs a unit test goes somewhere
+that has one.
 
 ### Integration tests
 
@@ -131,7 +152,7 @@ false confidence. `fixtures/` contains a deliberate violation of every rule, and
 these commands assert each one still fails:
 
 ```bash
-pnpm verify:gates            # lint, typecheck, dep-cruise, supply-chain policy
+pnpm verify:gates            # lint, typecheck, dep-cruise, supply chain, and the test surface
 pnpm verify:gates:build      # server-only, via a real next build
 pnpm verify:gates:mutation   # Stryker threshold, via a mock-only test
 pnpm verify:gates:migration  # migration drift, via an unmigrated schema change
@@ -153,9 +174,11 @@ Practical consequences:
   the lockfile record the resolution.
 - `pnpm install` reports things like `eslint 10.8.1 (10.9.0 is available)`. That
   gap is the policy working, not a stale lockfile.
-- Postinstall scripts are denied by default. `onlyBuiltDependencies` lists the
-  version-qualified exceptions, so a new version must be re-approved rather than
-  inheriting trust.
+- Postinstall scripts are denied by default. `allowBuilds` in
+  `pnpm-workspace.yaml` lists the exceptions, keyed `name@version`, so a new
+  version must be re-approved rather than inheriting trust. `onlyBuiltDependencies`
+  and `ignoredBuiltDependencies` are the pnpm 10 spellings and pnpm 11 reads
+  neither.
 - To ship a same-day security patch, add the package to
   `minimumReleaseAgeExclude` and say why in the commit message. Keep the list
   empty otherwise.
