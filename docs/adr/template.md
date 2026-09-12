@@ -9,7 +9,7 @@ Status is one of:
 - `Deferred` -- decided, deliberately not built. Requires a `**Trigger:**` line
   saying what has to be true before it is. Adopting it means editing this file:
   change the status to `Accepted`, add `**Adopted:** YYYY-MM-DD, PR #N`, and
-  leave the rest of the record intact so the reasoning stays readable.
+  leave the rest of the ADR intact so the reasoning stays readable.
 - `Superseded by ADR-NNNN` -- replaced. The replacement must exist.
 
 ## Problem

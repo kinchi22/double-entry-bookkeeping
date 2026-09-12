@@ -81,6 +81,17 @@ rather than unwritten:
   `node_modules`, which the shipped config excludes from the graph. The
   dependency is dropped before the rule sees it.
 
+## Gates with no fixture
+
+Two gates are pure functions rather than tool runs, so their deliberate
+breakages are inputs in their own test file instead of files here. Nothing
+resolves a path in either, which is what a fixture directory exists to catch:
+
+- `tools/gates/adr-shape.ts` -- the shape of `docs/adr/`, broken twenty ways in
+  `adr-gate.test.ts`.
+- `tools/gates/supply-chain-gate.test.ts` -- the build-script policy, broken by
+  the scaffold pnpm writes, a bare package name, a range, and an empty map.
+
 ## Fixtures that are planted, not linted
 
 `server-only/client-imports-server.tsx` and `migration/schema-with-a-table.ts`

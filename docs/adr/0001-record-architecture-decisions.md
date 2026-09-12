@@ -39,19 +39,24 @@ new one, so the record of a rule and the record of why it waited stay together.
 reinvent whatever is in the other.
 
 `tools/gates/adr-gate.test.ts` enforces the shape: numbering, the status
-vocabulary, the required sections, a trigger on every deferred record, an
-existing target for every supersede, and a link in both directions between the
-index and the files. Without it "deferred, and updated when adopted" is a habit,
-and the repository already has one example of what happens to those.
+vocabulary, the required sections and that none is left empty, a trigger on
+every deferred ADR, an adoption line on every ADR that carries a trigger and is
+in force, an existing target for every supersede, and the index in both
+directions -- including its status column against the status in the ADR, so
+adopting one and forgetting the table fails. The template is checked too, since
+it is the shape everything else is copied from. Without all of this, "deferred,
+and updated when adopted" is a habit, and this repo already has one example of
+what happens to those.
 
 Decisions taken before this one stay where they are, in `docs/ARCHITECTURE.md`
 and in the commit that made them. They are not backfilled.
 
 ## Consequences
 
-Two files to keep honest instead of one, and the gate only checks that they
-reference each other -- it cannot tell that a rule in `ARCHITECTURE.md`
-contradicts the ADR it links to. That stays a review concern.
+Two files to keep honest instead of one. The gate catches the mechanical half of
+that -- a missing entry, a dangling row, a status the two disagree on -- but not
+the semantic half: a rule stated in `ARCHITECTURE.md` can contradict the prose of
+the ADR it links to and nothing notices. That stays a review concern.
 
 Not backfilling leaves the record inconsistent: the four decisions made before
 this one (testcontainers over the shared database, the `uuid` package, Server
@@ -59,8 +64,8 @@ Actions as the write path, JSON-safe contracts) have commit messages and a table
 row, not records. Rewriting them would mean restating what those commits already
 say, in a format that adds nothing to a decision nobody is revisiting.
 
-A `Deferred` record is a standing invitation to build the thing early. The
-status line and `CLAUDE.md` both say not to, and neither is a gate.
+A `Deferred` ADR is a standing invitation to build the thing early. The status
+line and `CLAUDE.md` both say to stop and ask instead, and neither is a gate.
 
 ## Rejected alternatives
 
@@ -72,6 +77,11 @@ to fix.
 **Keeping everything in `docs/ARCHITECTURE.md`.** It has no way to say "decided,
 not in force". Adding one would make every reader work out, per line, whether
 they are reading a rule or a plan.
+
+**A fixture directory for this gate.** The escape hatch is recorded in
+`fixtures/README.md` instead. What a fixture proves is that a tool still resolves
+paths and still matches; this gate is a function over values, where the same
+breakages are inputs the test can state directly, next to the expected message.
 
 **Backfilling every past decision.** It rewrites history that the commits
 already carry, and it inflates the directory with records whose alternatives
