@@ -5,7 +5,11 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
 ## Non-negotiable
 
 - **If unsure, ask.** Any design decision not already fixed in
-  `docs/ARCHITECTURE.md` requires stopping and asking, not inventing.
+  `docs/ARCHITECTURE.md`, or in an `Accepted` ADR under `docs/adr/`, requires
+  stopping and asking, not inventing. A `Deferred` ADR is neither: the decision
+  is taken and deliberately not built. Read it before designing anything in that
+  area, and stop and ask before building it -- being decided does not authorise
+  the work.
 - **No new npm dependencies** without proposing them first, with a reason.
 - **Search before writing.** Duplicate reimplementation is the most common
   failure mode in this repo.

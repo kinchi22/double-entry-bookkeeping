@@ -4,8 +4,12 @@
 
 Verifiability is the architecture. Documentation and conventions do not constrain
 output; failing tests and CI gates do. Every rule below is enforced by a gate
-that exits non-zero, and every gate has a fixture in `fixtures/` proving it
-actually fails. A rule that is only written here is not a rule.
+that exits non-zero, and every gate is shown to fail on purpose. A gate that
+runs real tooling has a fixture in `fixtures/` that breaks it; a gate that is a
+pure function takes the same deliberate breakages as inputs in its own test. The
+split follows what can rot: a tool resolves paths and can silently stop
+matching, a function over values cannot. A rule that is only written here is not
+a rule.
 
 That claim is itself gated. `tools/gates/rule-coverage-gate.test.ts` reads the
 shipped ESLint and dependency-cruiser configuration and fails if a rule is turned
@@ -13,6 +17,26 @@ on without a fixture, so a new rule cannot arrive unverified. The escape hatch i
 an explicit exemption in `tools/gates/fixture-map.ts` carrying a reason why a
 fixture is impossible rather than merely absent; there are two today, both listed
 in `fixtures/README.md`.
+
+## ADRs
+
+`docs/adr/` holds one ADR per decision: the problem, what was chosen, what it
+costs, what was rejected. This file states the rule as it stands today; the ADR
+states why it stands, and whether it is in force.
+
+`Deferred` marks a decision taken and deliberately not built. It is not a rule,
+so nothing enforces it, and it is not an open question either, so it is not for
+deciding again. Adopting one edits that ADR in place.
+
+`tools/gates/adr-gate.test.ts` checks the shape: numbering, the status
+vocabulary, the required sections, a trigger on every deferred ADR, an adoption
+line on every ADR that waited, and the status in the table below against the
+status in the ADR itself. Decisions taken before ADR-0001 stay in this file and
+in the commit that made them; ADR-0001 says why they were not backfilled.
+
+| ADR | Status |
+| --- | ------ |
+| [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
 
 ## Package layout
 
