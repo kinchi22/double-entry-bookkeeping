@@ -19,14 +19,18 @@ const ALL_SOURCE_GLOBS = [
 
 /**
  * Selecting a runtime implementation with import() is invisible to static
- * analysis. Confining it to the composition root shrinks the region no gate can
- * see down to a single human-reviewed file.
+ * analysis, so it is banned everywhere, with no exception.
+ *
+ * apps/web/server/container.ts used to be exempt, on the grounds that a person
+ * reads the composition root. ADR-0002 reserved review for e2e/ and applied
+ * migrations, which made that justification false; the file contains no
+ * import(), so the exemption was permitting nothing.
  */
 const NO_DYNAMIC_IMPORT = {
   selector: 'ImportExpression',
   message:
-    'Dynamic import() is only allowed in apps/web/server/container.ts. ' +
-    'Everywhere else it hides the dependency graph from static analysis.',
+    'Dynamic import() hides the dependency graph from static analysis, so it is ' +
+    'banned everywhere, including the composition root. See ADR-0002.',
 };
 
 /**
@@ -115,16 +119,6 @@ export const layerConfigs = [
     files: DOMAIN_GLOBS,
     rules: {
       'no-restricted-syntax': ['error', NO_DYNAMIC_IMPORT, NO_THROW],
-    },
-  },
-
-  {
-    // The composition root is the one file allowed to choose implementations at
-    // runtime. It is on the human review list precisely because of this.
-    name: 'repo/container-exemption',
-    files: ['apps/web/server/container.ts'],
-    rules: {
-      'no-restricted-syntax': 'off',
     },
   },
 ];

@@ -37,6 +37,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | ADR | Status |
 | --- | ------ |
 | [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
+| [ADR-0002: Reserve human review for the specs and the applied migrations](adr/0002-reserve-human-review-for-specs-and-migrations.md) | Accepted |
 
 ## Package layout
 
@@ -114,7 +115,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
 | Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
-| Dynamic imports      | Forbidden outside `apps/web/server/container.ts`.                      |
+| Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
@@ -174,6 +175,27 @@ JavaScript client that shares this transformer" rather than "correct".
 
 ## Human review budget
 
-Reserved for: schema changes, auth and permission logic, money, data migrations,
-and `apps/web/server/container.ts`. Everything else is gates plus line-level
-review.
+Reserved for three paths, and nothing else:
+
+| Path                     | Why                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `e2e/**`                 | The requirements, as executable specs. An agent that may edit them can make a failing requirement pass by rewriting it. |
+| `packages/db/drizzle/**` | An applied migration is the one change a later fix cannot undo.                                                        |
+| `.github/**`             | The gates, and the ownership list itself: how everything else on this page stops being a promise.                      |
+
+`.github/CODEOWNERS` declares exactly these three: this table and that file are
+the same list said twice, and `tools/gates/review-surface-gate.test.ts` fails
+when they stop agreeing. They disagreed until ADR-0002, and what fell through
+the gap was `e2e/`. Everything else in the repository is written and reviewed by
+agents, behind the gates.
+
+A pull request changes `e2e/**` or it changes the rest of the repository, never
+both. `tools/check-pr-isolation.ts` decides that from the pull request's file
+list and the `Spec isolation` job fails when both sides moved, which is what
+turns "one PR per acceptance criterion" in `CLAUDE.md` from a habit into a rule.
+The job reads the pull request, so it has no local equivalent and `pnpm gates`
+does not run it.
+
+Schema changes, auth and permission logic, money and `apps/web/server/container.ts`
+were on this list and came off it. ADR-0002 says why, and ends the lint exemption
+the composition root carried on the strength of being read by a person.

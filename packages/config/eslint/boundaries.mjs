@@ -66,15 +66,12 @@ export const ELEMENTS = [
 ];
 
 /**
- * apps/web/server/container.ts is the DI composition root. It is not a separate
- * boundaries element -- its import permissions are the same as any other web
- * file -- but it is the one file exempt from the dynamic-import ban, which is
- * handled in layers.mjs.
+ * apps/web/server/container.ts was categorised here while it was the one file
+ * exempt from the dynamic-import ban. ADR-0002 removed that exemption, and with
+ * it the reason to name the file: its import permissions are, and always were,
+ * the same as any other file in apps/web/server.
  */
-export const FILE_CATEGORIES = [
-  { category: 'composition-root', pattern: 'apps/web/server/container.ts' },
-  { category: 'test', pattern: '**/*.test.{ts,tsx}' },
-];
+export const FILE_CATEGORIES = [{ category: 'test', pattern: '**/*.test.{ts,tsx}' }];
 
 const WEB = ['web-server', 'web-app', 'web-components'];
 

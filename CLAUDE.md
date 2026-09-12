@@ -24,6 +24,11 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   excludes it and must stay runnable without Docker.
 - **One PR per acceptance criterion.** Trunk-based, feature flags for anything
   incomplete.
+- **A PR touches `e2e/` or everything else, never both.** The specs are the
+  requirements, so changing one beside the code it judges is how a failing
+  requirement gets made to pass. The `Spec isolation` job enforces it, a spec
+  change needs the owner's approval, and the behaviour ships before the spec
+  that asserts it. See ADR-0002.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 
@@ -40,7 +45,7 @@ packages/core/src/x/adapters/      port implementations
 packages/core/src/x/index.ts       feature public surface
 packages/db/src/schema.ts          tables + migration
 apps/web/server/routers/x.ts       parse input -> invoke use case -> map response
-apps/web/server/container.ts       wiring (human-reviewed)
+apps/web/server/container.ts       wiring (composition root)
 apps/web/app/(app)/x/page.tsx      composition only
 apps/web/app/(app)/x/actions.ts    Server Actions: parse, invoke, revalidate
 ```

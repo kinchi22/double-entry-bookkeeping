@@ -94,6 +94,12 @@ Run in this order; any failure blocks a merge.
 
 `pnpm gates` runs everything except E2E.
 
+CI runs one more check that has no local form. `Spec isolation` fails a pull
+request that changes `e2e/` and anything else in the same change: the specs are
+the requirements, and editing one beside the code it judges is how a failing
+requirement gets rewritten into a passing one. It needs a pull request to read,
+so `pnpm gates` cannot run it. See ADR-0002.
+
 ### Integration tests
 
 Anything named `*.integration.test.ts` under `packages/*/src/**` runs against a

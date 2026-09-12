@@ -151,6 +151,43 @@ jobs:
       - name: Migration drift fixture
         run: pnpm verify:gates:migration
 
+  # ADR-0002. The specs are the requirements, so a change that edits a spec and
+  # the code the spec judges, in one pull request, can make a failing requirement
+  # pass by rewriting it. This is the mechanism behind "one PR per acceptance
+  # criterion" in CLAUDE.md, and it needs a pull request to have something to
+  # check, so it is the one gate `pnpm gates` cannot run.
+  isolation:
+    name: Spec isolation
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      # The file list comes from the pull request itself rather than from a git
+      # diff: a diff needs the merge base, so it needs the right base ref and a
+      # full-depth checkout, and getting either wrong makes the check pass
+      # quietly. A rename arrives as previous_filename too, so moving a spec out
+      # of e2e/ counts as touching both sides.
+      #
+      # No install step: the check has no dependencies, and Node 24 runs the
+      # TypeScript file directly.
+      - name: e2e/ changes alone
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)' \
+            | node tools/check-pr-isolation.ts
+
   # Migrations are applied from CI, not from the Vercel build: a build runs for
   # every preview and must never touch the production database, and Vercel gives
   # no hook that runs once per production deploy.

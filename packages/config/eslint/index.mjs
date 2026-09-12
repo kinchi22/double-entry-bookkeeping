@@ -35,7 +35,7 @@ export function createEslintConfig({ tsconfigRootDir, ignores = [] }) {
     boundariesConfig,
     ...nextConfigs,
     // Layer rules come last so their no-restricted-syntax entries win over the
-    // broader ones, and so the container exemption wins over everything.
+    // broader ones: domain files get the throw ban on top of the import() ban.
     ...layerConfigs,
   ];
 }
