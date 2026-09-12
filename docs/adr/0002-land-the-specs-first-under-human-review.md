@@ -39,9 +39,19 @@ spec can live while the behaviour that answers it is being built.
 
 ## Decision
 
+### The approval
+
+Every pull request into `main` needs one approval. An agent cannot land anything
+on `main` alone, and a milestone branch is the only place it works unattended.
+
+That is one rule instead of a classifier. Nothing needs to decide whether a
+change is "product code" or "tooling", which is a question no path can answer:
+logic put in `packages/core` is as much a behaviour as logic put in
+`apps/web/app`.
+
 ### The surface
 
-Human review is reserved for three paths:
+On top of the approval, three paths are owned:
 
 - `e2e/**` -- the requirements, stated as executable specs.
 - `packages/db/drizzle/**` -- an applied migration is the one change a later fix
@@ -52,6 +62,11 @@ The surface is stated twice, in `docs/ARCHITECTURE.md` and in
 `.github/CODEOWNERS`, and `tools/gates/review-surface-gate.test.ts` fails when
 the two stop being the same set. Two lists free to disagree is the problem
 above, not an incidental detail of it.
+
+Ownership means different things on either side of the trunk. Into `main` it
+decides whose approval counts, since one is required regardless. Into
+`milestone/**` it is the whole rule: no approval is required there, so an owned
+path in the diff is exactly what pulls a person in.
 
 ### The order
 
@@ -68,7 +83,8 @@ A specification lands before the behaviour it describes, on a milestone branch:
 4. `main` is merged into the milestone by pull request when the milestone falls
    behind.
 5. `milestone/<name> -> main` is the integration pull request. Every spec is
-   green by then, and the owner approves it because the specs are in its diff.
+   green by then, and the owner approves it -- as they approve everything that
+   reaches `main`.
 
 The `main` ruleset covers `refs/heads/milestone/**` as well, so a milestone
 branch takes no direct pushes and no force pushes either: everything above
@@ -107,12 +123,25 @@ The requirement is agreed before the code exists, which is the point, and the
 red specs on a milestone branch are its progress bar. Nothing else in this
 repository shows how much of a criterion is done.
 
-The human's leverage moves entirely to the spec. Feature pull requests onto a
-milestone merge with no approval at all, by design: what they may do was decided
-when the spec was approved, and what they may not do -- touch the spec -- is
-checked rather than reviewed. A migration is the exception, because CODEOWNERS
-matches paths, not branches: a feature pull request carrying one still needs the
-owner, even onto a milestone.
+The human's leverage sits in two places: the spec, and the trunk. Feature pull
+requests onto a milestone merge with no approval at all, by design -- what they
+may do was decided when the spec was approved, and what they may not do, touch
+the spec, is checked rather than reviewed. A migration is the exception, because
+CODEOWNERS matches paths, not branches: a feature pull request carrying one
+still needs the owner, even onto a milestone.
+
+The cost of the approval rule is that it applies to everything. A one-line
+document fix, a gate, a dependency bump: each needs a person, so the agent's
+unattended throughput is whatever fits on a milestone branch between two
+approvals. The gain is that there is no path rule to route around, and the
+pressure points the right way -- the way to work unattended is to open a
+milestone, which is where a specification comes first.
+
+What the approval does not do is make ordering mechanical. It stops code nobody
+reviewed; it does not stop a behaviour arriving with no specification, because no
+check can tell a behaviour from a refactor. A product change can still come
+straight to `main`, and what refuses it is the reviewer, now backed by a hard
+stop rather than by hoping the pull request is noticed.
 
 Renaming a `data-testid` is a spec change: its own pull request, reviewed.
 
@@ -163,6 +192,14 @@ a rule which does not fail the build is not a rule.
 pull request stays green, but a skipped spec on `main` is a dead gate with no
 expiry, it takes a third pull request per criterion, and nothing fails if the
 un-skip never comes.
+
+**Forcing product changes onto a milestone by path.** A rule that a pull request
+into `main` from any other branch may not touch the product source. Drawn
+narrowly -- the pages and the components -- it is routed around by putting the
+logic in `packages/core`. Drawn widely -- every package's `src` -- it charges a
+branch and two pull requests for a rename, and buys no oversight at all, since a
+milestone carrying no spec change needs no approval either. The approval on
+`main` gets the same protection with nothing to classify.
 
 **Keep the five-item list.** It cannot be applied mechanically, because three of
 its five entries are subjects rather than paths. It went unchallenged precisely

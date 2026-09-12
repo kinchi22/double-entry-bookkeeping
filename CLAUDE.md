@@ -22,6 +22,9 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   Name the file `*.integration.test.ts` and put it beside the adapter. It runs
   under `pnpm test:integration`, which starts the container; `pnpm test:unit`
   excludes it and must stay runnable without Docker.
+- **Nothing reaches `main` without an approval.** Every PR into `main` needs one,
+  so you cannot merge there alone, whatever the change is. A milestone branch is
+  the only place work proceeds unattended.
 - **One milestone branch per acceptance criterion.** `milestone/<name>`, branched
   from `main`. The specs land on it first, reviewed by the owner; feature
   branches then target the milestone and merge with no review; the milestone goes

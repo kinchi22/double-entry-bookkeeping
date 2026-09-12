@@ -100,7 +100,8 @@ the requirements, they land before the behaviour, and editing one beside the cod
 it judges is how a failing requirement gets rewritten into a passing one. It
 needs a pull request to read, so `pnpm gates` cannot run it.
 
-Work reaches `main` through a milestone branch, one per acceptance criterion:
+Every pull request into `main` needs an approval, whatever it changes. Work
+proceeds unattended on a milestone branch instead, one per acceptance criterion:
 the specs land on `milestone/<name>` first and the owner reviews them, feature
 branches merge into it unreviewed, and it goes to `main` when the suite is
 green. See "How a criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.

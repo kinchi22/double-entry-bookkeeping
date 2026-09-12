@@ -175,7 +175,11 @@ JavaScript client that shares this transformer" rather than "correct".
 
 ## Human review surface
 
-Reserved for three paths, and nothing else:
+Every pull request into `main` needs one approval. An agent cannot land anything
+there alone -- a document, a gate, a dependency bump included -- and the place it
+works unattended is a milestone branch.
+
+Three paths are owned on top of that:
 
 | Path                     | Why                                                                                                                    |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
@@ -186,8 +190,13 @@ Reserved for three paths, and nothing else:
 `.github/CODEOWNERS` declares exactly these three: this table and that file are
 the same list said twice, and `tools/gates/review-surface-gate.test.ts` fails
 when they stop agreeing. They disagreed until ADR-0002, and what fell through
-the gap was `e2e/`. Everything else in the repository is written and reviewed by
-agents, behind the gates.
+the gap was `e2e/`.
+
+Ownership does two different jobs depending on where a pull request lands. Into
+`main`, where an approval is required anyway, it decides *whose*: a change under
+an owned path needs the code owner's. Into `milestone/**`, where no approval is
+required, it is the entire rule -- a spec change is reviewed, and everything else
+merges unattended, behind the gates.
 
 Schema changes, auth and permission logic, money and `apps/web/server/container.ts`
 were on this list and came off it. ADR-0002 says why, and ends the lint exemption
@@ -200,17 +209,22 @@ green after the behaviour exists, so it needs somewhere to be red in the
 meantime, and that is a milestone branch: one branch per acceptance criterion,
 branched from `main`, named `milestone/<name>`.
 
-| Pull request                | Reviewed by | E2E    | Isolation |
+| Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
-| specs -> `milestone/x`      | the owner   | red, and not required | e2e only   |
+| specs -> `milestone/x`      | the owner, as code owner | red, and not required | e2e only |
 | feature -> `milestone/x`    | nobody      | red until the behaviour lands | no specs |
-| `main` -> `milestone/x`     | the owner if the sync carries specs | - | exempt |
-| `milestone/x` -> `main`     | the owner   | green, required | exempt |
+| `main` -> `milestone/x`     | the owner if the sync carries an owned path | - | exempt |
+| `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
 A feature branch merges with no approval at all: what it may do was settled when
 the spec was approved, and the one thing it must not do -- edit the spec -- is
 checked rather than reviewed. A spec that turns out to be wrong is corrected in
 its own pull request onto the milestone, reviewed like the first one.
+
+Nothing forces product code through this route. A pull request straight into
+`main` is allowed and sometimes right -- a spec correction, a tooling change, a
+fix with no criterion behind it. What stops a behaviour from arriving with no
+specification is the approval on that pull request, not a rule about paths.
 
 `tools/check-pr-isolation.ts` decides the isolation column from the pull
 request's file list and the two branch names, and the `Spec isolation` job fails
