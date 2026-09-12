@@ -2,11 +2,6 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-allowBuilds:
-  cpu-features: set this to true or false
-  esbuild: true
-  protobufjs: set this to true or false
-  ssh2: set this to true or false
 
 # --- Supply-chain policy -----------------------------------------------------
 # Refuse to install any package version published less than 7 days ago.
@@ -25,28 +20,24 @@ minimumReleaseAge: 10080
 # Legitimate use: shipping a same-day fix for a disclosed CVE.
 minimumReleaseAgeExclude: []
 
-# Postinstall scripts are arbitrary code execution at install time, so they are
-# denied by default and allowed only for packages that genuinely need to unpack
-# a native binary. Entries are version-qualified: a new version has to be
-# re-approved rather than inheriting trust from its predecessor.
-onlyBuiltDependencies:
-  - '@tailwindcss/oxide'
-  - 'esbuild@0.18.20'
-  - 'esbuild@0.25.12'
-  - 'esbuild@0.28.2'
-  - sharp
-
-# Postinstall scripts that are deliberately NOT run. Listing them here is an
-# acknowledgement, not an approval: pnpm refuses to install while an ignored
-# build is unaccounted for, so every one of these had to be looked at.
+# Postinstall scripts are arbitrary code execution at install time. pnpm refuses
+# to install while any of them is undecided, so this map is the decision: `true`
+# runs the script, `false` refuses it, and a package that appears without an
+# entry fails the install until someone looks at it.
 #
-# All three arrive under @testcontainers/postgresql -> dockerode -> ssh2, and
-# none of them is needed. ssh2 and cpu-features build an optional native addon
-# that only speeds up SSH crypto, which is used for talking to a remote Docker
-# host over SSH -- not something this repo does. protobufjs postinstall only
-# generates CLI helper files. Skipping all three leaves the JavaScript
-# fallbacks in place.
-ignoredBuiltDependencies:
-  - cpu-features@0.0.10
-  - protobufjs@7.6.6
-  - ssh2@1.17.0
+# Keys are version-qualified, and pnpm enforces that: an entry for one version
+# does not approve the next one, which has to be re-approved in a diff.
+#
+# esbuild unpacks the platform binary its bundler runs, so it needs its script.
+# The other three arrive under @testcontainers/postgresql -> dockerode -> ssh2
+# and none is needed: ssh2 and cpu-features build an optional native addon that
+# only speeds up SSH crypto, used for reaching a remote Docker host over SSH,
+# which this repo never does, and protobufjs only generates CLI helper files.
+# Refusing all three leaves the JavaScript fallbacks in place.
+allowBuilds:
+  esbuild@0.18.20: true
+  esbuild@0.25.12: true
+  esbuild@0.28.2: true
+  cpu-features@0.0.10: false
+  protobufjs@7.6.6: false
+  ssh2@1.17.0: false
