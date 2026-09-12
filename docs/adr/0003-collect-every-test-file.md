@@ -40,8 +40,9 @@ code that can be unit tested will live there -- `apps/web/server/env.ts` is the
 next one -- not because the router became reachable.
 
 There are no component tests. `.tsx` is deliberately absent from the include:
-`packages/ui` is presentational and `refresh-button.tsx` is covered by the E2E
-suite, so nothing here needs jsdom or a testing library. A `*.test.tsx` file is
+`packages/ui` is presentational, and the one client component,
+`apps/web/components/refresh-button.tsx`, is covered by the E2E suite, so
+nothing here needs jsdom or a testing library. A `*.test.tsx` file is
 therefore collected by nothing and fails the gate below, which is how that
 decision stops being a sentence in a config comment.
 
@@ -53,7 +54,7 @@ everything else to depend on. The router calls it and does nothing else.
 
 `tools/gates/test-collection-gate.test.ts` is the gate. It compares two lists:
 
-- every `*.test.ts` and `*.test.tsx` in the working tree, from
+- every `*.test.ts(x)` and `*.spec.ts(x)` in the working tree, from
   `git ls-files --cached --others --exclude-standard`, so an uncommitted test
   counts and everything gitignored does not;
 - every file each root `vitest*.config.ts` reports collecting, from
@@ -92,6 +93,24 @@ directory failing `pnpm gates`.
 
 It also shells out to `git`, so it needs a git checkout rather than an unpacked
 archive. CI checks out with git; there is no second consumer today.
+
+Three limits, stated rather than discovered:
+
+- It checks collection, not execution. A config that no script and no CI job
+  runs still satisfies it, and so does a `package.json` script narrowed to run
+  less than the config collects. What stands behind that is `.github/**` being
+  an owned path: the job that runs a suite is reviewed.
+- Configs are discovered at the repository root only. A per-package
+  `vitest.config.ts` would go unseen and its tests would be reported as
+  collected by nothing -- a false positive, but a loud one.
+- `vitest.integration.config.ts` keeps the narrow `packages/<pkg>/src` glob,
+  because adapters are the only thing it tests and they live nowhere else. An
+  integration test written outside that shape is collected by nothing and fails
+  this gate, which is the loud direction.
+
+Stryker runs the unit config, so `packages/contracts` tests now execute in every
+mutation run and kill no mutants, since `mutate` does not cover that package.
+Measured at no visible cost: 55s and a score of 96.23 before and after.
 
 A `*.test.tsx` file now fails CI rather than quietly not running. Wanting
 component tests means changing this ADR, which is the intended cost.

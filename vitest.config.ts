@@ -12,7 +12,8 @@ import { configDefaults, defineConfig } from 'vitest/config';
  * files on disk against the files these configs actually collect. See ADR-0003.
  *
  * `.tsx` is absent on purpose. There are no component tests: `packages/ui` is
- * presentational and `refresh-button.tsx` is covered by the E2E suite, so
+ * presentational, and the one client component --
+ * `apps/web/components/refresh-button.tsx` -- is covered by the E2E suite, so
  * nothing here needs jsdom or a testing library. A `*.test.tsx` file is
  * therefore collected by nothing and fails the collection gate, which is how
  * that decision is enforced rather than merely written down.

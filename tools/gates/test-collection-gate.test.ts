@@ -22,7 +22,12 @@ import { type Collection, findCollectionProblems } from './test-collection';
  * Test files that belong to another runner, and are therefore not vitest's to
  * collect. `fixtures/` is excluded from every tool in this repo -- eslint, tsc,
  * dependency-cruiser, jscpd -- and `fixtures/mutation/subject.test.ts` is run by
- * the Stryker fixture with its own config. `e2e/` is Playwright's directory.
+ * the Stryker fixture with its own config.
+ *
+ * `e2e/` is Playwright's `testDir`, and its default `testMatch` accepts `.test`
+ * as readily as `.spec`, so a `.test.ts` written there runs under Playwright
+ * rather than here. Excluding the directory is what keeps this gate from
+ * claiming such a file runs nowhere.
  */
 const OTHER_RUNNERS = ['fixtures/', 'e2e/'];
 
@@ -33,11 +38,27 @@ const posix = (file: string): string => file.replaceAll('\\', '/');
  * committed is exactly when this gate is worth failing. Gitignored paths are
  * out, which is what keeps `node_modules/` and the Stryker sandbox out without
  * a hand-maintained list.
+ *
+ * `.spec` as well as `.test`, even though nothing under `packages` or `apps`
+ * uses that name today. A `foo.spec.ts` there is collected by no vitest project
+ * and would be seen by no runner at all, which is the failure this gate is for;
+ * the only `.spec` files that do run are Playwright's, and they live in `e2e/`.
  */
 const testFilesOnDisk = (): readonly string[] => {
   const run = runGate(
     'git',
-    ['ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', '*.test.ts', '*.test.tsx'],
+    [
+      'ls-files',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+      '-z',
+      '--',
+      '*.test.ts',
+      '*.test.tsx',
+      '*.spec.ts',
+      '*.spec.tsx',
+    ],
     REPO_ROOT,
   );
   expect(run.status, `git ls-files must succeed\n${run.stderr}`).toBe(0);
@@ -49,7 +70,12 @@ const testFilesOnDisk = (): readonly string[] => {
     .filter((file) => !OTHER_RUNNERS.some((prefix) => file.startsWith(prefix)));
 };
 
-/** Every vitest config at the repository root. Discovered, so a new one counts. */
+/**
+ * Every vitest config at the repository root. Discovered rather than listed, so
+ * a new one counts without being added here. A per-package config would not be
+ * found, and its tests would be reported as collected by nothing -- a false
+ * positive, but a loud one, which is the direction this gate errs in.
+ */
 const vitestConfigs = (): readonly string[] =>
   readdirSync(REPO_ROOT)
     .filter((name) => /^vitest[.].*config[.]ts$/.test(name))

@@ -53,6 +53,10 @@ export function toHealthStatus(report: {
   readonly components: readonly HealthComponent[];
   readonly checkedAt: Date;
 }): HealthStatus {
+  // Each component is rebuilt rather than copied across, so the result is the
+  // contract's shape and only that: whatever else the caller's objects carry
+  // does not travel to the wire, and the array the caller passed is not the one
+  // that goes out.
   return {
     status: report.status,
     components: report.components.map((component) => ({

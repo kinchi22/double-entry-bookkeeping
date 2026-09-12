@@ -15,7 +15,7 @@ it here in the same commit that introduces it.
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`. Declared in `.github/CODEOWNERS`, justified in ADR-0002. |
 | Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
-| Minor units      | The whole units an amount is counted in. Scale 0 today: no decimal places and no currency symbol, with locale grouping applied only at display. |
+| Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |
 | Money            | A branded integer count of minor units. Built and combined only through `@repo/core/money`. |
 | Port             | An interface stated in domain terms that the application layer depends on.   |
 | Public surface   | The entry points a package lists in its `exports` field.                     |

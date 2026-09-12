@@ -135,9 +135,10 @@ Which files those suites run is gated too. The unit project collects
 `{packages,apps}/**/*.test.ts` as one glob, and
 `tools/gates/test-collection-gate.test.ts` compares every test file in the
 working tree against what each root `vitest*.config.ts` reports collecting, so a
-test that no project runs fails CI instead of being invisible. There are no
-component tests: `.tsx` is not in the include, which means a `*.test.tsx` is
-collected by nothing and fails that gate. See ADR-0003.
+test file that no project collects fails CI instead of being invisible. What it
+does not check is that a config is wired into a script or a CI job; ADR-0003
+records that limit. There are no component tests: `.tsx` is not in the include,
+which means a `*.test.tsx` is collected by nothing and fails that gate.
 
 Adapters are integration-tested with testcontainers rather than against the
 docker-compose database. A shared development database makes the gate
