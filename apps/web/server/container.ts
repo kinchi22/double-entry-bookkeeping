@@ -1,7 +1,7 @@
 import 'server-only';
 import { createGetHealth, type GetHealth } from '@repo/core';
 import { createPostgresHealthProbe } from '@repo/core/server';
-import { parseEnv } from './env';
+import { type Env, parseEnv } from './env';
 
 /**
  * DI composition root.
@@ -17,11 +17,7 @@ export type Container = {
   readonly getHealth: GetHealth;
 };
 
-export type ContainerEnvironment = {
-  readonly databaseUrl: string;
-};
-
-export function createContainer({ databaseUrl }: ContainerEnvironment): Container {
+export function createContainer({ databaseUrl }: Env): Container {
   const postgres = createPostgresHealthProbe(databaseUrl);
 
   return {

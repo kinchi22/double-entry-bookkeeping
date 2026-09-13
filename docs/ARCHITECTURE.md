@@ -133,7 +133,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | `ports/**`                   | Nothing. An interface has no behaviour to test.        |
 | `adapters/**`                | `*.integration.test.ts` against a real Postgres. Unmeasured: the mutation runner does not run that suite. |
 | `packages/contracts`         | Unit tests, pure. Measured since ADR-0004.             |
-| `apps/web/server`            | The half a unit test can import -- `domain-error.ts` today -- unit tested and measured. |
+| `apps/web/server`            | The half a unit test can import -- `domain-error.ts` and `env.ts` today -- unit tested and measured. |
 | the composition root, `routers/**`, `app/**` | Playwright, against a deployed preview. Nothing else reaches them. |
 
 "Measured" means the mutation score, which is the only coverage floor here:
@@ -141,7 +141,7 @@ there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs
 states the measured surface as patterns rather than a list, so a new file in a
 measured directory is measured by existing. A file nobody tests scores 0, and the
 break threshold of 90 is over the whole surface, so what fails is a named file
-rather than a percentage. Measured today: 11 files, 86 mutants, score 97.67.
+rather than a percentage. Measured today: 12 files, 113 mutants, score 98.23.
 
 The exclusions in that config name files no unit test can import, not files whose
 tests are missing: each reaches the composition root, and that imports
