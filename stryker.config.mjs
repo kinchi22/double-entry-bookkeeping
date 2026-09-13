@@ -24,9 +24,10 @@
  * ADR-0004 states that consequence rather than leaving it as a gap.
  *
  * So if the score breaks because a file here scores 0, the fix is a test. Adding
- * a name to the exclusions is the one move that is not available: this file is an
- * owned path in `.github/CODEOWNERS`, so a pull request that edits it needs the
- * owner, on a milestone branch too.
+ * a name to the exclusions is the move that is not quietly available: this file is
+ * an owned path in `.github/CODEOWNERS`, and both branch rulesets set
+ * `require_code_owner_review`, so a pull request that edits it pulls the owner in
+ * -- on a milestone branch too, where nothing else does.
  *
  * A feature's `ports` and `adapters` folders are absent on purpose. A port is an
  * interface and has no mutants; an adapter is tested against a real Postgres by

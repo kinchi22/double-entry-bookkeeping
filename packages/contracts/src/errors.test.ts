@@ -14,12 +14,6 @@ describe('domainError', () => {
       message: 'That period is closed.',
     });
   });
-
-  it('builds a value for every code in the vocabulary', () => {
-    const errors = DOMAIN_ERROR_CODES.map((code) => domainError(code, 'why'));
-
-    expect(errors.map((error) => error.code)).toEqual([...DOMAIN_ERROR_CODES]);
-  });
 });
 
 describe('DOMAIN_ERROR_CODES', () => {

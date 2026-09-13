@@ -136,20 +136,18 @@ Raise the TypeScript major only together with `typescript-eslint`.
 
 "Measured" means the mutation score, which is the only coverage floor here:
 there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs`
-states the measured surface as patterns rather than a list, so a new feature's
-`domain/` and `application/`, a new contract, and a testable new file under
-`apps/web/server` are all measured the moment they exist. A file nobody tests
-scores 0, and the break threshold of 90 is over the whole surface, so what fails
-is a named file rather than a percentage. Measured today: 11 files, 86 mutants,
-score 97.67.
+states the measured surface as patterns rather than a list, so a new file in a
+measured directory is measured by existing. A file nobody tests scores 0, and the
+break threshold of 90 is over the whole surface, so what fails is a named file
+rather than a percentage. Measured today: 11 files, 86 mutants, score 97.67.
 
-The exclusions in that config are files no unit test can import, not files whose
-tests are missing: each reaches `apps/web/server/container.ts`, and that imports
+The exclusions in that config name files no unit test can import, not files whose
+tests are missing: each reaches the composition root, and that imports
 `server-only`. So the rows above that say Playwright are outside every automated
-coverage gate, and `tools/**` is unmeasured for a different reason -- its tests
+coverage gate, and `tools/**` is outside too, for a different reason -- its tests
 run under `vitest.gates.config.ts` and the mutation runner runs the unit config.
-ADR-0004 records that, and the config is an owned path below, so the exclusion
-list cannot grow without the owner seeing it.
+ADR-0004 carries the reasoning, the numbers and the limits; the config is an owned
+path below, so the exclusion list cannot grow without the owner seeing it.
 
 Which files those suites run is gated too. The unit project collects
 `{packages,apps}/**/*.test.ts` as one glob, and

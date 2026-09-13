@@ -1,39 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { DOMAIN_ERROR_CODES, domainError } from '@repo/contracts';
+import { DOMAIN_ERROR_CODES, domainError, type DomainErrorCode } from '@repo/contracts';
 import { TRPCError } from '@trpc/server';
 import { toTrpcError } from './domain-error';
 
 /**
- * The first unit test under `apps/`, and the reason the unit glob was widened to
- * reach here in ADR-0003.
+ * The first unit test under `apps/`, and what proves ADR-0003's widened include
+ * reaches here.
  *
- * The expected status for each code is written out as a literal rather than read
- * from the table under test: the mapping is the specification, so a test that
- * imported the table would agree with itself no matter what the table said.
- *
- * Nothing here mocks `TRPCError`. The assertions are about the error that came
- * back -- its code, its message, its type -- because the mutation threshold
- * rejects a test that only proves a call happened.
+ * The expected status for each code is written out rather than read from the
+ * table under test: the mapping is the specification, so a test that imported
+ * the table would agree with it whatever it said. Typing the expectation as
+ * `Record<DomainErrorCode, ...>` is what makes it exhaustive -- a new code fails
+ * to compile here as well as in the subject -- and comparing the whole map in one
+ * assertion is what makes a wrong entry fail rather than an untested one pass.
  */
+const EXPECTED_STATUS: Record<DomainErrorCode, TRPCError['code']> = {
+  INVALID_INPUT: 'BAD_REQUEST',
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+  // A dependency this app could not reach is this app's failure rather than the
+  // caller's, so it is the one code that must not come back as a 4xx.
+  DEPENDENCY_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
+};
+
 describe('toTrpcError', () => {
-  it('maps invalid input to BAD_REQUEST', () => {
-    expect(toTrpcError(domainError('INVALID_INPUT', 'Amount must be a whole number.')).code).toBe(
-      'BAD_REQUEST',
+  it('maps every code in the vocabulary onto the status decided for it', () => {
+    const mapped = Object.fromEntries(
+      DOMAIN_ERROR_CODES.map((code) => [code, toTrpcError(domainError(code, 'why')).code] as const),
     );
-  });
 
-  it('maps a missing entity to NOT_FOUND', () => {
-    expect(toTrpcError(domainError('NOT_FOUND', 'No such book.')).code).toBe('NOT_FOUND');
-  });
-
-  it('maps a conflicting write to CONFLICT', () => {
-    expect(toTrpcError(domainError('CONFLICT', 'That period is closed.')).code).toBe('CONFLICT');
-  });
-
-  it('maps an unreachable dependency to INTERNAL_SERVER_ERROR, not to a client error', () => {
-    expect(toTrpcError(domainError('DEPENDENCY_UNAVAILABLE', 'Postgres is unreachable.')).code).toBe(
-      'INTERNAL_SERVER_ERROR',
-    );
+    expect(mapped).toEqual(EXPECTED_STATUS);
   });
 
   it('carries the domain message through unchanged', () => {
@@ -44,14 +40,5 @@ describe('toTrpcError', () => {
 
   it('returns a TRPCError, so the tRPC error formatter handles it', () => {
     expect(toTrpcError(domainError('NOT_FOUND', 'No such book.'))).toBeInstanceOf(TRPCError);
-  });
-
-  it('decides a status for every code in the vocabulary, leaving no hole in the table', () => {
-    const statuses = DOMAIN_ERROR_CODES.map((code) => toTrpcError(domainError(code, 'why')).code);
-
-    expect(statuses).toHaveLength(DOMAIN_ERROR_CODES.length);
-    expect(statuses.filter((status) => typeof status === 'string' && status.length > 0)).toEqual(
-      statuses,
-    );
   });
 });

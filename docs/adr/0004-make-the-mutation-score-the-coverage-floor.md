@@ -59,9 +59,14 @@ Every exclusion is a file no unit test can import, rather than a file whose test
 are missing: each reaches `apps/web/server/container.ts`, which imports
 `server-only`, whose `exports` resolve outside the `react-server` condition to a
 module whose entire body is a `throw`. So the answer to a broken threshold is a
-test. Adding a name to that list is not available as an answer: the config is an
-owned path in `.github/CODEOWNERS`, so a pull request that edits it needs the
-owner's review, on a milestone branch too, where nothing else does.
+test. Adding a name to that list is not available as a quiet answer: the config is
+an owned path in `.github/CODEOWNERS`, so a pull request that edits it pulls the
+owner in as reviewer, on a milestone branch too, where nothing else does.
+
+What enforces that is the rulesets rather than `CODEOWNERS` on its own, which only
+requests a reviewer: both set `require_code_owner_review` -- `main` alongside one
+required approval, `milestone/**` alongside none. That is a repository setting, like
+the required checks, so nothing in this repository tests it.
 
 Ownership is cheap because the surface is patterns. A milestone that adds a
 feature adds `core/src/x/{domain,application}` (matched), `contracts/src/x.ts`
@@ -80,8 +85,10 @@ declares `vitest` as a devDependency, the way `packages/contracts` and
 `packages/core` already do: three lines in the lockfile and no new package in the
 store.
 
-Measured on this branch: `Found 11 of 444 file(s) to be mutated`, 86 mutants,
-score **97.67**, 1m23s locally against 55s for the old two-file glob.
+Measured on this branch: 11 files mutated, 86 mutants, score **97.67**, against
+two files, 53 mutants and 96.23. Stryker's `Found N of M` line is quoted above for
+the baseline and not here, because `M` counts whatever sits in the working tree and
+moves on its own.
 
 One fact about the runner that shapes where a test has to live: Stryker sandboxes
 the repository and symlinks `node_modules`, so a workspace import of
@@ -126,9 +133,17 @@ a gate: nothing proves an excluded file is genuinely unimportable. The owner
 reviews the list, and `fixtures/mutation/` proves only that the threshold itself
 is alive.
 
-The run is slower: 1m23s locally against 55s, and the CI job took 29s for the old
-glob. Sixteen times the mutants for one and a half times the wall clock, because
-the initial dry run dominates.
+One of the five is unimportable for a reason that could change without anyone
+touching it. `trpc.ts` reaches the composition root through
+`import { type AppContext } from './context'`, an inline type specifier that
+`verbatimModuleSyntax` keeps as a side-effect import; turn that setting off and the
+file becomes importable, which would make it excluded and testable -- the one state
+this list should not contain.
+
+The run is slower, by less than the surface grew: five times the files and 1.6
+times the mutants, for about one and a half times the wall clock. Locally 1m23s to
+1m43s across runs against 55s; the CI job went from 29s to 36s. The initial dry run
+dominates, which is why 33 more mutants cost half a minute.
 
 `stryker.config.mjs` is not typechecked -- the root `tsconfig.json` includes
 `*.config.ts`, not `.mjs` -- and it loses the `$schema` reference that gave the
