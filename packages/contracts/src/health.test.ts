@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { healthStatusSchema, toHealthStatus } from './health';
+import { healthStateSchema, healthStatusSchema, toHealthStatus } from './health';
 
 const CHECKED_AT = new Date('2026-01-01T00:00:00.000Z');
+
+describe('healthStateSchema', () => {
+  it('accepts each state the domain can conclude', () => {
+    expect(healthStateSchema.parse('healthy')).toBe('healthy');
+    expect(healthStateSchema.parse('degraded')).toBe('degraded');
+  });
+
+  it('rejects a state nobody defined, so a typo cannot travel as a status', () => {
+    expect(healthStateSchema.safeParse('ok').success).toBe(false);
+  });
+});
 
 describe('toHealthStatus', () => {
   it('renders the instant as an ISO 8601 string in UTC', () => {

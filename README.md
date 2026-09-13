@@ -87,7 +87,7 @@ Run in this order; any failure blocks a merge.
 | 3c| `pnpm db:check`              | Migration journal is consistent                        |
 | 4 | `pnpm test:unit`             | Vitest over `packages` and `apps`, no IO               |
 | 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
-| 5 | `pnpm test:mutation`         | Stryker on `core/*/domain/**`, break threshold 90      |
+| 5 | `pnpm test:mutation`         | Stryker over domain, application, contracts and the testable half of `apps/web/server`; break threshold 90. The only coverage gate. |
 | 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
 | 7 | `pnpm test:e2e`              | Playwright against the preview deployment              |
 | 8 | `pnpm jscpd`                 | Duplication threshold                                  |
