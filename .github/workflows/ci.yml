@@ -141,7 +141,7 @@ jobs:
 
       # Every gate that runs under vitest: the lint, typecheck and dep-cruise
       # fixtures, and the gates that are functions over values -- supply chain,
-      # ADR shape, review surface, spec isolation.
+      # ADR shape, review surface, spec isolation, and the test surface itself.
       - name: Fixture and shape gates
         run: pnpm verify:gates
 

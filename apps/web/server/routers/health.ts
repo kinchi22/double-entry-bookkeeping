@@ -1,12 +1,15 @@
-import { healthStatusSchema } from '@repo/contracts';
+import { healthStatusSchema, toHealthStatus } from '@repo/contracts';
 import { toTrpcError } from '../domain-error';
 import { publicProcedure, router } from '../trpc';
 
 /**
  * Parse input, invoke the use case, map the response. Nothing else.
  *
- * The mapping is where the instant becomes an ISO string. Core deals in `Date`,
- * the contract deals in what JSON can carry, and this is the seam between them.
+ * The `Date` -> ISO mapping is `toHealthStatus`, in `@repo/contracts`. It sat
+ * inline here until ADR-0003: this file reaches `../container` through
+ * `../trpc`, the container imports `server-only`, and that throws outside a
+ * React server runtime -- so a conversion written here is covered by the E2E
+ * suite or by nothing.
  *
  * A lint rule caps procedure bodies, so anything that outgrows this shape has
  * to move into core rather than accumulating here.
@@ -17,10 +20,6 @@ export const healthRouter = router({
     if (!result.ok) {
       throw toTrpcError(result.error);
     }
-    return {
-      status: result.value.status,
-      components: [...result.value.components],
-      checkedAt: result.value.checkedAt.toISOString(),
-    };
+    return toHealthStatus(result.value);
   }),
 });

@@ -38,6 +38,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | --- | ------ |
 | [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
 | [ADR-0002: Land the specs first, under human review](adr/0002-land-the-specs-first-under-human-review.md) | Accepted |
+| [ADR-0003: Collect every test file, wherever it lives](adr/0003-collect-every-test-file.md) | Accepted |
 
 ## Package layout
 
@@ -109,7 +110,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Error model          | Domain returns `Result<T, DomainError>`. No throwing.                  |
 | HTTP mapping         | Only in tRPC routers, via `apps/web/server/domain-error.ts`.           |
 | IDs                  | uuid v7, branded per entity from `uuidV7Schema`. Generators are injected, never imported into a pure layer. |
-| Money                | Integer minor units, branded `Money` in contracts. Arithmetic only through `@repo/core/money`, which returns `Result`. |
+| Money                | A branded integer in contracts, scale 0: no decimal places, no currency symbol, locale grouping at display only. Arithmetic only through `@repo/core/money`, which returns `Result`. A per-book scale is the additive path if a decimal currency ever appears. |
 | Dates                | Store UTC, `timestamptz`. Convert only at display.                     |
 | Transaction boundary | Owned by the use case. Repositories never begin a transaction.         |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
@@ -117,7 +118,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
-| Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core. |
+| Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 
 ## Testing layers
@@ -127,7 +128,17 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | `domain/**`                  | Unit tests, pure. Mutation threshold 90.               |
 | `application/**`             | Unit tests against stub ports, never spies.            |
 | `adapters/**`                | `*.integration.test.ts` against a real Postgres.       |
+| `packages/contracts`         | Unit tests, pure. Outside the mutation glob.            |
 | `apps/web`                   | Playwright, against a deployed preview.                |
+
+Which files those suites run is gated too. The unit project collects
+`{packages,apps}/**/*.test.ts` as one glob, and
+`tools/gates/test-collection-gate.test.ts` compares every test file in the
+working tree against what each root `vitest*.config.ts` reports collecting, so a
+test file that no project collects fails CI instead of being invisible. What it
+does not check is that a config is wired into a script or a CI job; ADR-0003
+records that limit. There are no component tests: `.tsx` is not in the include,
+which means a `*.test.tsx` is collected by nothing and fails that gate.
 
 Adapters are integration-tested with testcontainers rather than against the
 docker-compose database. A shared development database makes the gate
@@ -164,10 +175,16 @@ client component that needs them needs nothing installed.
 ## Dates on the wire
 
 `checkedAt` is a `Date` in `core` and an ISO 8601 string in `packages/contracts`,
-and the router converts between them. A contract describes what crosses a wire,
-JSON has no date type, and a `Date` in a contract types the value as something
-the transport cannot carry: over HTTP the client is handed a string while the
-type promises an object, and nothing notices until the first `.getTime()`.
+and `toHealthStatus` converts between them, beside the schema whose shape it
+produces. A contract describes what crosses a wire, JSON has no date type, and a
+`Date` in a contract types the value as something the transport cannot carry:
+over HTTP the client is handed a string while the type promises an object, and
+nothing notices until the first `.getTime()`.
+
+The conversion sat inline in the router until ADR-0003. Nothing in
+`apps/web/server` that reaches the composition root can be unit tested -- it
+imports `server-only`, which throws outside a React server runtime -- so the one
+piece of logic in the router was reachable by the E2E suite and by nothing else.
 
 The alternative -- a superjson transformer that reconstructs `Date` on the other
 side -- was rejected because it makes the contract type mean "correct for a
