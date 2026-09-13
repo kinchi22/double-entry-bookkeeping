@@ -1,6 +1,7 @@
 import 'server-only';
 import { createGetHealth, type GetHealth } from '@repo/core';
 import { createPostgresHealthProbe } from '@repo/core/server';
+import { parseEnv } from './env';
 
 /**
  * DI composition root.
@@ -37,8 +38,14 @@ let cached: Container | undefined;
  * Reading configuration from the environment happens here and nowhere else.
  * Core receives configuration as arguments, which is what keeps it testable and
  * portable off Vercel.
+ *
+ * `parseEnv` is called here rather than at module scope on purpose. This module
+ * is loaded while `next build` collects page data for
+ * `apps/web/app/api/trpc/[trpc]/route.ts`, and that build runs in CI with no
+ * database URL; a throw during import would fail it. Called from inside the
+ * function, validation happens on the first request instead. ADR-0005.
  */
 export function getContainer(): Container {
-  cached ??= createContainer({ databaseUrl: process.env['DATABASE_URL'] ?? '' });
+  cached ??= createContainer(parseEnv(process.env));
   return cached;
 }
