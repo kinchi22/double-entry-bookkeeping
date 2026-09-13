@@ -88,7 +88,10 @@ A specification lands before the behaviour it describes, on a milestone branch:
 
 The `main` ruleset covers `refs/heads/milestone/**` as well, so a milestone
 branch takes no direct pushes and no force pushes either: everything above
-arrives as a reviewed or checked pull request.
+arrives as a reviewed or checked pull request. (Since step 3 there are two
+rulesets rather than one -- `main` on the default branch, `milestone` on
+`refs/heads/milestone/**` -- and both require a pull request and block force
+pushes, so this still holds.)
 
 ### The isolation rule
 
@@ -162,7 +165,9 @@ Five limits, stated rather than discovered:
   feature pull request that is halfway through a milestone. Required checks
   belong to a ruleset, and one ruleset currently covers both `main` and
   `milestone/**`, so that split needs a second ruleset scoped to the default
-  branch. The job itself does not exist yet either; both are step 6.
+  branch. The job itself does not exist yet either; both are step 6. (The second
+  ruleset was created in step 3. What remains is the job, and requiring it on the
+  `main` ruleset alone.)
 - The exemption keys on a branch name, so an agent can create a
   `milestone/<name>` branch that already contains specs and behaviour together
   and open it against `main` with the isolation check switched off. What stands

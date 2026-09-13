@@ -6,7 +6,7 @@
 # an owned path in the diff is what pulls a reviewer in, and everything else
 # merges unattended behind the gates in .github/workflows/ci.yml.
 #
-# Three paths, each here for its own reason:
+# Four paths, each here for its own reason:
 #
 #   e2e/                  the requirements themselves, stated as executable
 #                         specs. An agent that may edit these can make a
@@ -15,7 +15,12 @@
 #                         cannot undo.
 #   .github/              the gates, and this file. Both are what make
 #                         everything above enforceable rather than stated.
+#   stryker.config.mjs    the coverage floor. Its `!` lines take files out of
+#                         the only gate that requires them to be tested, so a
+#                         test that got hard to write has a one-line way out
+#                         that nothing else would review. ADR-0004.
 
 /e2e/                      @kinchi22
 /packages/db/drizzle/      @kinchi22
 /.github/                  @kinchi22
+/stryker.config.mjs        @kinchi22

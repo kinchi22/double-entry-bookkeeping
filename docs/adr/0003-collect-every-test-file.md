@@ -110,7 +110,8 @@ Three limits, stated rather than discovered:
 
 Stryker runs the unit config, so `packages/contracts` tests now execute in every
 mutation run and kill no mutants, since `mutate` does not cover that package.
-Measured at no visible cost: 55s and a score of 96.23 before and after.
+Measured at no visible cost: 55s and a score of 96.23 before and after. (ADR-0004
+put the package into `mutate`, so those tests kill mutants from then on.)
 
 A `*.test.tsx` file now fails CI rather than quietly not running. Wanting
 component tests means changing this ADR, which is the intended cost.
@@ -118,7 +119,7 @@ component tests means changing this ADR, which is the intended cost.
 `toHealthStatus` is unit tested, and nothing measures how good those tests are:
 Stryker's `mutate` covers `packages/core/src/*/domain/**`, and
 `packages/contracts` is not in it. Step 4 of the current plan decides whether it
-joins.
+joins. (ADR-0004 is that decision: it joined, as a whole package.)
 
 `packages/contracts` gains `vitest` as a devDependency, which is three lines in
 the lockfile and no new package in the store: it declares what it already uses,

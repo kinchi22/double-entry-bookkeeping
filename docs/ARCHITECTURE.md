@@ -39,6 +39,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
 | [ADR-0002: Land the specs first, under human review](adr/0002-land-the-specs-first-under-human-review.md) | Accepted |
 | [ADR-0003: Collect every test file, wherever it lives](adr/0003-collect-every-test-file.md) | Accepted |
+| [ADR-0004: Make the mutation score the coverage floor](adr/0004-make-the-mutation-score-the-coverage-floor.md) | Accepted |
 
 ## Package layout
 
@@ -125,11 +126,28 @@ Raise the TypeScript major only together with `typescript-eslint`.
 
 | Layer                        | How it is tested                                      |
 | ---------------------------- | ----------------------------------------------------- |
-| `domain/**`                  | Unit tests, pure. Mutation threshold 90.               |
-| `application/**`             | Unit tests against stub ports, never spies.            |
-| `adapters/**`                | `*.integration.test.ts` against a real Postgres.       |
-| `packages/contracts`         | Unit tests, pure. Outside the mutation glob.            |
-| `apps/web`                   | Playwright, against a deployed preview.                |
+| `domain/**`                  | Unit tests, pure. Measured.                            |
+| `application/**`             | Unit tests against stub ports, never spies. Measured.  |
+| `ports/**`                   | Nothing. An interface has no behaviour to test.        |
+| `adapters/**`                | `*.integration.test.ts` against a real Postgres. Unmeasured: the mutation runner does not run that suite. |
+| `packages/contracts`         | Unit tests, pure. Measured since ADR-0004.             |
+| `apps/web/server`            | The half a unit test can import -- `domain-error.ts` today -- unit tested and measured. |
+| the composition root, `routers/**`, `app/**` | Playwright, against a deployed preview. Nothing else reaches them. |
+
+"Measured" means the mutation score, which is the only coverage floor here:
+there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs`
+states the measured surface as patterns rather than a list, so a new file in a
+measured directory is measured by existing. A file nobody tests scores 0, and the
+break threshold of 90 is over the whole surface, so what fails is a named file
+rather than a percentage. Measured today: 11 files, 86 mutants, score 97.67.
+
+The exclusions in that config name files no unit test can import, not files whose
+tests are missing: each reaches the composition root, and that imports
+`server-only`. So the rows above that say Playwright are outside every automated
+coverage gate, and `tools/**` is outside too, for a different reason -- its tests
+run under `vitest.gates.config.ts` and the mutation runner runs the unit config.
+ADR-0004 carries the reasoning, the numbers and the limits; the config is an owned
+path below, so the exclusion list cannot grow without the owner seeing it.
 
 Which files those suites run is gated too. The unit project collects
 `{packages,apps}/**/*.test.ts` as one glob, and
@@ -196,15 +214,16 @@ Every pull request into `main` needs one approval. An agent cannot land anything
 there alone -- a document, a gate, a dependency bump included -- and the place it
 works unattended is a milestone branch.
 
-Three paths are owned on top of that:
+Four paths are owned on top of that:
 
 | Path                     | Why                                                                                                                    |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `e2e/**`                 | The requirements, as executable specs. An agent that may edit them can make a failing requirement pass by rewriting it. |
 | `packages/db/drizzle/**` | An applied migration is the one change a later fix cannot undo.                                                        |
 | `.github/**`             | The gates, and the ownership list itself: how everything else on this page stops being a promise.                      |
+| `stryker.config.mjs`     | The coverage floor. One `!` line takes a file out of the only gate that requires it to be tested, and on a milestone branch nothing else would review that. ADR-0004. |
 
-`.github/CODEOWNERS` declares exactly these three: this table and that file are
+`.github/CODEOWNERS` declares exactly these four: this table and that file are
 the same list said twice, and `tools/gates/review-surface-gate.test.ts` fails
 when they stop agreeing. They disagreed until ADR-0002, and what fell through
 the gap was `e2e/`.
@@ -250,9 +269,10 @@ and `pnpm gates` does not run it.
 
 The E2E column is step 6's to build: there is no job today that runs the suite
 on a pull request, so "green, required" is a decision, not yet a gate. Required
-checks belong to a ruleset, and one ruleset covers both `main` and
-`milestone/**` today, so requiring the suite on one and not the other needs a
-second ruleset scoped to the default branch.
+checks belong to a ruleset, and there are two: `main`, which requires one
+approval, a code owner's where one applies, and five checks; and `milestone/**`,
+which requires the same five checks and no approval. Requiring the suite on the
+trunk alone is therefore a line in the first of them.
 
 This is what "one PR per acceptance criterion" in `CLAUDE.md` now means: one
 milestone per criterion, and as many feature pull requests underneath it as the
