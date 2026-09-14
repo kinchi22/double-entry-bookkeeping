@@ -4,18 +4,22 @@ import globals from 'globals';
 import { repoPlugin } from './plugin.mjs';
 
 /**
- * Files the English-only rule applies to, per section 2 of the brief.
+ * Files the English-only rule applies to: every file ESLint lints.
+ *
+ * Section 2 of the brief makes the whole project English-only, test names
+ * included. Its enforcement line named folders instead, and a folder list rots
+ * silently: `apps/web/components`, `tools`, `e2e` and every config file went
+ * unchecked because nobody added them. A catch-all has no folder to forget.
  */
-const ENGLISH_ONLY_GLOBS = [
-  'packages/**/*.{ts,tsx,js,mjs,cjs}',
-  'apps/web/server/**/*.{ts,tsx}',
-  'apps/web/app/**/*.{ts,tsx}',
-];
+const ENGLISH_ONLY_GLOBS = ['**/*.{ts,tsx,mts,cts,js,mjs,cjs}'];
 
 /**
  * Localized copy is exempt by construction: it lives in i18n resource files,
  * which are data, not source. Keeping the exemption path-based rather than
  * rule-based means there is no way to smuggle inline copy past the gate.
+ *
+ * Under a catch-all these ignores are the only exemption, so a catalogue in a
+ * non-English locale fails the rule without one.
  */
 const I18N_GLOBS = [
   '**/i18n/**',
