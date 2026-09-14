@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { findLivenessProblems, type LivenessReport } from '../verify-e2e-gate';
+import {
+  findLivenessProblems,
+  type LivenessReport,
+  type ReportError,
+  type ReportResult,
+  type ReportSpec,
+} from '../verify-e2e-liveness';
 
 /**
  * Section 9, applied to the E2E suite. ADR-0006.
@@ -17,17 +23,15 @@ import { findLivenessProblems, type LivenessReport } from '../verify-e2e-gate';
 
 const ROOT = '/repo/e2e';
 
-type Result = LivenessReport['suites'][number]['specs'][number]['tests'][number]['results'][number];
-
-const atLine = (line: number, message = 'Error: expect(locator).toBeVisible() failed'): Result['errors'][number] => ({
+const atLine = (line: number, message = 'Error: expect(locator).toBeVisible() failed'): ReportError => ({
   message,
   location: { file: `${ROOT}/health.spec.ts`, line },
 });
 
-const failedAt = (line: number): Result => ({ status: 'failed', errors: [atLine(line)] });
+const failedAt = (line: number): ReportResult => ({ status: 'failed', errors: [atLine(line)] });
 
 /** What `browserType.launch` leaves behind when the executable is missing. */
-const neverLaunched: Result = {
+const neverLaunched: ReportResult = {
   status: 'failed',
   errors: [{ message: "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium" }],
 };
@@ -36,8 +40,8 @@ const spec = (
   title: string,
   line: number,
   status: string,
-  ...results: readonly Result[]
-): LivenessReport['suites'][number]['specs'][number] => ({
+  ...results: readonly ReportResult[]
+): ReportSpec => ({
   title,
   file: 'health.spec.ts',
   line,
@@ -45,7 +49,7 @@ const spec = (
 });
 
 const report = (
-  specs: LivenessReport['suites'][number]['specs'],
+  specs: readonly ReportSpec[],
   extra: Partial<LivenessReport> = {},
 ): LivenessReport => ({
   config: { rootDir: ROOT },
@@ -116,7 +120,7 @@ describe('the E2E liveness rule', () => {
   });
 
   it('counts an error in a helper under the spec directory as the spec failing', () => {
-    const helper: Result = {
+    const helper: ReportResult = {
       status: 'failed',
       errors: [{ message: 'Error: timed out', location: { file: `${ROOT}/support/login.ts`, line: 4 } }],
     };
@@ -124,7 +128,7 @@ describe('the E2E liveness rule', () => {
   });
 
   it('does not mistake a sibling directory with the same prefix for the spec directory', () => {
-    const sibling: Result = {
+    const sibling: ReportResult = {
       status: 'failed',
       errors: [{ message: 'Error: boom', location: { file: '/repo/e2e-support/login.ts', line: 4 } }],
     };
@@ -144,9 +148,9 @@ describe('the E2E liveness rule', () => {
   });
 
   it('strips terminal colours from the message it quotes', () => {
-    const coloured: Result = {
+    const coloured: ReportResult = {
       status: 'failed',
-      errors: [{ message: '[31mTest timeout of 30000ms exceeded.[39m\nmore detail' }],
+      errors: [{ message: '\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m\nmore detail' }],
     };
     expect(findLivenessProblems(report([spec('re-checks health', 37, 'unexpected', coloured)]), 1)).toEqual([
       'failed outside the spec, so its own assertions never ran: health.spec.ts:37 re-checks health',

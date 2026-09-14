@@ -41,32 +41,29 @@ is asserted by name in `apps/web/server/env.test.ts` for that purpose. And the
 `Gates` job builds with no `DATABASE_URL` at all, which is the only thing that
 enforces validating the environment at first use rather than at import.
 
-`apps/web/next-env.d.ts` was tracked. `next dev` and `next build` rewrite it with
-different contents, so the tree was dirty or clean depending on which ran last.
-Measured here: `tsc -p apps/web/tsconfig.json` passes with that file and
-`.next/types` both absent, which is the state of a fresh checkout.
-
 ## Decision
 
-**`E2E build` is the merge gate.** A job in `.github/workflows/ci.yml` that runs
-on a pull request into `main` and on push to `main`: install, install chromium,
+**`E2E build` is the merge gate.** It is the one job in
+`.github/workflows/e2e-build.yml`, a workflow triggered by `pull_request` with
+`branches: [main]` and by push to `main`: install, install chromium,
 `pnpm build`, then `pnpm test:e2e`. `playwright.config.ts` already starts
 `next start` when `E2E_BASE_URL` is unset, so no server step is added. The job
 depends on no deployment.
 
 - `DATABASE_URL` is set to the dead URL above on the `test:e2e` step and nowhere
-  wider. The build step has none, like `Gates`, and a workflow-level value is
-  what this rules out, because it would reach `Gates`.
+  wider. The build step has none, like `Gates`. A job- or workflow-level value
+  would reach that build, and in `ci.yml`'s `env:` it would reach `Gates`.
 - It does not run on a pull request into a milestone. A feature branch is red
   there by design until its behaviour lands, and ADR-0002 says the suite must not
-  block it.
+  block it. The branch filter is on the workflow's trigger, not an `if:` on a job;
+  the rejected alternatives say why.
 - It is required by the `main` ruleset alone. That is a repository setting, not
   a file.
 
 **`E2E` stays, as a smoke run of what was deployed.** It is not a merge gate. Once
 Vercel is connected it is narrowed to production deployments.
 
-**E2E liveness runs in `Gate liveness`.** `tools/verify-e2e-gate.ts`, as
+**E2E liveness runs in `Gate liveness`.** `tools/verify-e2e-liveness.ts`, as
 `pnpm verify:gates:e2e`, starts a server in its own process that answers an
 empty 200 at `/` and 404 elsewhere, and runs Playwright against it with
 `--retries=0 --forbid-only --reporter=json`. It fails unless:
@@ -86,16 +83,17 @@ milestone, while the owner is reviewing it.
 **Neither `test:e2e` nor `verify:gates:e2e` is in `pnpm gates`.** Both need a
 browser, and CI is already the stronger claim (ADR-0002).
 
-**`apps/web/next-env.d.ts` is untracked and ignored.**
-
 ## Consequences
 
-Measured locally: `pnpm build` 70 seconds with no turbo cache, `pnpm test:e2e`
-20 seconds with `CI=true`, three passed and none retried. CI timings do not
-exist yet. Chromium is installed twice for a pull request into `main`, once per
-job, uncached. `Gate liveness` grows by a chromium install and about 36 seconds,
-and every new spec that waits for something an empty page lacks adds up to its
-own timeout to that.
+Measured on the first CI run of this change: in `E2E build`, the chromium
+install took 24 seconds, `pnpm build` 10 and `pnpm test:e2e` 4, three passed and
+none retried; in `Gate liveness`, the chromium install took 22 seconds and the
+liveness run 32. Locally the same build takes 70 seconds and the liveness run 36.
+The build in `E2E build` had the same turbo hash as the one in `Gates`, which is
+the evidence that no `DATABASE_URL` reached it. Chromium is installed twice for a
+pull request into `main`, once per job, uncached, and every new spec that waits
+for something an empty page lacks adds up to its own timeout to the liveness
+run.
 
 The gate blocks nothing until `E2E build` is added to the `main` ruleset's
 required checks, and only the owner can add it. Until then the job reports and
@@ -112,8 +110,10 @@ can fail, not that it fails consistently.
 Liveness proves each spec fails against an empty page. It does not prove a spec
 asserts the right thing, and it would fail a correct spec whose requirement an
 empty page happens to meet -- that an unknown path answers 404, for instance.
-There is no exemption for that; one would be a change to this script, and a
-decision to take when such a spec exists.
+The same goes for specs that share state: when a `beforeAll` hook fails, or a
+test in a serial describe block, Playwright marks the tests after it skipped, and
+this script reports a skipped spec. There is no exemption for either; one would
+be a change to this script, and a decision to take when such a spec exists.
 
 The located-error rule separates "failed on its own line" from "never started".
 It does not separate an assertion from a network error thrown by the spec's own
@@ -131,9 +131,6 @@ The script lives in `tools/`, which no one owns (ADR-0002), so it can be weakene
 in a pull request onto a milestone that needs no approval. The step that runs it
 is in `.github/`, which is owned.
 
-A fresh clone has no `next-env.d.ts` until the first `next dev` or `next build`.
-`typecheck` passes without it; an editor may lack Next's global types until then.
-
 ## Rejected alternatives
 
 **Make the `deployment_status` job the gate.** It has never run, and when it does
@@ -149,10 +146,18 @@ the variable there removes the only check that validation is lazy.
 milestone it is red on every feature pull request until the last one, and a
 check that is allowed to be red is a check nobody reads (ADR-0002).
 
-**A separate workflow file triggered by `pull_request: branches: [main]`.** The
-same jobs with the install boilerplate repeated, and the gates split across two
-files. `Spec isolation` and `Apply migrations` are already scoped by `if:` in
-`ci.yml`.
+**A job in `ci.yml`, scoped by `if:` to pull requests into `main`.** It was the
+first version of this change, chosen because `Spec isolation` and
+`Apply migrations` are scoped that way, and review found it fails open. GitHub
+reports a job skipped by `if:` as successful, including to a required check. A
+pull request opened into a milestone skips the job; retargeted to `main` later
+-- which GitHub does by itself to open pull requests when their base branch is
+merged and deleted -- it gets no new run, because a base change is an `edited`
+event and `pull_request` does not listen for it by default. The skipped,
+successful check would stand. A workflow filtered out by `branches:` reports no
+check at all, so the same pull request waits for a run. Listening for `edited`
+instead would rerun every job in `ci.yml` whenever a title or description
+changed.
 
 **Liveness inside `E2E build`.** It reuses that job's chromium, but it would run
 only into `main`, so a spec that asserts nothing would sit on a milestone, with
@@ -164,6 +169,3 @@ passes it.
 **Liveness in `pnpm gates`.** Every other `verify:gates:*` script is there, but
 this one needs a browser installed and about 36 seconds, and `test:e2e`, the
 suite it checks, is outside `pnpm gates` already.
-
-**Keep `next-env.d.ts` tracked.** It changes whenever the other of `next dev` and
-`next build` last ran, and nothing needs it committed.

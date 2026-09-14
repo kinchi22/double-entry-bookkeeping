@@ -94,7 +94,7 @@ Run in this order; any failure blocks a merge.
 | 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
 | 5 | `pnpm test:mutation`         | Stryker over domain, application, contracts and the testable half of `apps/web/server`; break threshold 90. The only coverage gate. |
 | 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
-| 7 | `pnpm test:e2e`              | Playwright against a production build; in CI, `E2E build` on every pull request into `main` |
+| 7 | `pnpm test:e2e`              | Playwright against a production build; in CI, `E2E build` on every pull request into `main`, blocking once the `main` ruleset requires it |
 | 8 | `pnpm jscpd`                 | Duplication threshold                                  |
 
 `pnpm gates` runs everything except E2E, and except `pnpm verify:gates:e2e`,
@@ -164,6 +164,7 @@ pnpm verify:gates            # lint, typecheck, dep-cruise, supply chain, and th
 pnpm verify:gates:build      # server-only, via a real next build
 pnpm verify:gates:mutation   # Stryker threshold, via a mock-only test
 pnpm verify:gates:migration  # migration drift, via an unmigrated schema change
+pnpm verify:gates:e2e        # every E2E spec fails against an empty page (needs chromium)
 ```
 
 They run in CI on every PR. See `fixtures/README.md`.

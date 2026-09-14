@@ -1,0 +1,71 @@
+name: E2E build
+
+# Section 6, gate 7, as a merge gate. ADR-0006. The suite against a production
+# build of this commit, served by `next start`, so it depends on no deployment.
+#
+# Only into main, and on main itself. A feature pull request onto a milestone is
+# red by design until the behaviour lands, and must not be blocked by the specs
+# it is there to satisfy (ADR-0002); the milestone meeting main is where they
+# must all be green. It is meant to be required by the `main` ruleset alone, and
+# blocks nothing until that repository setting lists it.
+#
+# Its own workflow rather than a job in ci.yml behind `if:`, because the two fail
+# differently. A job skipped by `if:` reports success to a required check. A pull
+# request opened into a milestone and later retargeted to main -- which GitHub
+# does by itself when the milestone branch is merged and deleted -- gets no new
+# run, since a base change is an `edited` event. It would keep that skipped,
+# successful check. A workflow filtered out by `branches:` reports nothing, so
+# the same pull request waits for a run instead of passing.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  e2e-build:
+    name: E2E build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # No DATABASE_URL here, as in `Gates`: the build must not need it
+      # (ADR-0005), and turbo hashes it into the build task.
+      - name: 6. build
+        run: pnpm build
+
+      # playwright.config.ts starts `next start` itself when E2E_BASE_URL is
+      # unset. The URL is set on this step and nowhere wider: deliberately dead,
+      # asserted by name in apps/web/server/env.test.ts, so the probe reports
+      # unreachable rather than the request failing. Set any wider, it would
+      # reach the build above. Moved into ci.yml's `env:`, it would reach `Gates`
+      # and silently remove the only check that validation is lazy.
+      - name: 7. test:e2e
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgres://ci:ci@127.0.0.1:5433/ci
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-build
+          path: playwright-report
+          if-no-files-found: warn

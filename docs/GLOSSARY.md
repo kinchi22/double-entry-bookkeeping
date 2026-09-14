@@ -12,8 +12,8 @@ it here in the same commit that introduces it.
 | Composition root | `apps/web/server/container.ts`. The only place implementations are chosen.   |
 | Contract         | A zod schema plus its inferred type, in `packages/contracts`.                |
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
-| E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-gate.ts`, run in `Gate liveness`. ADR-0006. |
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
+| E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`. Declared in `.github/CODEOWNERS`, justified in ADR-0002. |
 | Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
 | Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |

@@ -24,14 +24,14 @@ import { stripVTControlCharacters } from 'node:util';
  * part that can be wrong. The server and the Playwright run are the CLI below.
  */
 
-type ReportError = {
+export type ReportError = {
   readonly message: string;
   readonly location?: { readonly file: string; readonly line: number };
 };
 
-type ReportResult = { readonly status: string; readonly errors: readonly ReportError[] };
+export type ReportResult = { readonly status: string; readonly errors: readonly ReportError[] };
 
-type ReportSpec = {
+export type ReportSpec = {
   readonly title: string;
   /** Relative to `config.rootDir`. */
   readonly file: string;
@@ -39,7 +39,7 @@ type ReportSpec = {
   readonly tests: readonly { readonly status: string; readonly results: readonly ReportResult[] }[];
 };
 
-type ReportSuite = { readonly specs: readonly ReportSpec[]; readonly suites?: readonly ReportSuite[] };
+export type ReportSuite = { readonly specs: readonly ReportSpec[]; readonly suites?: readonly ReportSuite[] };
 
 /** The part of Playwright's JSON report this reads. A full report satisfies it. */
 export type LivenessReport = {
@@ -52,7 +52,7 @@ const firstLine = (message: string): string =>
   stripVTControlCharacters(message).split('\n')[0] ?? '';
 
 /** Every spec in the report, describe blocks included. */
-export const specsIn = (suites: readonly ReportSuite[]): readonly ReportSpec[] =>
+const specsIn = (suites: readonly ReportSuite[]): readonly ReportSpec[] =>
   suites.flatMap((suite) => [...suite.specs, ...specsIn(suite.suites ?? [])]);
 
 /**

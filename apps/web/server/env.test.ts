@@ -20,7 +20,7 @@ import { parseEnv } from './env';
 const VALID = 'postgres://app:hunter2@db.internal:5432/ledger';
 
 /**
- * The URL the `E2E build` job in `.github/workflows/ci.yml` supplies:
+ * The URL the `E2E build` job in `.github/workflows/e2e-build.yml` supplies:
  * syntactically a connection string, deliberately pointing at nothing. It is
  * asserted by name because the job depends on this function accepting it, and a
  * stricter rule added later would break that job rather than this test.

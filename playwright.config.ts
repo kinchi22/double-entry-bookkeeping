@@ -2,19 +2,19 @@ import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/te
 
 /**
  * With E2E_BASE_URL unset, this drives a production build served by
- * `pnpm --filter @repo/web start`: locally, and in the `E2E build` job, which is
- * the merge gate. With it set, no server is started. The `E2E` job sets it to the
- * Vercel preview deployment, and `pnpm verify:gates:e2e` to an empty page every
- * spec must fail against. ADR-0006.
+ * `pnpm --filter @repo/web start`: locally, and in the `E2E build` workflow.
+ * With it set, no server is started. The `E2E` job sets it to the Vercel preview
+ * deployment, and `pnpm verify:gates:e2e` to an empty page every spec must fail
+ * against. ADR-0006.
  */
-const previewUrl = process.env['E2E_BASE_URL'];
-const baseURL = previewUrl ?? 'http://127.0.0.1:3000';
+const externalUrl = process.env['E2E_BASE_URL'];
+const baseURL = externalUrl ?? 'http://127.0.0.1:3000';
 const isCI = process.env['CI'] === 'true' || process.env['CI'] === '1';
 
 // Built separately rather than inline, because exactOptionalPropertyTypes does
 // not allow assigning `undefined` to an optional property.
 const localServer: Pick<PlaywrightTestConfig, 'webServer'> =
-  previewUrl === undefined
+  externalUrl === undefined
     ? {
         webServer: {
           command: 'pnpm --filter @repo/web start',

@@ -104,7 +104,7 @@ catch:
   `.github/CODEOWNERS` name the same review surface. Its two readers are
   functions over file content, broken in the same file by a comment line, an
   unowned path, a table under the wrong heading, and a renamed section.
-- `tools/verify-e2e-gate.ts` -- the E2E liveness rule of ADR-0006, broken in
+- `tools/verify-e2e-liveness.ts` -- the E2E liveness rule of ADR-0006, broken in
   `e2e-liveness-gate.test.ts` by reports shaped like real runs: a spec that
   passed against the empty page, one skipped, one that passed on a retry, specs
   that failed in the harness before a line of their own ran, no specs at all,

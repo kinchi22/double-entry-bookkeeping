@@ -16,8 +16,9 @@ access to the Vercel account.
 5. Confirm Git integration is on: pull request creates a Preview deployment,
    merge to `main` creates the Production (staging) deployment.
 
-The merge gate for the specs does not involve Vercel: `E2E build` runs them
-against a production build inside CI. ADR-0006.
+The specs' merge check does not involve Vercel: `E2E build`, in
+`.github/workflows/e2e-build.yml`, runs them against a production build inside
+CI. ADR-0006.
 
 The `E2E` job in `.github/workflows/ci.yml` is a smoke run of what was deployed.
 It is triggered by the `deployment_status` event that Vercel emits when a preview

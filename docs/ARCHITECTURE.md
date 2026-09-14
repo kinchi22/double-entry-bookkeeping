@@ -250,8 +250,8 @@ branched from `main`, named `milestone/<name>`.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
-| specs -> `milestone/x`      | the owner, as code owner | not run; red by design | e2e only |
-| feature -> `milestone/x`    | nobody      | not run; red until the behaviour lands | no specs |
+| specs -> `milestone/x`      | the owner, as code owner | not run (the specs would fail by design) | e2e only |
+| feature -> `milestone/x`    | nobody      | not run (the specs would fail until the behaviour lands) | no specs |
 | `main` -> `milestone/x`     | the owner if the sync carries an owned path | - | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
@@ -270,9 +270,9 @@ request's file list and the two branch names, and the `Spec isolation` job fails
 when both sides moved. It reads a pull request, so it has no local equivalent
 and `pnpm gates` does not run it.
 
-The E2E column is the `E2E build` job: the suite against a production build of
-the pull request, run on every pull request into `main` and on `main` itself, and
-on nothing aimed at a milestone. It is a gate once the `main` ruleset lists it as
+The E2E column is the `E2E build` workflow: the suite against a production build
+of the pull request, run on every pull request into `main` and on `main` itself,
+and on nothing aimed at a milestone. It is a gate once the `main` ruleset lists it as
 a required check, which is a repository setting rather than a file here; until
 that line exists, "green, required" is a decision, not yet a gate. Required
 checks belong to a ruleset, and there are two: `main`, which requires one
