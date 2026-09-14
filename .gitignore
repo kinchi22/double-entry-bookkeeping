@@ -10,6 +10,10 @@ out/
 dist/
 build/
 *.tsbuildinfo
+# Rewritten by every `next dev` and `next build`, and the two write different
+# contents, so a tracked copy dirties the tree depending on which ran last.
+# Nothing needs it before one of them runs: typecheck passes without it.
+apps/web/next-env.d.ts
 
 # Tool caches
 .turbo/

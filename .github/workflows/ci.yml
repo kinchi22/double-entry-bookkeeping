@@ -141,7 +141,8 @@ jobs:
 
       # Every gate that runs under vitest: the lint, typecheck and dep-cruise
       # fixtures, and the gates that are functions over values -- supply chain,
-      # ADR shape, review surface, spec isolation, and the test surface itself.
+      # ADR shape, review surface, spec isolation, E2E liveness, and the test
+      # surface itself.
       - name: Fixture and shape gates
         run: pnpm verify:gates
 
@@ -153,6 +154,17 @@ jobs:
 
       - name: Migration drift fixture
         run: pnpm verify:gates:migration
+
+      # ADR-0006. The specs against an empty page, where every one of them must
+      # fail on a line of its own. Here rather than in `E2E build` so it runs on
+      # every pull request, including the one that lands a spec on a milestone:
+      # a spec that asserts nothing is caught while it is being reviewed, not
+      # after a milestone has been built on it. It needs no build and no server
+      # beyond the one the script starts.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E specs fail against an empty page
+        run: pnpm verify:gates:e2e
 
   # ADR-0002. The specs are the requirements and they land first, so a change
   # that edits a spec and the code the spec judges, in one pull request, can make
@@ -231,8 +243,11 @@ jobs:
           fi
           pnpm --filter @repo/db db:migrate
 
-  # Section 6, gate 7. Runs against the Vercel preview deployment, which is why
-  # it is driven by deployment_status rather than by the push itself.
+  # Section 6, gate 7, after the fact. Runs against the Vercel preview
+  # deployment, which is why it is driven by deployment_status rather than by
+  # the push itself. A smoke run of what was deployed, not a merge gate: that is
+  # `E2E build`, in e2e-build.yml. Gate it to production deployments once Vercel
+  # is connected.
   e2e:
     name: E2E
     runs-on: ubuntu-latest
