@@ -9,8 +9,10 @@ import { expect, test } from '@playwright/test';
  *
  * The database is deliberately not assumed reachable: this asserts that the
  * pipeline reports a status, not that the status is healthy. A preview
- * deployment without a database must still render, or the E2E gate would be
- * testing the environment rather than the code.
+ * deployment whose database cannot be reached must still render, or the E2E
+ * gate would be testing the environment rather than the code. A missing or
+ * malformed `DATABASE_URL` is not that case: it is configuration, and the app
+ * refuses it. ADR-0005.
  */
 test('renders pipeline health for every checked component', async ({ page }) => {
   await page.goto('/');
