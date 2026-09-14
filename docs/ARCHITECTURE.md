@@ -272,13 +272,21 @@ and `pnpm gates` does not run it.
 
 The E2E column is the `E2E build` workflow: the suite against a production build
 of the pull request, run on every pull request into `main` and on `main` itself,
-and on nothing aimed at a milestone. It is a gate once the `main` ruleset lists it as
-a required check, which is a repository setting rather than a file here; until
-that line exists, "green, required" is a decision, not yet a gate. Required
-checks belong to a ruleset, and there are two: `main`, which requires one
-approval, a code owner's where one applies, and five checks; and `milestone/**`,
-which requires the same five checks and no approval. Requiring the suite on the
-trunk alone is therefore a line in the first of them. ADR-0006.
+and on nothing aimed at a milestone. Required checks belong to a ruleset, and
+there are two: `main`, which requires one approval, a code owner's where one
+applies, and six checks -- `Gates`, `Integration`, `Mutation testing`,
+`Gate liveness`, `Spec isolation` and `E2E build`; and `milestone/**`, which
+requires the first five and no approval. That is how the suite is required on
+the trunk alone: it is a line in the first of them and not in the second.
+ADR-0006.
+
+Every required check, in both rulesets, is accepted from GitHub Actions only.
+With "any source", GitHub's documentation says anyone with write access to the
+repository -- the machine account included -- can set a check's state without
+the job running. What the source does not stop is a pull request adding a workflow of
+its own with a job of the same name; that is a change under `.github/`, so it
+needs the owner. Rulesets are repository settings rather than files, so no gate
+here checks them.
 
 A green suite does not prove a spec asserts anything, so `Gate liveness`, which
 runs on every pull request, runs the specs against an empty page and fails
