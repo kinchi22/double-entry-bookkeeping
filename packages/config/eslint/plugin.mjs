@@ -33,7 +33,9 @@ const noNonAscii = {
     messages: {
       nonAscii:
         'Non-ASCII character {{display}} (U+{{code}}) is not allowed in source. ' +
-        'Source is English-only; user-facing copy belongs in an i18n resource file.',
+        'Source is English-only; user-facing copy belongs in a message catalogue. ' +
+        'A non-English catalogue needs its exact path added to the ignores of the ' +
+        'repo/english-only block in packages/config/eslint/base.mjs.',
     },
   },
   create(context) {

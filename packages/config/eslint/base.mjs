@@ -40,11 +40,9 @@ export function createBaseConfig({ tsconfigRootDir }) {
     },
 
     {
-      // The brief makes the whole project English-only. A folder list here rotted:
-      // apps/web/components, tools, e2e and the root and apps/web configs went
-      // unchecked. `**/*` names no folder or extension to forget, and ESLint
-      // treats a trailing `/*` as universal: the block applies wherever another
-      // block lints and makes no file linted on its own.
+      // The whole project is English-only. ESLint treats a trailing `/*` as
+      // universal: this block applies wherever another block lints, and makes
+      // no file linted on its own.
       //
       // No path is exempt. The change that ships a non-English catalogue ignores
       // its exact path; a name glob like `**/messages/**` would also exempt the
