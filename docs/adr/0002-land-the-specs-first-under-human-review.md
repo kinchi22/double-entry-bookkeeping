@@ -160,15 +160,16 @@ is a stronger claim than `pnpm gates` passing.
 Five limits, stated rather than discovered:
 
 - The job reports; it blocks only once `Spec isolation` is added to the ruleset's
-  required checks. That is a repository setting, not a file in this diff.
+  required checks. That is a repository setting, not a file in this diff. (Both
+  rulesets require it.)
 - The E2E suite must be green for `milestone -> main` and must not block a
   feature pull request that is halfway through a milestone. Required checks
   belong to a ruleset, and one ruleset currently covers both `main` and
   `milestone/**`, so that split needs a second ruleset scoped to the default
   branch. The job itself does not exist yet either; both are step 6. (The second
   ruleset was created in step 3. What remains is the job, and requiring it on the
-  `main` ruleset alone.) (Step 6 added the job, `E2E build`, in ADR-0006. What
-  remains is the ruleset line.)
+  `main` ruleset alone.) (Step 6 added the job, `E2E build`, in ADR-0006, and
+  the `main` ruleset alone requires it.)
 - The exemption keys on a branch name, so an agent can create a
   `milestone/<name>` branch that already contains specs and behaviour together
   and open it against `main` with the isolation check switched off. What stands

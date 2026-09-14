@@ -6,8 +6,8 @@ name: E2E build
 # Only into main, and on main itself. A feature pull request onto a milestone is
 # red by design until the behaviour lands, and must not be blocked by the specs
 # it is there to satisfy (ADR-0002); the milestone meeting main is where they
-# must all be green. It is meant to be required by the `main` ruleset alone, and
-# blocks nothing until that repository setting lists it.
+# must all be green. Required by the `main` ruleset alone, with GitHub Actions
+# as its only accepted source: a repository setting, so nothing here enforces it.
 #
 # Its own workflow rather than a job in ci.yml behind `if:`, because the two fail
 # differently. A job skipped by `if:` reports success to a required check. A pull

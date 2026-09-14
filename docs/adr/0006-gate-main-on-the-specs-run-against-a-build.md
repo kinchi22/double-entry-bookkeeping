@@ -95,9 +95,14 @@ pull request into `main`, once per job, uncached, and every new spec that waits
 for something an empty page lacks adds up to its own timeout to the liveness
 run.
 
-The gate blocks nothing until `E2E build` is added to the `main` ruleset's
-required checks, and only the owner can add it. Until then the job reports and
-`docs/ARCHITECTURE.md` still cannot call the suite required.
+The gate is a repository setting as much as a file. `E2E build` blocked nothing
+until the owner added it to the `main` ruleset's required checks, which was done
+by hand after this change merged, on 2026-09-14. At the same time every required
+check in that ruleset was restricted to GitHub Actions as its source, as the
+`milestone` ruleset's already were: with "any source", GitHub's documentation
+says anyone with write access, the machine account included, can set a check's
+state without the job running.
+No gate reads a ruleset, so either setting can be undone without a diff.
 
 A milestone's specs are not run by any job while it is a milestone, so ADR-0002's
 "red specs as a progress bar" is read by running the suite locally or by opening
