@@ -49,6 +49,39 @@ export const nextConfigs = [
     },
   },
   {
+    // `apps/web/server/env.ts` states what this app reads from the environment,
+    // and `container.ts` is its one caller. That was documentation before this
+    // rule existed, and documentation does not stop the next file reading
+    // `process.env` directly and skipping validation entirely -- which is the
+    // whole failure ADR-0005 is about, reintroduced one import at a time.
+    //
+    // The same rule id is on in layers.mjs for a different reason: in
+    // `packages/core` configuration is an argument and never ambient. Here it is
+    // ambient in exactly one file.
+    //
+    // Product source only. `next.config.ts` is build configuration, not part of
+    // the application, and reads `NEXT_DIST_DIR` legitimately -- the same
+    // exemption `packages/db/drizzle.config.ts` has.
+    name: 'repo/one-reader-of-the-environment',
+    files: [
+      'apps/web/server/**/*.ts',
+      'apps/web/app/**/*.{ts,tsx}',
+      'apps/web/components/**/*.{ts,tsx}',
+    ],
+    ignores: ['apps/web/server/container.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'process',
+          property: 'env',
+          message:
+            'The environment is read in apps/web/server/container.ts and nowhere else, through parseEnv in apps/web/server/env.ts. Add the variable to the schema there. ADR-0005.',
+        },
+      ],
+    },
+  },
+  {
     // A Server Action must be declared async because the framework requires it,
     // not because it awaits anything, so require-await's premise does not hold
     // in these files. The rule stays on everywhere else.

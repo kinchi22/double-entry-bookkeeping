@@ -45,6 +45,7 @@ export const LINT_FIXTURES: readonly LintFixture[] = [
     '@typescript-eslint/explicit-module-boundary-types',
   ],
   ['packages/core/src/ledger/domain/unused-binding.ts', '@typescript-eslint/no-unused-vars'],
+  ['apps/web/server/reads-process-env.ts', 'no-restricted-properties'],
   ['apps/web/server/routers/fat-handler.ts', 'max-lines-per-function'],
   ['apps/web/server/routers/branchy-handler.ts', 'complexity'],
 ];

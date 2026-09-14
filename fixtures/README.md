@@ -41,6 +41,7 @@ the test-collection gate excludes this directory too.
 | `violations/.../domain/value-type-import.ts`     | `@typescript-eslint/consistent-type-imports`     |
 | `violations/.../domain/untyped-boundary.ts`      | `@typescript-eslint/explicit-module-boundary-types` |
 | `violations/.../domain/unused-binding.ts`        | `@typescript-eslint/no-unused-vars`              |
+| `violations/apps/web/server/reads-process-env.ts`       | `no-restricted-properties` (outside the composition root) |
 | `violations/apps/web/server/routers/fat-handler.ts`     | `max-lines-per-function`                  |
 | `violations/apps/web/server/routers/branchy-handler.ts` | `complexity`                              |
 

@@ -10,7 +10,9 @@ access to the Vercel account.
 3. Framework preset: Next.js. Leave build and install commands at their
    defaults -- Vercel detects pnpm workspaces from `pnpm-workspace.yaml`.
 4. Set `DATABASE_URL` for Preview and Production. Use a separate database per
-   environment; a preview deployment must never point at production data.
+   environment; a preview deployment must never point at production data. It is
+   required, not optional: a deployment without it answers its first request
+   with a 500 rather than rendering a degraded page. ADR-0005.
 5. Confirm Git integration is on: pull request creates a Preview deployment,
    merge to `main` creates the Production (staging) deployment.
 
@@ -82,12 +84,13 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 
 | Name           | Where                        | Purpose                          |
 | -------------- | ---------------------------- | -------------------------------- |
-| `DATABASE_URL` | Vercel Preview + Production, and local `.env` | Postgres connection string |
+| `DATABASE_URL` | Vercel Preview + Production, and local `.env` | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
 | `E2E_BASE_URL` | CI only, set by the E2E job  | Target for Playwright            |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.
-Configuration enters through `apps/web/server/container.ts` and is passed down as
-arguments. That is what keeps core testable and portable.
+Configuration enters through `apps/web/server/container.ts`, which validates it
+through `apps/web/server/env.ts` and passes it down as arguments. That is what
+keeps core testable and portable.
 
 ## AWS migration readiness
 

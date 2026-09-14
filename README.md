@@ -24,9 +24,14 @@ pnpm dev                       # http://localhost:3000
 
 The health panel should report `postgres: reachable`.
 
-The app also renders without a database: the probe reports `postgres` as
-unreachable and the status degrades rather than erroring. That is deliberate, so
-a preview deployment with no database still passes E2E.
+The app also renders without a *reachable* database: the probe reports
+`postgres` as unreachable and the status degrades rather than erroring. That is
+deliberate, so a preview deployment whose database is down still passes E2E.
+
+`DATABASE_URL` itself is not optional. It is validated on the first request, in
+`apps/web/server/env.ts`, and a missing or malformed one fails that request
+instead of degrading -- no probe can tell an unset variable from an outage, so
+the two are separated here. ADR-0005.
 
 ### Migrations
 
