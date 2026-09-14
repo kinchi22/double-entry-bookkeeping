@@ -19,8 +19,8 @@ const NON_ASCII = /[^\x00-\x7F]/gu;
  * Disallow non-ASCII characters anywhere in a source file: identifiers,
  * comments, and string literals alike.
  *
- * The project is English-only. User-facing copy is exempt by living in i18n
- * resource files, which this rule is simply not applied to.
+ * The project is English-only. The files it applies to, and any path exempt
+ * from it, are set beside its block in `base.mjs`.
  */
 const noNonAscii = {
   meta: {
@@ -33,7 +33,9 @@ const noNonAscii = {
     messages: {
       nonAscii:
         'Non-ASCII character {{display}} (U+{{code}}) is not allowed in source. ' +
-        'Source is English-only; user-facing copy belongs in an i18n resource file.',
+        'Source is English-only; user-facing copy belongs in a message catalogue. ' +
+        'A non-English catalogue needs its exact path added to the ignores of the ' +
+        'repo/english-only block in packages/config/eslint/base.mjs.',
     },
   },
   create(context) {

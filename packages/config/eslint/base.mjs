@@ -3,27 +3,6 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 import { repoPlugin } from './plugin.mjs';
 
-/**
- * Files the English-only rule applies to, per section 2 of the brief.
- */
-const ENGLISH_ONLY_GLOBS = [
-  'packages/**/*.{ts,tsx,js,mjs,cjs}',
-  'apps/web/server/**/*.{ts,tsx}',
-  'apps/web/app/**/*.{ts,tsx}',
-];
-
-/**
- * Localized copy is exempt by construction: it lives in i18n resource files,
- * which are data, not source. Keeping the exemption path-based rather than
- * rule-based means there is no way to smuggle inline copy past the gate.
- */
-const I18N_GLOBS = [
-  '**/i18n/**',
-  '**/messages/**',
-  '**/locales/**',
-  '**/*.messages.ts',
-];
-
 export function createBaseConfig({ tsconfigRootDir }) {
   return [
     js.configs.recommended,
@@ -61,9 +40,15 @@ export function createBaseConfig({ tsconfigRootDir }) {
     },
 
     {
+      // The whole project is English-only. ESLint treats a trailing `/*` as
+      // universal: this block applies wherever another block lints, and makes
+      // no file linted on its own.
+      //
+      // No path is exempt. The change that ships a non-English catalogue ignores
+      // its exact path; a name glob like `**/messages/**` would also exempt the
+      // source of any feature with that name.
       name: 'repo/english-only',
-      files: ENGLISH_ONLY_GLOBS,
-      ignores: I18N_GLOBS,
+      files: ['**/*'],
       plugins: { repo: repoPlugin },
       rules: {
         'repo/no-non-ascii': 'error',
