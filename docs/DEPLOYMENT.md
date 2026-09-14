@@ -16,13 +16,18 @@ access to the Vercel account.
 5. Confirm Git integration is on: pull request creates a Preview deployment,
    merge to `main` creates the Production (staging) deployment.
 
-The E2E job in `.github/workflows/ci.yml` is triggered by the `deployment_status`
-event that Vercel emits when a preview finishes building, and runs Playwright
-against `environment_url`. Reading the event directly means no polling step and
-no third-party action holding a token in this repository.
+The merge gate for the specs does not involve Vercel: `E2E build` runs them
+against a production build inside CI. ADR-0006.
 
-Until Vercel is connected, the `deployment_status` event never fires, so the E2E
-job simply does not run. The other gates are unaffected.
+The `E2E` job in `.github/workflows/ci.yml` is a smoke run of what was deployed.
+It is triggered by the `deployment_status` event that Vercel emits when a preview
+finishes building, and runs Playwright against `environment_url`. Reading the
+event directly means no polling step and no third-party action holding a token
+in this repository. Once Vercel is connected, narrow it to production
+deployments.
+
+Until Vercel is connected, the `deployment_status` event never fires, so the
+`E2E` job simply does not run. The other gates are unaffected.
 
 ## Migrations
 
@@ -84,8 +89,8 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 
 | Name           | Where                        | Purpose                          |
 | -------------- | ---------------------------- | -------------------------------- |
-| `DATABASE_URL` | Vercel Preview + Production, and local `.env` | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
-| `E2E_BASE_URL` | CI only, set by the E2E job  | Target for Playwright            |
+| `DATABASE_URL` | Vercel Preview + Production, and local `.env`; in CI, the `test:e2e` step of `E2E build`, deliberately dead | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
+| `E2E_BASE_URL` | The `E2E` job, and `pnpm verify:gates:e2e` | Target for Playwright; unset, it starts `next start` |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.
 Configuration enters through `apps/web/server/container.ts`, which validates it

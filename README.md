@@ -94,10 +94,13 @@ Run in this order; any failure blocks a merge.
 | 4b| `pnpm test:integration`      | Adapters against a real Postgres (Docker required)     |
 | 5 | `pnpm test:mutation`         | Stryker over domain, application, contracts and the testable half of `apps/web/server`; break threshold 90. The only coverage gate. |
 | 6 | `pnpm build`                 | Next build, including the `server-only` RSC boundary   |
-| 7 | `pnpm test:e2e`              | Playwright against the preview deployment              |
+| 7 | `pnpm test:e2e`              | Playwright against a production build; in CI, `E2E build` on every pull request into `main` |
 | 8 | `pnpm jscpd`                 | Duplication threshold                                  |
 
-`pnpm gates` runs everything except E2E.
+`pnpm gates` runs everything except E2E, and except `pnpm verify:gates:e2e`,
+which runs the specs against an empty page and fails unless every one of them
+fails. Both need a browser (`pnpm exec playwright install chromium`); CI runs
+them in `E2E build` and `Gate liveness`. ADR-0006.
 
 CI runs one more check that has no local form. `Spec isolation` fails a pull
 request that changes `e2e/` and anything else in the same change: the specs are

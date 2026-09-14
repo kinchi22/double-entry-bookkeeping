@@ -1,9 +1,11 @@
 import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
 
 /**
- * In CI this runs against the Vercel preview deployment, so E2E_BASE_URL is
- * supplied and no local server is started. Locally it drives a production build
- * served by `pnpm --filter @repo/web start`.
+ * With E2E_BASE_URL unset, this drives a production build served by
+ * `pnpm --filter @repo/web start`: locally, and in the `E2E build` job, which is
+ * the merge gate. With it set, no server is started. The `E2E` job sets it to the
+ * Vercel preview deployment, and `pnpm verify:gates:e2e` to an empty page every
+ * spec must fail against. ADR-0006.
  */
 const previewUrl = process.env['E2E_BASE_URL'];
 const baseURL = previewUrl ?? 'http://127.0.0.1:3000';

@@ -41,6 +41,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0003: Collect every test file, wherever it lives](adr/0003-collect-every-test-file.md) | Accepted |
 | [ADR-0004: Make the mutation score the coverage floor](adr/0004-make-the-mutation-score-the-coverage-floor.md) | Accepted |
 | [ADR-0005: Validate the environment once, at first use](adr/0005-validate-the-environment-once-at-first-use.md) | Accepted |
+| [ADR-0006: Gate main on the specs, run against a build](adr/0006-gate-main-on-the-specs-run-against-a-build.md) | Accepted |
 
 ## Package layout
 
@@ -134,7 +135,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | `adapters/**`                | `*.integration.test.ts` against a real Postgres. Unmeasured: the mutation runner does not run that suite. |
 | `packages/contracts`         | Unit tests, pure. Measured since ADR-0004.             |
 | `apps/web/server`            | The half a unit test can import -- `domain-error.ts` and `env.ts` today -- unit tested and measured. |
-| the composition root, `routers/**`, `app/**` | Playwright, against a deployed preview. Nothing else reaches them. |
+| the composition root, `routers/**`, `app/**` | Playwright, against a production build in CI (`E2E build`). Nothing else reaches them. |
 
 "Measured" means the mutation score, which is the only coverage floor here:
 there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs`
@@ -249,8 +250,8 @@ branched from `main`, named `milestone/<name>`.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
-| specs -> `milestone/x`      | the owner, as code owner | red, and not required | e2e only |
-| feature -> `milestone/x`    | nobody      | red until the behaviour lands | no specs |
+| specs -> `milestone/x`      | the owner, as code owner | not run; red by design | e2e only |
+| feature -> `milestone/x`    | nobody      | not run; red until the behaviour lands | no specs |
 | `main` -> `milestone/x`     | the owner if the sync carries an owned path | - | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
@@ -269,12 +270,20 @@ request's file list and the two branch names, and the `Spec isolation` job fails
 when both sides moved. It reads a pull request, so it has no local equivalent
 and `pnpm gates` does not run it.
 
-The E2E column is step 6's to build: there is no job today that runs the suite
-on a pull request, so "green, required" is a decision, not yet a gate. Required
+The E2E column is the `E2E build` job: the suite against a production build of
+the pull request, run on every pull request into `main` and on `main` itself, and
+on nothing aimed at a milestone. It is a gate once the `main` ruleset lists it as
+a required check, which is a repository setting rather than a file here; until
+that line exists, "green, required" is a decision, not yet a gate. Required
 checks belong to a ruleset, and there are two: `main`, which requires one
 approval, a code owner's where one applies, and five checks; and `milestone/**`,
 which requires the same five checks and no approval. Requiring the suite on the
-trunk alone is therefore a line in the first of them.
+trunk alone is therefore a line in the first of them. ADR-0006.
+
+A green suite does not prove a spec asserts anything, so `Gate liveness`, which
+runs on every pull request, runs the specs against an empty page and fails
+unless each one fails on a line of its own. A spec that asserts nothing is
+caught on the pull request that lands it on the milestone.
 
 This is what "one PR per acceptance criterion" in `CLAUDE.md` now means: one
 milestone per criterion, and as many feature pull requests underneath it as the

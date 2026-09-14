@@ -81,10 +81,10 @@ Local development without a `.env` now fails outright instead of rendering an
 amber dot. That is the intended trade, and it is a worse first run: the fix is
 `cp .env.example .env`, which `README.md` already instructs.
 
-The E2E job in step 6 must supply a syntactically valid, deliberately dead URL
-rather than nothing. `postgres://ci:ci@127.0.0.1:5433/ci` is asserted by name in
-`apps/web/server/env.test.ts`, so a stricter rule added later breaks that test
-rather than that job.
+The `E2E build` job (step 6, ADR-0006) must supply a syntactically valid,
+deliberately dead URL rather than nothing. `postgres://ci:ci@127.0.0.1:5433/ci`
+is asserted by name in `apps/web/server/env.test.ts`, so a stricter rule added
+later breaks that test rather than that job.
 
 `env.ts` is the first file to land inside the `apps/web/server/**/*.ts` mutate
 pattern that ADR-0004 widened, with no configuration change. It arrived already

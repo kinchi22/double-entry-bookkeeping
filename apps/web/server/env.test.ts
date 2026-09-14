@@ -20,10 +20,10 @@ import { parseEnv } from './env';
 const VALID = 'postgres://app:hunter2@db.internal:5432/ledger';
 
 /**
- * The URL the E2E job in `.github/workflows/ci.yml` will supply: syntactically
- * a connection string, deliberately pointing at nothing. It is asserted by name
- * because the job depends on this function accepting it, and a stricter rule
- * added later would break that job rather than this test.
+ * The URL the `E2E build` job in `.github/workflows/ci.yml` supplies:
+ * syntactically a connection string, deliberately pointing at nothing. It is
+ * asserted by name because the job depends on this function accepting it, and a
+ * stricter rule added later would break that job rather than this test.
  */
 const DELIBERATELY_DEAD = 'postgres://ci:ci@127.0.0.1:5433/ci';
 
@@ -38,7 +38,7 @@ describe('parseEnv', () => {
     expect(parseEnv({ DATABASE_URL: postgresql })).toEqual({ databaseUrl: postgresql });
   });
 
-  it('accepts the deliberately dead URL the E2E job supplies', () => {
+  it('accepts the deliberately dead URL the E2E build job supplies', () => {
     expect(parseEnv({ DATABASE_URL: DELIBERATELY_DEAD })).toEqual({
       databaseUrl: DELIBERATELY_DEAD,
     });

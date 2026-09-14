@@ -154,6 +154,17 @@ jobs:
       - name: Migration drift fixture
         run: pnpm verify:gates:migration
 
+      # ADR-0006. The specs against an empty page, where every one of them must
+      # fail on a line of its own. Here rather than in `E2E build` so it runs on
+      # every pull request, including the one that lands a spec on a milestone:
+      # a spec that asserts nothing is caught while it is being reviewed, not
+      # after a milestone has been built on it. It needs no build and no server
+      # beyond the one the script starts.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E specs fail against an empty page
+        run: pnpm verify:gates:e2e
+
   # ADR-0002. The specs are the requirements and they land first, so a change
   # that edits a spec and the code the spec judges, in one pull request, can make
   # a failing requirement pass by rewriting it. The branch names decide the one
@@ -231,8 +242,58 @@ jobs:
           fi
           pnpm --filter @repo/db db:migrate
 
-  # Section 6, gate 7. Runs against the Vercel preview deployment, which is why
-  # it is driven by deployment_status rather than by the push itself.
+  # Section 6, gate 7, as a gate. ADR-0006. The suite against a production build
+  # of this commit, served by `next start`, so it depends on no deployment.
+  #
+  # Only into main, and on main itself. A feature pull request onto a milestone
+  # is red by design until the behaviour lands, and must not be blocked by the
+  # specs it is there to satisfy (ADR-0002); the milestone meeting main is where
+  # they must all be green. Required by the `main` ruleset alone.
+  e2e-build:
+    name: E2E build
+    if: >-
+      (github.event_name == 'pull_request' && github.base_ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # No DATABASE_URL here, as in `Gates`: the build must not need it
+      # (ADR-0005), and turbo hashes it into the build task.
+      - name: build
+        run: pnpm build
+
+      # playwright.config.ts starts `next start` itself when E2E_BASE_URL is
+      # unset. The URL is set on this step and nowhere wider: deliberately dead,
+      # asserted by name in apps/web/server/env.test.ts, so the probe reports
+      # unreachable rather than the request failing. At workflow level it would
+      # reach `Gates` and silently remove the only check that validation is lazy.
+      - name: 7. test:e2e
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgres://ci:ci@127.0.0.1:5433/ci
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-build
+          path: playwright-report
+          if-no-files-found: warn
+
+  # Section 6, gate 7, after the fact. Runs against the Vercel preview
+  # deployment, which is why it is driven by deployment_status rather than by
+  # the push itself. A smoke run of what was deployed, not a merge gate: that is
+  # `E2E build` above. Gate it to production deployments once Vercel is
+  # connected.
   e2e:
     name: E2E
     runs-on: ubuntu-latest

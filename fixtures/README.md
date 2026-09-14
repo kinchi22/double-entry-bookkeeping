@@ -86,7 +86,7 @@ rather than unwritten:
 
 ## Gates with no fixture
 
-Four gates are pure functions rather than tool runs, so their deliberate
+Five gates are pure functions rather than tool runs, so their deliberate
 breakages are inputs in their own test file instead of files here. Nothing
 resolves a path in any of them, which is what a fixture directory exists to
 catch:
@@ -104,6 +104,12 @@ catch:
   `.github/CODEOWNERS` name the same review surface. Its two readers are
   functions over file content, broken in the same file by a comment line, an
   unowned path, a table under the wrong heading, and a renamed section.
+- `tools/verify-e2e-gate.ts` -- the E2E liveness rule of ADR-0006, broken in
+  `e2e-liveness-gate.test.ts` by reports shaped like real runs: a spec that
+  passed against the empty page, one skipped, one that passed on a retry, specs
+  that failed in the harness before a line of their own ran, no specs at all,
+  and an empty page nobody requested. Its command half starts a browser, so
+  `Gate liveness` runs it rather than that test.
 
 ## Fixtures that are planted, not linted
 

@@ -28,7 +28,8 @@
     "verify:gates:build": "node tools/verify-server-only-gate.mjs",
     "gates": "pnpm typecheck && pnpm lint && pnpm dep-cruise && pnpm db:drift && pnpm db:check && pnpm test:unit && pnpm test:integration && pnpm test:mutation && pnpm build && pnpm jscpd && pnpm verify:gates && pnpm verify:gates:build && pnpm verify:gates:mutation && pnpm verify:gates:migration",
     "verify:gates:mutation": "node tools/verify-mutation-gate.mjs",
-    "verify:gates:migration": "node tools/verify-migration-gate.mjs"
+    "verify:gates:migration": "node tools/verify-migration-gate.mjs",
+    "verify:gates:e2e": "node tools/verify-e2e-gate.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

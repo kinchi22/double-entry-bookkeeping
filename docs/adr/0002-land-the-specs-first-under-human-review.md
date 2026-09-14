@@ -167,7 +167,8 @@ Five limits, stated rather than discovered:
   `milestone/**`, so that split needs a second ruleset scoped to the default
   branch. The job itself does not exist yet either; both are step 6. (The second
   ruleset was created in step 3. What remains is the job, and requiring it on the
-  `main` ruleset alone.)
+  `main` ruleset alone.) (Step 6 added the job, `E2E build`, in ADR-0006. What
+  remains is the ruleset line.)
 - The exemption keys on a branch name, so an agent can create a
   `milestone/<name>` branch that already contains specs and behaviour together
   and open it against `main` with the isolation check switched off. What stands
