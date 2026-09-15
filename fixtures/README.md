@@ -44,6 +44,11 @@ the test-collection gate excludes this directory too.
 | `violations/apps/web/server/reads-process-env.ts`       | `no-restricted-properties` (outside the composition root) |
 | `violations/apps/web/server/routers/fat-handler.ts`     | `max-lines-per-function`                  |
 | `violations/apps/web/server/routers/branchy-handler.ts` | `complexity`                              |
+| `violations/apps/web/messages/imports-server.ts`        | `boundaries/dependencies` (the catalogue imports nothing else in the repo) |
+| `violations/apps/web/components/inline-text.tsx`        | `repo/no-inline-copy` (JSX text)          |
+| `violations/apps/web/components/inline-attribute.tsx`   | `repo/no-inline-copy` (an attribute not listed as markup) |
+| `violations/apps/web/app/inline-expression.tsx`         | `repo/no-inline-copy` (a string an expression renders) |
+| `violations/apps/web/app/inline-metadata.ts`            | `repo/no-inline-copy` (`export const metadata`) |
 
 ## dependency-cruiser
 

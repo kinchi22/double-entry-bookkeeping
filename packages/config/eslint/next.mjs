@@ -1,6 +1,7 @@
 import nextPlugin from '@next/eslint-plugin-next';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
+import { repoPlugin } from './plugin.mjs';
 
 /**
  * apps/web only. Core packages must never see React or Next rules, because they
@@ -79,6 +80,18 @@ export const nextConfigs = [
             'The environment is read in apps/web/server/container.ts and nowhere else, through parseEnv in apps/web/server/env.ts. Add the variable to the schema there. ADR-0005.',
         },
       ],
+    },
+  },
+  {
+    // Copy lives in apps/web/messages/en.ts (ADR-0007), so adopting a second
+    // locale (ADR-0008) swaps imports for translation calls instead of hunting
+    // strings through JSX. `app` and `components` are where copy is rendered;
+    // packages/ui takes its text as props and renders none of its own.
+    name: 'repo/copy-in-the-catalogue',
+    files: ['apps/web/app/**/*.{ts,tsx}', 'apps/web/components/**/*.{ts,tsx}'],
+    plugins: { repo: repoPlugin },
+    rules: {
+      'repo/no-inline-copy': 'error',
     },
   },
   {

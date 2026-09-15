@@ -86,7 +86,7 @@ Run in this order; any failure blocks a merge.
 | # | Command                      | What it enforces                                      |
 | - | ---------------------------- | ----------------------------------------------------- |
 | 1 | `pnpm typecheck`             | TypeScript strict; `any` forbidden; no deep imports    |
-| 2 | `pnpm lint`                  | Boundaries matrix, layer purity, no-throw, ASCII-only  |
+| 2 | `pnpm lint`                  | Boundaries matrix, layer purity, no-throw, ASCII-only, no inline copy |
 | 3 | `pnpm dep-cruise`            | Cycles, orphans, layer violations in the module graph  |
 | 3b| `pnpm db:drift`              | Schema changed without a migration                     |
 | 3c| `pnpm db:check`              | Migration journal is consistent                        |

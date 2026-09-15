@@ -48,6 +48,11 @@ export const LINT_FIXTURES: readonly LintFixture[] = [
   ['apps/web/server/reads-process-env.ts', 'no-restricted-properties'],
   ['apps/web/server/routers/fat-handler.ts', 'max-lines-per-function'],
   ['apps/web/server/routers/branchy-handler.ts', 'complexity'],
+  ['apps/web/messages/imports-server.ts', 'boundaries/dependencies'],
+  ['apps/web/components/inline-text.tsx', 'repo/no-inline-copy'],
+  ['apps/web/components/inline-attribute.tsx', 'repo/no-inline-copy'],
+  ['apps/web/app/inline-expression.tsx', 'repo/no-inline-copy'],
+  ['apps/web/app/inline-metadata.ts', 'repo/no-inline-copy'],
 ];
 
 /**
@@ -59,7 +64,7 @@ export const LINT_FIXTURES: readonly LintFixture[] = [
 export const LINT_RULES_WITHOUT_FIXTURE: Readonly<Record<string, string>> = {
   'boundaries/no-unknown-files':
     'Unreachable by construction: every root in `boundaries/include` is covered by a ' +
-    'catch-all element (packages/*/src, apps/web/{app,server,components}), so no included ' +
+    'catch-all element (packages/*/src, apps/web/{app,server,components,messages}), so no included ' +
     'file can fail to classify. The rule is a guard for a future include entry added ' +
     'without a matching element, and a fixture for it would have to weaken the shared ' +
     'config, which would stop testing the config that actually ships.',

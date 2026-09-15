@@ -11,10 +11,12 @@ it here in the same commit that introduces it.
 | Component        | A checked dependency of the system, as reported by the health slice.         |
 | Composition root | `apps/web/server/container.ts`. The only place implementations are chosen.   |
 | Contract         | A zod schema plus its inferred type, in `packages/contracts`.                |
+| Copy             | Text a person reads in the UI, page metadata included. Lives in the message catalogue, never inline. `repo/no-inline-copy` catches it written as a literal; ADR-0007 lists what that misses. |
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
 | E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`. Declared in `.github/CODEOWNERS`, justified in ADR-0002. |
+| Message catalogue | `apps/web/messages/{locale}.ts`: the copy for one locale, a plain object keyed in English, grouped by the part of the UI that renders it. `en.ts` is the only one until ADR-0008 is adopted. |
 | Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
 | Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |
 | Money            | A branded integer count of minor units. Built and combined only through `@repo/core/money`. |
@@ -31,5 +33,6 @@ it here in the same commit that introduces it.
 ## Naming rules
 
 - Source is English-only, enforced by the `repo/no-non-ascii` lint rule.
-- User-facing copy lives in i18n resource files, never inline. Message keys and
-  the default locale bundle are English.
+- Copy lives in `apps/web/messages/en.ts`, never inline. The
+  `repo/no-inline-copy` lint rule rejects it written as a literal. Catalogue keys
+  are English, and `en` is the default locale.
