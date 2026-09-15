@@ -33,7 +33,11 @@ parent's data and its roles' passwords.
    Protection Bypass for Automation secret and store it as the GitHub
    repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`.
 5. Git integration: a pull request creates a Preview deployment, a merge to
-   `main` creates the Production deployment.
+   `main` creates the Production deployment. This must be the only Vercel
+   project connected to the repository. A second one posts its builds to the
+   same GitHub deployment and under the same `Vercel` status, so its result
+   replaces this project's on the commit, and a Production build of it would be
+   what the smoke run tests.
 
 No setting chooses pnpm. Vercel reads the major version from `packageManager`
 and installs with its own pnpm 11.x, so the pnpm 11 settings in

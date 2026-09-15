@@ -72,6 +72,10 @@ for Automation secret, which `playwright.config.ts` sends as
   is no HTML report or trace to download.
 - If Vercel renames the environment, the smoke run stops running instead of
   failing. It was never a merge gate, so nothing blocks on it.
+- The smoke run's filter and concurrency group assume one Vercel project per
+  repository. A second connected project reports on the same GitHub deployment
+  id (measured on PR #12, where a second project's failed Preview build replaced
+  the first's `Vercel` status), so its Production URL would pass the filter.
 - Until the first smoke run after this lands, the bypass header is proven only
   against a local server and the unprotected production domain.
 - Vercel's pnpm minor version can differ from the 11.8.0 CI runs.
