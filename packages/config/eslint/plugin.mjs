@@ -27,7 +27,7 @@ const noNonAscii = {
     type: 'problem',
     docs: {
       description:
-        'Disallow non-ASCII characters in source files. Localized copy belongs in i18n resource files.',
+        'Disallow non-ASCII characters in source files. Copy belongs in a message catalogue.',
     },
     schema: [],
     messages: {
@@ -68,10 +68,14 @@ const noNonAscii = {
 };
 
 /**
- * A string is copy when it holds a letter, in any script. The `: ` between two
- * expressions in `{name}: {state}` is layout, not language.
+ * JSX text is copy when it holds a letter, in any script: the `: ` between two
+ * expressions in `{name}: {state}` is layout, not language. Every other string
+ * the rule checks is copy unless it is blank, so an ellipsis or a status code
+ * on an attribute is text a person reads.
  */
 const LETTER = /\p{L}/u;
+
+const isBlank = (text) => text.trim() === '';
 
 /**
  * Attributes whose string value is markup rather than something a person reads.
@@ -100,6 +104,12 @@ const isMarkupAttribute = (name) => name.startsWith('data-') || MARKUP_ATTRIBUTE
 const attributeName = (name) =>
   name.type === 'JSXNamespacedName' ? `${name.namespace.name}:${name.name.name}` : name.name;
 
+/** `x as T` and `x satisfies T` evaluate to `x`. */
+const unwrap = (node) =>
+  node.type === 'TSAsExpression' || node.type === 'TSSatisfiesExpression'
+    ? unwrap(node.expression)
+    : node;
+
 /**
  * The string literals an expression can evaluate to. Only the branches that
  * become the value are followed -- both arms of a ternary, both operands of a
@@ -107,18 +117,16 @@ const attributeName = (name) =>
  * is a test, not copy.
  */
 function valueStrings(node) {
-  switch (node.type) {
+  const value = unwrap(node);
+  switch (value.type) {
     case 'Literal':
-      return typeof node.value === 'string' ? [{ node, text: node.value }] : [];
+      return typeof value.value === 'string' ? [{ node: value, text: value.value }] : [];
     case 'TemplateLiteral':
-      return [{ node, text: node.quasis.map((quasi) => quasi.value.cooked ?? '').join('') }];
+      return [{ node: value, text: value.quasis.map((quasi) => quasi.value.cooked ?? '').join('') }];
     case 'ConditionalExpression':
-      return [...valueStrings(node.consequent), ...valueStrings(node.alternate)];
+      return [...valueStrings(value.consequent), ...valueStrings(value.alternate)];
     case 'LogicalExpression':
-      return [...valueStrings(node.left), ...valueStrings(node.right)];
-    case 'TSAsExpression':
-    case 'TSSatisfiesExpression':
-      return valueStrings(node.expression);
+      return [...valueStrings(value.left), ...valueStrings(value.right)];
     default:
       return [];
   }
@@ -126,25 +134,23 @@ function valueStrings(node) {
 
 /** Every string in a metadata object, at any depth. Keys are not copy. */
 function metadataStrings(node) {
-  switch (node.type) {
+  const value = unwrap(node);
+  switch (value.type) {
     case 'ObjectExpression':
-      return node.properties.flatMap((property) =>
+      return value.properties.flatMap((property) =>
         property.type === 'Property' ? metadataStrings(property.value) : [],
       );
     case 'ArrayExpression':
-      return node.elements.flatMap((element) => (element === null ? [] : metadataStrings(element)));
-    case 'TSAsExpression':
-    case 'TSSatisfiesExpression':
-      return metadataStrings(node.expression);
+      return value.elements.flatMap((element) => (element === null ? [] : metadataStrings(element)));
     default:
-      return valueStrings(node);
+      return valueStrings(value);
   }
 }
 
 /**
  * Disallow user-facing copy written inline: JSX text, a string on an attribute
  * not listed as markup, a string a JSX expression renders, and the strings of
- * `export const metadata`.
+ * `export const metadata`. ADR-0007.
  *
  * It sees literals only. `label={health.status}` renders a domain value as UI
  * text and passes, and so does a string assigned to a variable first.
@@ -167,31 +173,33 @@ const noInlineCopy = {
     },
   },
   create(context) {
-    const report = (found, messageId = 'inlineCopy', name = '') => {
+    const report = (node, text, messageId, name = '') => {
+      context.report({ node, messageId, data: { text: JSON.stringify(text.trim()), name } });
+    };
+    const reportStrings = (found, messageId, name) => {
       for (const { node, text } of found) {
-        if (!LETTER.test(text)) continue;
-        context.report({ node, messageId, data: { text: JSON.stringify(text.trim()), name } });
+        if (!isBlank(text)) report(node, text, messageId, name);
       }
     };
 
     return {
       JSXText(node) {
-        report([{ node, text: node.value }]);
+        if (LETTER.test(node.value)) report(node, node.value, 'inlineCopy');
       },
       JSXAttribute(node) {
         const name = attributeName(node.name);
         if (node.value === null || isMarkupAttribute(name)) return;
         const value = node.value.type === 'JSXExpressionContainer' ? node.value.expression : node.value;
-        report(valueStrings(value), 'inlineAttributeCopy', name);
+        reportStrings(valueStrings(value), 'inlineAttributeCopy', name);
       },
       // A child expression. An attribute's container belongs to the attribute
       // above and is not matched here.
       ':matches(JSXElement, JSXFragment) > JSXExpressionContainer'(node) {
-        report(valueStrings(node.expression));
+        reportStrings(valueStrings(node.expression), 'inlineCopy');
       },
       'ExportNamedDeclaration > VariableDeclaration > VariableDeclarator'(node) {
         if (node.id.type !== 'Identifier' || node.id.name !== 'metadata' || node.init === null) return;
-        report(metadataStrings(node.init));
+        reportStrings(metadataStrings(node.init), 'inlineCopy');
       },
     };
   },

@@ -42,7 +42,8 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0004: Make the mutation score the coverage floor](adr/0004-make-the-mutation-score-the-coverage-floor.md) | Accepted |
 | [ADR-0005: Validate the environment once, at first use](adr/0005-validate-the-environment-once-at-first-use.md) | Accepted |
 | [ADR-0006: Gate main on the specs, run against a build](adr/0006-gate-main-on-the-specs-run-against-a-build.md) | Accepted |
-| [ADR-0007: Localize without a locale in the URL](adr/0007-localize-without-a-locale-in-the-url.md) | Deferred |
+| [ADR-0007: Keep copy in one catalogue](adr/0007-keep-copy-in-one-catalogue.md) | Accepted |
+| [ADR-0008: Localize without a locale in the URL](adr/0008-localize-without-a-locale-in-the-url.md) | Deferred |
 
 ## Package layout
 
@@ -80,9 +81,9 @@ Whitelist: anything not marked allowed is a violation.
 apps/web reaches core only through its public surface (`@repo/core`,
 `@repo/core/server`, `@repo/core/<feature>`), never into a layer directly.
 
-Inside apps/web, `messages/` imports nothing, and only `app/` and `components/`
-import it. That line is `eslint-plugin-boundaries` alone: dependency-cruiser
-treats `apps/web` as one unit.
+Inside apps/web, `messages/` imports nothing else in the repo, and only `app/`
+and `components/` import it. That line is `eslint-plugin-boundaries` alone:
+dependency-cruiser treats `apps/web` as one unit. ADR-0007.
 
 ### Layer rules inside `core`
 
@@ -129,7 +130,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
 | Environment          | `DATABASE_URL` only, validated by `parseEnv` in `apps/web/server/env.ts` and read in `apps/web/server/container.ts` alone, at first use rather than at import. Missing or malformed fails the request; unreachable degrades to the probe's amber dot. ADR-0005. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
-| User-facing copy     | In `apps/web/messages/en.ts`, a plain object read by import, one namespace per component that renders copy. `repo/no-inline-copy` rejects copy written in `apps/web/app` or `apps/web/components`. Localization is decided and not built: ADR-0007, Deferred. |
+| User-facing copy     | In `apps/web/messages/en.ts`, a plain object read by import, grouped by the part of the UI that renders it. `repo/no-inline-copy` rejects copy written as a literal in `apps/web/app` or `apps/web/components`. ADR-0007. Localization is decided and not built: ADR-0008, Deferred. |
 
 ## Testing layers
 

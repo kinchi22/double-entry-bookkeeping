@@ -83,8 +83,8 @@ export const nextConfigs = [
     },
   },
   {
-    // Copy lives in apps/web/messages/en.ts, so the page that adopts a locale
-    // (ADR-0007) swaps one import for a translation call instead of hunting
+    // Copy lives in apps/web/messages/en.ts (ADR-0007), so adopting a second
+    // locale (ADR-0008) swaps imports for translation calls instead of hunting
     // strings through JSX. `app` and `components` are where copy is rendered;
     // packages/ui takes its text as props and renders none of its own.
     name: 'repo/copy-in-the-catalogue',

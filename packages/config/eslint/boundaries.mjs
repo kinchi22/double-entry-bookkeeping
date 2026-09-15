@@ -125,8 +125,10 @@ export const DEPENDENCY_POLICIES = [
   // into a layer directly, and it never touches db.
   { from: from(...WEB), allow: allow('contracts', 'core-surface', 'ui', ...WEB) },
 
-  // Copy is read where it is rendered, and the catalogue is data: it imports
-  // nothing, so a translation library can replace it without untangling one.
+  // Copy is read where it is rendered, and the catalogue is data: nothing else
+  // in the repo is imported by it, so a translation library can replace it
+  // without untangling a dependency. No allow entry, so `default: disallow`
+  // applies, as for contracts. ADR-0007.
   { from: from('web-app', 'web-components'), allow: allow('web-messages') },
   { from: from('web-messages'), allow: [] },
 ];
