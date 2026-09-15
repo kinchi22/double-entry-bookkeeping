@@ -61,7 +61,8 @@ depends on no deployment.
   a file.
 
 **`E2E` stays, as a smoke run of what was deployed.** It is not a merge gate. Once
-Vercel is connected it is narrowed to production deployments.
+Vercel is connected it is narrowed to production deployments. (Step 8 narrowed
+it and moved it to its own workflow, `e2e-deployed.yml`, in ADR-0009.)
 
 **E2E liveness runs in `Gate liveness`.** `tools/verify-e2e-liveness.ts`, as
 `pnpm verify:gates:e2e`, starts a server in its own process that answers an

@@ -1,0 +1,62 @@
+name: E2E deployed
+
+# Section 6, gate 7, after the fact. ADR-0006. A smoke run of the Vercel
+# Production deployment, not a merge gate: that is `E2E build`, in
+# e2e-build.yml. Vercel fires deployment_status when a deployment finishes
+# building, and reading environment_url straight off the event means no polling
+# and no third-party action in the supply chain.
+#
+# Its own workflow rather than a job in ci.yml, because this event arrives for
+# every Vercel deployment, previews included, on the commit a pull request is
+# judged by. In ci.yml each run would add a `Gates`, `Integration` and the rest,
+# skipped by `if:`, beside the real ones on that commit, and a job skipped by
+# `if:` reports success to a required check. This workflow names no required
+# check, so its runs cannot stand in for one.
+
+on:
+  deployment_status:
+
+# Keyed by deployment. Vercel deploys a commit rather than a branch, so
+# github.ref is empty on this event, and keyed by ref every deployment would
+# share one group: a preview's status would cancel a running smoke run of
+# production.
+concurrency:
+  group: e2e-deployed-${{ github.event.deployment.id }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # 'Production' is the environment name Vercel gives its deployments.
+    # Renamed, this job stops running rather than failing.
+    if: >-
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment_status.environment_url != ''
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.deployment.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # environment_url is the deployment's own URL, which Vercel's Deployment
+      # Protection covers. playwright.config.ts sends the bypass secret as a
+      # header; without it every request is redirected to the Vercel login.
+      #
+      # No report is uploaded. A failed request's error text lists its headers,
+      # the secret included, and GitHub masks secrets in this log but not in an
+      # artifact.
+      - name: 7. test:e2e
+        run: pnpm test:e2e
+        env:
+          E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}

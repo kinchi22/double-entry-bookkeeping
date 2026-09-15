@@ -4,10 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Vercel reports its preview deployment through this event, which is what the
-  # E2E job waits for. Using the event directly avoids granting a third-party
-  # polling action a token in this repository.
-  deployment_status:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +17,6 @@ jobs:
   # Section 6, gates 1-4, 6 and 8, in the order the brief specifies. Any failure
   # blocks the merge.
   gates:
-    if: github.event_name != 'deployment_status'
     name: Gates
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -85,7 +80,6 @@ jobs:
   # the suite starts a throwaway Postgres with testcontainers rather than
   # reusing a shared database, so it either gets a real server or fails.
   integration:
-    if: github.event_name != 'deployment_status'
     name: Integration
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -102,7 +96,6 @@ jobs:
 
   # Section 6, gate 5. Split out because it is slow and independent of the rest.
   mutation:
-    if: github.event_name != 'deployment_status'
     name: Mutation testing
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -126,7 +119,6 @@ jobs:
   # Section 9. Kept in CI permanently: a rule that dies later must surface here,
   # not months afterwards when someone notices the gate never fired.
   gate-liveness:
-    if: github.event_name != 'deployment_status'
     name: Gate liveness
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -216,13 +208,15 @@ jobs:
   # every preview and must never touch the production database, and Vercel gives
   # no hook that runs once per production deploy.
   #
-  # Until PRODUCTION_DATABASE_URL exists the step reports that it is unset and
-  # succeeds, the same way the E2E job simply does not run until Vercel is
-  # connected. See docs/DEPLOYMENT.md.
+  # The environment holds PRODUCTION_DATABASE_URL as an environment secret and
+  # requires the owner's approval, so the job waits before it can read the URL,
+  # and no other job can read it at all. Without the secret the step reports
+  # that it is unset and succeeds. See docs/DEPLOYMENT.md.
   migrate:
     name: Apply migrations
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [gates, integration]
+    environment: production-database
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -242,44 +236,3 @@ jobs:
             exit 0
           fi
           pnpm --filter @repo/db db:migrate
-
-  # Section 6, gate 7, after the fact. Runs against the Vercel preview
-  # deployment, which is why it is driven by deployment_status rather than by
-  # the push itself. A smoke run of what was deployed, not a merge gate: that is
-  # `E2E build`, in e2e-build.yml. Gate it to production deployments once Vercel
-  # is connected.
-  e2e:
-    name: E2E
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    # Vercel fires deployment_status when the preview finishes building. Reading
-    # environment_url straight off the event means no polling, no extra token,
-    # and no third-party action in the supply chain.
-    if: >-
-      github.event_name == 'deployment_status' &&
-      github.event.deployment_status.state == 'success' &&
-      github.event.deployment_status.environment_url != ''
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.deployment.sha }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm exec playwright install --with-deps chromium
-
-      - name: 7. test:e2e
-        run: pnpm test:e2e
-        env:
-          E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report
-          if-no-files-found: warn

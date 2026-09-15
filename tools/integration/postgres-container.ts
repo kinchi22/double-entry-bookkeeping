@@ -13,7 +13,7 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
  * The image is pinned to the same tag docker-compose uses, so the integration
  * gate tests the database the product actually runs against.
  */
-const IMAGE = 'postgres:17-alpine';
+const IMAGE = 'postgres:18-alpine';
 
 /**
  * The container URL is published as TEST_DATABASE_URL, deliberately not as
