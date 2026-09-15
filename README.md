@@ -26,7 +26,7 @@ The health panel should report `postgres: reachable`.
 
 The app also renders without a *reachable* database: the probe reports
 `postgres` as unreachable and the status degrades rather than erroring. That is
-deliberate, so a preview deployment whose database is down still passes E2E.
+deliberate, so a deployment whose database is down still passes E2E.
 
 `DATABASE_URL` itself is not optional. It is validated on the first request, in
 `apps/web/server/env.ts`, and a missing or malformed one fails that request
@@ -139,7 +139,7 @@ that has one.
 
 Anything named `*.integration.test.ts` under `packages/*/src/**` runs against a
 throwaway Postgres that `tools/integration/postgres-container.ts` starts with
-testcontainers, on the same `postgres:17-alpine` image docker-compose uses.
+testcontainers, on the same `postgres:18-alpine` image docker-compose uses.
 
 ```bash
 pnpm test:integration    # needs a running Docker daemon
@@ -200,8 +200,5 @@ code reviewed in the lockfile diff.
 - `docs/ARCHITECTURE.md` -- dependency matrix, layer rules, fixed decisions
 - `docs/GLOSSARY.md` -- one canonical name per concept
 - `fixtures/README.md` -- which fixture proves which gate
+- `docs/DEPLOYMENT.md` -- Neon, Vercel and GitHub setup, migrations, environment variables
 - `CLAUDE.md` -- working agreement for AI agents
-
-## Remaining setup (needs a human)
-
-Vercel is not connected yet. See "Connecting Vercel" in `docs/DEPLOYMENT.md`.
