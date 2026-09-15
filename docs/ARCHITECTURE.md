@@ -44,6 +44,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0006: Gate main on the specs, run against a build](adr/0006-gate-main-on-the-specs-run-against-a-build.md) | Accepted |
 | [ADR-0007: Keep copy in one catalogue](adr/0007-keep-copy-in-one-catalogue.md) | Accepted |
 | [ADR-0008: Localize without a locale in the URL](adr/0008-localize-without-a-locale-in-the-url.md) | Deferred |
+| [ADR-0009: Deploy to Vercel against two Neon projects](adr/0009-deploy-to-vercel-against-two-neon-projects.md) | Accepted |
 
 ## Package layout
 
@@ -124,7 +125,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | Owned by the use case. Repositories never begin a transaction.         |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change. Applied from CI.       |
+| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. ADR-0009. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |

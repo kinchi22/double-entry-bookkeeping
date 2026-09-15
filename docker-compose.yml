@@ -23,8 +23,8 @@ services:
       # change DATABASE_URL to match.
       - '${POSTGRES_PORT:-5433}:5432'
     volumes:
-      # From 18 the image keeps its data in a versioned directory under
-      # /var/lib/postgresql, so the volume mounts there rather than at .../data.
+      # The image keeps its data in a directory named for the major version,
+      # under /var/lib/postgresql.
       - postgres-data:/var/lib/postgresql
     healthcheck:
       test:

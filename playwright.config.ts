@@ -15,13 +15,14 @@ const isCI = process.env['CI'] === 'true' || process.env['CI'] === '1';
  * Vercel's Deployment Protection covers a deployment's own URL, so the `E2E`
  * job supplies the project's bypass secret and every request carries it. An
  * unset secret arrives from Actions as an empty string, and sends no header.
- *
- * A trace records request headers, and the report that holds it is uploaded as
- * an artifact anyone with access to the repository can download, so no trace
- * is taken while the secret is being sent.
+ * The secret can appear in a failure's error text, so that job uploads no
+ * report.
  */
 const bypassSecret = process.env['VERCEL_AUTOMATION_BYPASS_SECRET'] ?? '';
-const sendsBypassSecret = bypassSecret !== '';
+const protectionBypass: Pick<NonNullable<PlaywrightTestConfig['use']>, 'extraHTTPHeaders'> =
+  bypassSecret === ''
+    ? {}
+    : { extraHTTPHeaders: { 'x-vercel-protection-bypass': bypassSecret } };
 
 // Built separately rather than inline, because exactOptionalPropertyTypes does
 // not allow assigning `undefined` to an optional property.
@@ -45,10 +46,8 @@ export default defineConfig({
   reporter: isCI ? [['github'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL,
-    trace: sendsBypassSecret ? 'off' : 'on-first-retry',
-    ...(sendsBypassSecret
-      ? { extraHTTPHeaders: { 'x-vercel-protection-bypass': bypassSecret } }
-      : {}),
+    trace: 'on-first-retry',
+    ...protectionBypass,
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   ...localServer,

@@ -3,14 +3,14 @@
 ## Connecting Vercel
 
 Set up once, in the Neon, Vercel and GitHub dashboards; none of it can be
-automated from the repo.
+automated from the repo. ADR-0009 records why each choice below was made.
 
 ### Databases
 
 Two Neon projects, `double-entry-bookkeeping-production` and
 `double-entry-bookkeeping-preview`: Postgres 18, AWS Asia Pacific (Singapore).
-They are separate projects, not branches of one, because a Neon branch starts
-as a copy of its parent's data and a preview must never hold production data.
+They are separate projects, not branches of one: a Neon branch starts with its
+parent's data and its roles' passwords.
 
 - The app connects through the **pooled** URL, whose host ends in `-pooler`.
 - The `migrate` job connects through the **direct** URL, because a migration
@@ -60,16 +60,14 @@ polling step and no third-party action holding a token in this repository.
 Previews are not smoke-run, and if Vercel ever names the environment differently
 the job stops running rather than failing.
 
-It is a workflow of its own because the event also arrives for previews, on the
-commit a pull request is judged by. Any workflow it triggers adds its jobs'
-checks to that commit, and a job skipped by `if:` counts as passed for a required
-check of the same name. This one defines no job a ruleset requires.
+It is a workflow of its own, defining no job a ruleset requires, because the
+event also arrives for previews on the commit a pull request is judged by.
 
 `environment_url` is the deployment's own URL, which Standard Protection puts
 behind a Vercel login. `playwright.config.ts` sends the bypass secret as the
-`x-vercel-protection-bypass` header whenever it is set, and takes no trace
-while it does: a trace records request headers, and the report is uploaded as
-an artifact.
+`x-vercel-protection-bypass` header whenever it is set. The job uploads no
+report, because a failed request's error text lists its headers: read a failure
+in the job log, where GitHub masks the secret.
 
 A green `E2E` does not prove the database is reachable, because the specs
 accept either answer. After changing `DATABASE_URL`, open the production domain
@@ -90,15 +88,24 @@ project's direct URL, is a secret of that environment rather than of the
 repository, so no other job can read it. Without it the step reports that it is
 unset and succeeds.
 
-Because Vercel deploys on merge independently of this job, the two can land in
-either order. Migrations must therefore be backwards compatible with the
-currently deployed code: add columns and tables first, remove them in a later
-release once nothing reads them. That is the one deployment rule this repository
-cannot enforce with a gate.
+A newer push to `main` cancels the run before it, including a `migrate` job still
+waiting for approval. Nothing is lost: the next approved run applies every
+migration not yet applied.
+
+Vercel deploys on merge without waiting for this job, so new code reaches
+Production before its migration is approved. Two rules follow, and no gate
+enforces either:
+
+1. **A migration lands first.** It merges, and is approved and applied, before
+   any code that needs it merges. Code must run on the schema as it was before
+   its own migration.
+2. **A migration is backwards compatible** with the code already deployed: add
+   columns and tables first, remove them in a later release once nothing reads
+   them.
 
 Preview deployments share the preview project that `DATABASE_URL` names in the
-Vercel Preview environment. Nothing applies migrations to it; apply them by hand
-when a preview needs them.
+Vercel Preview environment. Apply migrations to it manually or from a branch job
+if a preview needs them.
 
 ## Local development database
 
@@ -112,6 +119,10 @@ pnpm db:up      # start, wait for healthy
 pnpm db:down    # stop, keep data
 pnpm db:reset   # stop, DESTROY the volume, start again
 ```
+
+The volume holds data for one Postgres major version. When the image moves to
+another, the container refuses the old volume and `pnpm db:up` fails until
+`pnpm db:reset` recreates it.
 
 Three decisions worth knowing:
 
