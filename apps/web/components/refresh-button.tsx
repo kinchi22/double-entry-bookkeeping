@@ -2,6 +2,7 @@
 
 import { useFormStatus } from 'react-dom';
 import { type ReactNode } from 'react';
+import { en } from '../messages/en';
 
 export type RefreshButtonProps = {
   /**
@@ -24,7 +25,7 @@ function SubmitButton(): ReactNode {
       className="rounded border border-neutral-300 px-3 py-1 text-sm disabled:opacity-50"
       disabled={pending}
     >
-      {pending ? 'Checking...' : 'Re-check'}
+      {pending ? en.refreshButton.pending : en.refreshButton.idle}
     </button>
   );
 }

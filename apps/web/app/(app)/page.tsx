@@ -1,6 +1,7 @@
 import { Panel, StatusDot } from '@repo/ui';
 import { type ReactNode } from 'react';
 import { RefreshButton } from '../../components/refresh-button';
+import { en } from '../../messages/en';
 import { createContext } from '../../server/context';
 import { createCaller } from '../../server/root-router';
 import { recheckHealth } from './actions';
@@ -18,9 +19,9 @@ export default async function HomePage(): Promise<ReactNode> {
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-8">
-      <h1 className="text-xl font-semibold">Double Entry Bookkeeping</h1>
+      <h1 className="text-xl font-semibold">{en.app.name}</h1>
 
-      <Panel title="Pipeline health">
+      <Panel title={en.healthPanel.title}>
         <div className="flex flex-col gap-2" data-testid="health">
           <StatusDot
             tone={health.status === 'healthy' ? 'positive' : 'negative'}
@@ -29,7 +30,8 @@ export default async function HomePage(): Promise<ReactNode> {
           <ul className="text-sm text-neutral-600">
             {health.components.map((component) => (
               <li key={component.name} data-testid={`component-${component.name}`}>
-                {component.name}: {component.reachable ? 'reachable' : 'unreachable'}
+                {component.name}:{' '}
+                {component.reachable ? en.healthPanel.reachable : en.healthPanel.unreachable}
               </li>
             ))}
           </ul>
@@ -43,7 +45,7 @@ export default async function HomePage(): Promise<ReactNode> {
             dateTime={health.checkedAt}
             data-testid="checked-at"
           >
-            checked at {health.checkedAt}
+            {en.healthPanel.checkedAt} {health.checkedAt}
           </time>
           <RefreshButton action={recheckHealth} />
         </div>
