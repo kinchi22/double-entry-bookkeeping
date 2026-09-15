@@ -55,6 +55,7 @@ apps/web/server/routers/x.ts       parse input -> invoke use case -> map respons
 apps/web/server/container.ts       wiring (composition root)
 apps/web/app/(app)/x/page.tsx      composition only
 apps/web/app/(app)/x/actions.ts    Server Actions: parse, invoke, revalidate
+apps/web/messages/en.ts            copy, one namespace per component (ADR-0007)
 ```
 
 Add the feature to the `exports` field of `packages/core/package.json`. Do not
