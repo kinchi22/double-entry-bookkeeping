@@ -118,11 +118,19 @@ catch:
 
 ## Fixtures that are planted, not linted
 
-`server-only/client-imports-server.tsx` and `migration/schema-with-a-table.ts`
-are copied into `apps/web` and `packages/db` respectively, checked, and removed
-again in a `finally` block. Both have to run from inside the real package,
-because what they break is a build rather than a lint pass, and both tools
-resolve their imports from wherever the file sits.
+`server-only/client-imports-server.tsx` is copied into `apps/web`, and
+`migration/schema-with-a-table.ts` is appended to `packages/db/src/schema.ts`.
+Both are checked and removed again in a `finally` block. Both have to run from
+inside the real package, because what they break is a build rather than a lint
+pass, and both tools resolve their imports from wherever the file sits.
+
+The migration fixture is appended rather than substituted so that what it plants
+is one table added to the schema as it stands. Written over the schema it would
+drop the real tables in the same diff, and drizzle-kit resolves a create beside a
+drop by asking whether the table was renamed -- a question it cannot ask with no
+TTY. It fails and writes nothing, which the drift check cannot tell apart from no
+drift, so the gate would report itself dead. Its imports are aliased for the same
+reason: the real schema already binds those names.
 
 ## Support files
 

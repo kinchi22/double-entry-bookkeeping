@@ -74,7 +74,15 @@ const result = spawnSync(process.execPath, [DRIZZLE_KIT, 'generate'], {
 
 const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
 
-if (result.status !== 0) {
+/**
+ * drizzle-kit reports failure in its output rather than in its exit status: a
+ * schema it cannot compile, and a diff it wants to ask about but has no TTY for,
+ * both exit 0 having written nothing. Exit status alone would read either as a
+ * clean schema. So the run has to say which of the two things it did.
+ */
+const RAN = [/Your SQL migration file/, /No schema changes/];
+
+if (result.status !== 0 || !RAN.some((marker) => marker.test(output))) {
   console.error('migration drift check could not run: drizzle-kit generate failed.');
   console.error(output.slice(-4000));
   process.exit(1);
