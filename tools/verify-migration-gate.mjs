@@ -6,6 +6,12 @@
  * where it lives, because drizzle-kit compiles the schema in place and resolves
  * drizzle-orm from it. Restoring the original is in a finally block: leaving
  * the fixture behind would rewrite the real schema.
+ *
+ * It is appended to the schema rather than written over it, so the planted
+ * change is one table added to whatever the schema already holds. Substituting
+ * the file also drops every real table, and drizzle-kit answers a create beside
+ * a drop by asking whether the table was renamed, which it cannot do with no
+ * TTY: it fails and writes nothing, and the drift check reads that as no drift.
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -24,7 +30,7 @@ const fail = (message) => {
 const original = readFileSync(SCHEMA);
 
 try {
-  writeFileSync(SCHEMA, readFileSync(FIXTURE));
+  writeFileSync(SCHEMA, `${original.toString()}\n${readFileSync(FIXTURE, 'utf8')}`);
 
   const result = spawnSync(process.execPath, [DRIFT_CHECK], {
     cwd: REPO_ROOT,
