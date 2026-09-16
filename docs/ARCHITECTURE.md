@@ -45,6 +45,14 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0007: Keep copy in one catalogue](adr/0007-keep-copy-in-one-catalogue.md) | Accepted |
 | [ADR-0008: Localize without a locale in the URL](adr/0008-localize-without-a-locale-in-the-url.md) | Deferred |
 | [ADR-0009: Deploy to Vercel against two Neon projects](adr/0009-deploy-to-vercel-against-two-neon-projects.md) | Accepted |
+| [ADR-0010: Model a record as a balanced entry of lines](adr/0010-model-a-record-as-a-balanced-entry-of-lines.md) | Accepted |
+| [ADR-0011: Make an aggregate write atomic](adr/0011-make-an-aggregate-write-atomic.md) | Accepted |
+| [ADR-0012: Run the specs against a real database](adr/0012-run-the-specs-against-a-real-database.md) | Accepted |
+| [ADR-0013: Land a migration before the milestone that needs it](adr/0013-land-a-migration-before-the-milestone-that-needs-it.md) | Accepted |
+| [ADR-0014: Keep Production out of the write specs](adr/0014-keep-production-out-of-the-write-specs.md) | Accepted |
+| [ADR-0015: Model accounts as data](adr/0015-model-accounts-as-data.md) | Deferred |
+| [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
+| [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Deferred |
 
 ## Package layout
 
@@ -121,11 +129,11 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | HTTP mapping         | Only in tRPC routers, via `apps/web/server/domain-error.ts`.           |
 | IDs                  | uuid v7, branded per entity from `uuidV7Schema`. Generators are injected, never imported into a pure layer. |
 | Money                | A branded integer in contracts, scale 0: no decimal places, no currency symbol, locale grouping at display only. Arithmetic only through `@repo/core/money`, which returns `Result`. A per-book scale is the additive path if a decimal currency ever appears. |
-| Dates                | Store UTC, `timestamptz`. Convert only at display.                     |
-| Transaction boundary | Owned by the use case. Repositories never begin a transaction.         |
+| Dates                | An instant is stored in UTC as `timestamptz` and converted only at display. A calendar day -- the day an entry is posted -- is a `date`: it holds no time, so there is nothing to convert. ADR-0010. |
+| Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. ADR-0009. |
+| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
@@ -272,6 +280,11 @@ Nothing forces product code through this route. A pull request straight into
 `main` is allowed and sometimes right -- a spec correction, a tooling change, a
 fix with no criterion behind it. What stops a behaviour from arriving with no
 specification is the approval on that pull request, not a rule about paths.
+
+A migration is the one thing a milestone does not carry. Vercel deploys a merge
+to `main` while `Apply migrations` is still waiting for the owner, so a schema
+change goes to `main` in a pull request of its own, is approved and applied
+there, and the milestone that needs it merges afterwards. ADR-0013.
 
 `tools/check-pr-isolation.ts` decides the isolation column from the pull
 request's file list and the two branch names, and the `Spec isolation` job fails
