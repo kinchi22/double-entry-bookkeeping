@@ -13,7 +13,7 @@ They are separate projects, not branches of one: a Neon branch starts with its
 parent's data and its roles' passwords.
 
 - The app connects through the **pooled** URL, whose host ends in `-pooler`.
-- The `migrate` job connects through the **direct** URL, because a migration
+- The two migrate jobs connect through the **direct** URL, because a migration
   needs a session of its own rather than a transaction pooler.
 - Every URL ends in `?sslmode=verify-full`, replacing Neon's default query.
   Neon's certificates chain to a public CA, so node-postgres verifies the
@@ -54,15 +54,25 @@ database before its first real use.
 
 The specs' merge check does not involve Vercel: `E2E build`, in
 `.github/workflows/e2e-build.yml`, runs them against a production build inside
-CI. ADR-0006.
+CI. ADR-0006. That job brings its own `postgres:18-alpine` service container and
+migrates it before the suite, so the specs are judged against the schema the
+commit carries and a spec that writes has somewhere disposable to write.
+ADR-0012.
 
 The `E2E` job in `.github/workflows/e2e-deployed.yml` is a smoke run of the
-Production deployment. Vercel emits a `deployment_status` event for every
-deployment; the job runs when one whose environment is named `Production`
-succeeds, against its `environment_url`. Reading the event directly means no
-polling step and no third-party action holding a token in this repository.
-Previews are not smoke-run, and if Vercel ever names the environment differently
-the job stops running rather than failing.
+Production deployment, of the `@smoke`-tagged specs alone (`--grep @smoke`). A
+spec that writes stays untagged and runs in `E2E build` only: Production becomes
+the owner's real books, and this job holds a deployment bypass secret rather
+than a database credential, so it could not clean up after itself. The tag is a
+claim a person makes and no gate checks it, so review of `e2e/` is where a
+wrongly tagged write is caught. ADR-0014.
+
+Vercel emits a `deployment_status` event for every deployment; the job runs when
+one whose environment is named `Production` succeeds, against its
+`environment_url`. Reading the event directly means no polling step and no
+third-party action holding a token in this repository. Previews are not
+smoke-run, and if Vercel ever names the environment differently the job stops
+running rather than failing.
 
 It is a workflow of its own, defining no job a ruleset requires, because the
 event also arrives for previews on the commit a pull request is judged by.
@@ -73,17 +83,17 @@ behind a Vercel login. `playwright.config.ts` sends the bypass secret as the
 report, because a failed request's error text lists its headers: read a failure
 in the job log, where GitHub masks the secret.
 
-A green `E2E` does not prove the database is reachable, because the specs
+A green `E2E` does not prove the database is reachable, because the health specs
 accept either answer. After changing `DATABASE_URL`, open the production domain
 and check that the health panel reports `postgres: reachable`.
 
 ## Migrations
 
-Migrations are applied by the `migrate` job in `.github/workflows/ci.yml`, on
-push to `main`, after the gates and integration jobs pass. They are deliberately
-not applied from the Vercel build: a build runs for every preview and must never
-touch the production database, and Vercel offers no hook that runs exactly once
-per production deploy.
+Migrations are applied to Production by the `Apply migrations` job in
+`.github/workflows/ci.yml`, on push to `main`, after the gates and integration
+jobs pass. They are deliberately not applied from the Vercel build: a build runs
+for every preview and must never touch the production database, and Vercel
+offers no hook that runs exactly once per production deploy.
 
 The job runs in the GitHub environment `production-database`, which accepts only
 `main` and requires the owner's approval. Every push to `main` therefore waits
@@ -92,7 +102,7 @@ project's direct URL, is a secret of that environment rather than of the
 repository, so no other job can read it. Without it the step reports that it is
 unset and succeeds.
 
-A newer push to `main` cancels the run before it, including a `migrate` job still
+A newer push to `main` cancels the run before it, including a migrate job still
 waiting for approval. Nothing is lost: the next approved run applies every
 migration not yet applied.
 
@@ -108,8 +118,19 @@ enforces either:
    them.
 
 Preview deployments share the preview project that `DATABASE_URL` names in the
-Vercel Preview environment. Apply migrations to it manually or from a branch job
-if a preview needs them.
+Vercel Preview environment. The `Migrate preview` job in the same workflow
+applies migrations to it, on push to `main`, after the same two jobs. Its
+environment `preview-database` accepts only `main` and requires no approval, so
+preview is migrated ahead of Production and without waiting for anyone: a
+migration that is going to fail has usually failed there before the owner is
+asked to apply it to Production. Between the two, the databases are one
+migration apart by design. `PREVIEW_DATABASE_URL` is the preview project's
+direct URL, a secret of that environment, so no pull request job can read it.
+
+Preview carries what is on `main` and nothing else, so a pull request whose own
+migration has not merged still has a broken preview. That is rule 1 above rather
+than a gap: the migration merges first, and ADR-0013 keeps it out of the
+milestone that needs it for the same reason.
 
 ## Local development database
 
@@ -151,9 +172,10 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 
 | Name           | Where                        | Purpose                          |
 | -------------- | ---------------------------- | -------------------------------- |
-| `DATABASE_URL` | Vercel Preview + Production (pooled), and local `.env`; in CI, the `test:e2e` step of `E2E build`, deliberately dead | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
+| `DATABASE_URL` | Vercel Preview + Production (pooled), and local `.env`; in CI, the migrate and `test:e2e` steps of `E2E build`, pointing at that job's service container | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
 | `E2E_BASE_URL` | The `E2E` job, and `pnpm verify:gates:e2e` | Target for Playwright; unset, it starts `next start` |
-| `PRODUCTION_DATABASE_URL` | Secret of the GitHub environment `production-database` | Direct connection string the `migrate` job applies migrations through |
+| `PRODUCTION_DATABASE_URL` | Secret of the GitHub environment `production-database` | Direct connection string the `Apply migrations` job applies migrations through |
+| `PREVIEW_DATABASE_URL` | Secret of the GitHub environment `preview-database` | Direct connection string the `Migrate preview` job applies migrations through |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub repository secret, read by the `E2E` job | Sent as `x-vercel-protection-bypass`, so Playwright gets past Deployment Protection |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.

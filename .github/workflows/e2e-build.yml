@@ -36,6 +36,35 @@ jobs:
     name: E2E build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    # ADR-0012. The first criterion of Phase 1 writes an entry and reads it
+    # back, so the gate that decides whether a milestone may reach `main` needs
+    # a database or it judges the absence of one. postgres:18-alpine is the
+    # image docker-compose.yml runs and the version both Neon projects are on;
+    # nothing checks that the three agree, and a mismatch surfaces as a
+    # migration that passes here and fails on Neon.
+    #
+    # The job runs on the host, not in a container, so the service is reached
+    # through a mapped port on 127.0.0.1 rather than by service name. Port 5432:
+    # the runner is a clean machine, so docker-compose.yml's reason for 5433
+    # does not apply, and a different port keeps this live URL from reading like
+    # the dead one it replaces. Steps do not start until the health check
+    # passes.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: e2e
+          POSTGRES_PASSWORD: e2e
+          POSTGRES_DB: e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U e2e -d e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -45,6 +74,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      # Before the build, so a broken migration fails the job in seconds rather
+      # than after it. The specs then run on the schema this commit carries,
+      # which is the point: a milestone's behaviour is judged against its own
+      # tables, not against whatever `main` last applied.
+      - name: Migrate the CI database
+        run: pnpm --filter @repo/db db:migrate
+        env:
+          DATABASE_URL: postgres://e2e:e2e@127.0.0.1:5432/e2e
+
       - run: pnpm exec playwright install --with-deps chromium
 
       # No DATABASE_URL here, as in `Gates`: the build must not need it
@@ -53,15 +91,15 @@ jobs:
         run: pnpm build
 
       # playwright.config.ts starts `next start` itself when E2E_BASE_URL is
-      # unset. The URL is set on this step and nowhere wider: deliberately dead,
-      # asserted by name in apps/web/server/env.test.ts, so the probe reports
-      # unreachable rather than the request failing. Set any wider, it would
-      # reach the build above. Moved into ci.yml's `env:`, it would reach `Gates`
-      # and silently remove the only check that validation is lazy.
+      # unset, and that server inherits this step's environment. The URL is set
+      # here and nowhere wider: set on the job, it would reach the build above
+      # and change what turbo hashes; moved into ci.yml's `env:`, it would reach
+      # `Gates`, which proves the environment is validated lazily by building
+      # with none at all.
       - name: 7. test:e2e
         run: pnpm test:e2e
         env:
-          DATABASE_URL: postgres://ci:ci@127.0.0.1:5433/ci
+          DATABASE_URL: postgres://e2e:e2e@127.0.0.1:5432/e2e
 
       - uses: actions/upload-artifact@v4
         if: always()

@@ -151,7 +151,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | `adapters/**`                | `*.integration.test.ts` against a real Postgres. Unmeasured: the mutation runner does not run that suite. |
 | `packages/contracts`         | Unit tests, pure. Measured since ADR-0004.             |
 | `apps/web/server`            | The half a unit test can import -- `domain-error.ts` and `env.ts` today -- unit tested and measured. |
-| the composition root, `routers/**`, `app/**` | Playwright, against a production build in CI (`E2E build`). Nothing else reaches them. |
+| the composition root, `routers/**`, `app/**` | Playwright, against a production build in CI (`E2E build`), on a Postgres service container migrated before the suite. Nothing else reaches them. |
 
 "Measured" means the mutation score, which is the only coverage floor here:
 there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs`
@@ -293,13 +293,18 @@ and `pnpm gates` does not run it.
 
 The E2E column is the `E2E build` workflow: the suite against a production build
 of the pull request, run on every pull request into `main` and on `main` itself,
-and on nothing aimed at a milestone. Required checks belong to a ruleset, and
-there are two: `main`, which requires one approval, a code owner's where one
-applies, and six checks -- `Gates`, `Integration`, `Mutation testing`,
-`Gate liveness`, `Spec isolation` and `E2E build`; and `milestone/**`, which
-requires the first five and no approval. That is how the suite is required on
-the trunk alone: it is a line in the first of them and not in the second.
-ADR-0006.
+and on nothing aimed at a milestone. The job brings a `postgres:18-alpine`
+service of its own and migrates it first, so a spec that writes is judged
+against the schema its own commit carries; the deployed smoke run in
+`E2E deployed` is not a required check and runs the `@smoke`-tagged reads alone.
+ADR-0012, ADR-0014.
+
+Required checks belong to a ruleset, and there are two: `main`, which requires
+one approval, a code owner's where one applies, and six checks -- `Gates`,
+`Integration`, `Mutation testing`, `Gate liveness`, `Spec isolation` and
+`E2E build`; and `milestone/**`, which requires the first five and no approval.
+That is how the suite is required on the trunk alone: it is a line in the first
+of them and not in the second. ADR-0006.
 
 Every required check, in both rulesets, is accepted from GitHub Actions only.
 With "any source", GitHub's documentation says anyone with write access to the
