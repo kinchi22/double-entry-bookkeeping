@@ -31,7 +31,7 @@ force before then.
   (asset, liability, equity, revenue, expense), and an archived flag. `code` and
   `name` are the owner's; `type` is the fixed vocabulary of double-entry
   bookkeeping and stays a domain constant.
-- `entry_lines.account_code` becomes `account_id`, a foreign key. The migration
+- `entry_lines.account` becomes `account_id`, a foreign key. The migration
   seeds the five existing codes first, maps every existing line onto them, and
   drops the code column in a later release, per the backwards-compatible rule in
   `docs/DEPLOYMENT.md`.

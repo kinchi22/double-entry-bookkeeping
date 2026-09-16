@@ -129,7 +129,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | HTTP mapping         | Only in tRPC routers, via `apps/web/server/domain-error.ts`.           |
 | IDs                  | uuid v7, branded per entity from `uuidV7Schema`. Generators are injected, never imported into a pure layer. |
 | Money                | A branded integer in contracts, scale 0: no decimal places, no currency symbol, locale grouping at display only. Arithmetic only through `@repo/core/money`, which returns `Result`. A per-book scale is the additive path if a decimal currency ever appears. |
-| Dates                | An instant is stored in UTC as `timestamptz` and converted only at display. A calendar day -- the day an entry is posted -- is a `date`, because midnight in the timezone the book is kept in is the previous day in UTC. ADR-0010. |
+| Dates                | An instant is stored in UTC as `timestamptz` and converted only at display. A calendar day -- the day an entry is posted -- is a `date`: it holds no time, so there is nothing to convert. ADR-0010. |
 | Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
