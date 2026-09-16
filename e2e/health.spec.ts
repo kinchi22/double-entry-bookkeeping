@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 /**
+ * Every spec here is tagged `@smoke`: each one is a read, so each one may run
+ * against Production, which the `E2E` job filters for with `--grep @smoke`.
+ * A spec that writes stays untagged and runs in `E2E build` alone. ADR-0014.
+ */
+
+/**
  * Phase 0 acceptance criterion.
  *
  * Given the app is deployed
@@ -14,7 +20,7 @@ import { expect, test } from '@playwright/test';
  * malformed `DATABASE_URL` is not that case: it is configuration, and the app
  * refuses it. ADR-0005.
  */
-test('renders pipeline health for every checked component', async ({ page }) => {
+test('renders pipeline health for every checked component', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/');
 
   const health = page.getByTestId('health');
@@ -34,7 +40,7 @@ test('renders pipeline health for every checked component', async ({ page }) => 
  * proves the action actually invalidated the render instead of the button
  * merely being clickable.
  */
-test('re-checks health through the server action', async ({ page }) => {
+test('re-checks health through the server action', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/');
 
   const checkedAt = page.getByTestId('checked-at');
@@ -45,7 +51,7 @@ test('re-checks health through the server action', async ({ page }) => {
   await expect(checkedAt).not.toHaveText(before ?? '');
 });
 
-test('serves the health procedure over the tRPC endpoint', async ({ request }) => {
+test('serves the health procedure over the tRPC endpoint', { tag: '@smoke' }, async ({ request }) => {
   const response = await request.get('/api/trpc/health.get');
 
   expect(response.status()).toBe(200);
