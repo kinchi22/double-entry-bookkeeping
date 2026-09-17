@@ -1,0 +1,146 @@
+import { asc, desc } from 'drizzle-orm';
+import {
+  domainError,
+  err,
+  ok,
+  sideSchema,
+  type DomainError,
+  type EntryId,
+  type Err,
+  type Result,
+} from '@repo/contracts';
+import { createDatabase, schema } from '@repo/db';
+import { money } from '../../money/domain/money';
+import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
+import { type EntryRepository } from '../ports/entry-repository';
+
+export type PostgresEntryRepository = EntryRepository & {
+  close: () => Promise<void>;
+};
+
+type EntryRow = typeof schema.entries.$inferSelect;
+type LineRow = typeof schema.entryLines.$inferSelect;
+
+/**
+ * Entries in Postgres: a row in `entries` and one row per line in
+ * `entry_lines`, numbered from 1 in the order the lines were entered.
+ *
+ * It takes a connection string for the reason the health probe does: the
+ * composition root may not import @repo/db.
+ *
+ * A database failure is a returned `DEPENDENCY_UNAVAILABLE`, never a thrown
+ * error. Its message stays generic, because a driver's message names hosts and
+ * ports, and a message can reach an HTTP response.
+ */
+export function createPostgresEntryRepository(connectionString: string): PostgresEntryRepository {
+  const { database, close } = createDatabase(connectionString);
+
+  return {
+    /**
+     * One transaction, because an entry without all of its lines is a ledger
+     * that no longer balances and says nothing about it. ADR-0011.
+     */
+    save: async (entry: Entry): Promise<Result<void, DomainError>> => {
+      try {
+        await database.transaction(async (transaction) => {
+          await transaction.insert(schema.entries).values({
+            id: entry.id,
+            entryDate: entry.entryDate,
+            memo: entry.memo,
+            createdAt: entry.createdAt,
+          });
+          await transaction.insert(schema.entryLines).values(
+            entry.lines.map((line, index) => ({
+              entryId: entry.id,
+              lineNumber: index + 1,
+              account: line.account,
+              side: line.side,
+              amount: line.amount,
+            })),
+          );
+        });
+        return ok(undefined);
+      } catch {
+        return unavailable('The entry could not be stored.');
+      }
+    },
+
+    /**
+     * Two reads rather than a join, entries first. Under read committed an
+     * entry committed between them brings lines the first read has no entry
+     * for, and those are ignored; an entry the first read saw has all of its
+     * lines committed already, because they were written in its transaction.
+     */
+    list: async (): Promise<Result<readonly Entry[], DomainError>> => {
+      let entryRows: EntryRow[];
+      let lineRows: LineRow[];
+      try {
+        entryRows = await database
+          .select()
+          .from(schema.entries)
+          .orderBy(
+            desc(schema.entries.entryDate),
+            desc(schema.entries.createdAt),
+            desc(schema.entries.id),
+          );
+        lineRows = await database
+          .select()
+          .from(schema.entryLines)
+          .orderBy(asc(schema.entryLines.entryId), asc(schema.entryLines.lineNumber));
+      } catch {
+        return unavailable('The entries could not be read.');
+      }
+
+      const linesByEntry = new Map<string, LineRow[]>();
+      for (const line of lineRows) {
+        const lines = linesByEntry.get(line.entryId) ?? [];
+        lines.push(line);
+        linesByEntry.set(line.entryId, lines);
+      }
+
+      const entries: Entry[] = [];
+      for (const row of entryRows) {
+        const entry = restore(row, linesByEntry.get(row.id) ?? []);
+        if (!entry.ok) {
+          return entry;
+        }
+        entries.push(entry.value);
+      }
+      return ok(entries);
+    },
+
+    close,
+  };
+}
+
+const unavailable = (message: string): Err<DomainError> =>
+  err(domainError('DEPENDENCY_UNAVAILABLE', message));
+
+/**
+ * Rebuilds a stored entry through the same rules that admitted it.
+ *
+ * The database enforces shape and none of the rules (ADR-0010), so a row
+ * written around the app can hold an unbalanced entry or an unknown side. That
+ * is reported as this app's failure rather than listed, and rather than blamed
+ * on the caller with the code the rule would have given a draft.
+ */
+function restore(row: EntryRow, lineRows: readonly LineRow[]): Result<Entry, DomainError> {
+  const lines: EntryDraft['lines'][number][] = [];
+  for (const line of lineRows) {
+    const side = sideSchema.safeParse(line.side);
+    const amount = money(line.amount);
+    if (!side.success || !amount.ok) {
+      return unavailable(`Stored entry ${row.id} has a line with no valid side or amount.`);
+    }
+    lines.push({ account: line.account, side: side.data, amount: amount.value });
+  }
+
+  const entry = makeEntry(
+    { entryDate: row.entryDate, memo: row.memo, lines },
+    // The column is a uuid that only `save` writes, and it writes an EntryId.
+    { id: row.id as EntryId, createdAt: row.createdAt },
+  );
+  return entry.ok
+    ? entry
+    : unavailable(`Stored entry ${row.id} breaks a rule: ${entry.error.message}`);
+}
