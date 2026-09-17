@@ -92,7 +92,8 @@ what. Each failure is one JSON line on stderr with an `event` --
 `health.probe_unreachable`, `entries.list_failed`, `entries.save_failed`,
 `entries.stored_entry_invalid` -- and, for a driver error, its `code`: a
 SQLSTATE such as `42P01` (table missing), or a system code such as
-`ECONNREFUSED`. ADR-0018.
+`ECONNREFUSED`. A request that failed on the server adds `request.failed`, with
+its `routePath` and the `digest` a 500 page shows. ADR-0018.
 
 ## Migrations
 

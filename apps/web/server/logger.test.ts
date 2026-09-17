@@ -1,6 +1,6 @@
 import { describeError, type LogFields } from '@repo/core';
 import { describe, expect, it } from 'vitest';
-import { createLogger } from './logger';
+import { createLogger, stderr } from './logger';
 
 /** Every line the logger wrote, parsed. */
 function capture(): { lines: () => unknown[]; destination: { write: (line: string) => void } } {
@@ -73,5 +73,14 @@ describe('LogFields', () => {
       name: 'Error',
       message: 'A query failed; its text and parameters are not logged.',
     });
+  });
+});
+
+describe('stderr', () => {
+  it('writes to file descriptor 2, synchronously', () => {
+    const destination = stderr();
+
+    expect(Reflect.get(destination, 'fd')).toBe(2);
+    expect(Reflect.get(destination, 'sync')).toBe(true);
   });
 });
