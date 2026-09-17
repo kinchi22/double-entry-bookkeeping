@@ -197,12 +197,61 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Through the environment, not interpolated into the script: a branch
+          # name is chosen by whoever opens the pull request, and a template
+          # expression is substituted into the script text before bash parses
+          # it. Read-only permissions bound what that could do here; this costs
+          # two lines and removes the question.
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           gh api --paginate \
             "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             --jq '.[] | .filename, (.previous_filename // empty)' \
-            | node tools/check-pr-isolation.ts \
-                '${{ github.head_ref }}' '${{ github.base_ref }}'
+            | node tools/check-pr-isolation.ts "$HEAD_REF" "$BASE_REF"
+
+  # ADR-0013. Nothing migrated the preview database, which cost nothing while the
+  # schema was empty. The first table makes every preview of a pull request whose
+  # code reads it a broken deployment until someone remembers.
+  #
+  # Push to `main` only, so the preview database carries what `main` carries and
+  # nothing else. A pull request whose own migration has not merged still has a
+  # broken preview: that is the migration-first rule in docs/DEPLOYMENT.md, not a
+  # gap here.
+  #
+  # No approval on this environment, unlike `production-database`, so preview is
+  # migrated ahead of Production and a migration that is going to fail has
+  # usually failed before the owner is asked to apply it. The two databases are
+  # one migration apart by design.
+  #
+  # `preview-database` accepts only `main`, so no pull request job can read
+  # PREVIEW_DATABASE_URL. What could still reach it is a change to this file or
+  # to a package script this job runs; what it would leak is a disposable
+  # database.
+  migrate-preview:
+    name: Migrate preview
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [gates, integration]
+    environment: preview-database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo 'PREVIEW_DATABASE_URL is not set. Skipping; see docs/DEPLOYMENT.md.'
+            exit 0
+          fi
+          pnpm --filter @repo/db db:migrate
 
   # Migrations are applied from CI, not from the Vercel build: a build runs for
   # every preview and must never touch the production database, and Vercel gives

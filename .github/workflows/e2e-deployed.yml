@@ -2,9 +2,12 @@ name: E2E deployed
 
 # Section 6, gate 7, after the fact. ADR-0006. A smoke run of the Vercel
 # Production deployment, not a merge gate: that is `E2E build`, in
-# e2e-build.yml. Vercel fires deployment_status when a deployment finishes
-# building, and reading environment_url straight off the event means no polling
-# and no third-party action in the supply chain.
+# e2e-build.yml. It runs the `@smoke`-tagged specs alone (ADR-0014), so it
+# asserts less than the merge gate does, on purpose.
+#
+# Vercel fires deployment_status when a deployment finishes building, and
+# reading environment_url straight off the event means no polling and no
+# third-party action in the supply chain.
 #
 # Its own workflow rather than a job in ci.yml, because this event arrives for
 # every Vercel deployment, previews included, on the commit a pull request is
@@ -55,8 +58,17 @@ jobs:
       # No report is uploaded. A failed request's error text lists its headers,
       # the secret included, and GitHub masks secrets in this log but not in an
       # artifact.
+      #
+      # --grep @smoke, not the whole suite: ADR-0014. Production becomes the
+      # owner's real books, and this job holds a deployment bypass secret rather
+      # than a database credential, so it has no way to clean up after a spec
+      # that writes. The tag is an allowlist a person applies, and no gate checks
+      # it; review of e2e/ is where a wrongly tagged write is caught.
+      #
+      # --grep exits non-zero when it matches nothing, so this filter and the
+      # tags must not be separated: the tags landed first, in #14.
       - name: 7. test:e2e
-        run: pnpm test:e2e
+        run: pnpm test:e2e --grep @smoke
         env:
           E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}

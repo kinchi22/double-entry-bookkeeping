@@ -20,10 +20,14 @@ import { parseEnv } from './env';
 const VALID = 'postgres://app:hunter2@db.internal:5432/ledger';
 
 /**
- * The URL the `E2E build` job in `.github/workflows/e2e-build.yml` supplies:
- * syntactically a connection string, deliberately pointing at nothing. It is
- * asserted by name because the job depends on this function accepting it, and a
- * stricter rule added later would break that job rather than this test.
+ * Syntactically a connection string, pointing at nothing: a host that is up and
+ * a host that refuses are the same value to this function, because reachability
+ * is not something a parser can know. Rejecting it would move that judgement
+ * into validation, where it would fail a request the app is supposed to answer
+ * with the probe's amber dot instead. ADR-0005.
+ *
+ * `E2E build` supplied exactly this URL until ADR-0012 gave that job a real
+ * database. Nothing in CI depends on this case now; the rule it pins does.
  */
 const DELIBERATELY_DEAD = 'postgres://ci:ci@127.0.0.1:5433/ci';
 
@@ -38,7 +42,7 @@ describe('parseEnv', () => {
     expect(parseEnv({ DATABASE_URL: postgresql })).toEqual({ databaseUrl: postgresql });
   });
 
-  it('accepts the deliberately dead URL the E2E build job supplies', () => {
+  it('accepts a syntactically valid URL that points at nothing', () => {
     expect(parseEnv({ DATABASE_URL: DELIBERATELY_DEAD })).toEqual({
       databaseUrl: DELIBERATELY_DEAD,
     });
