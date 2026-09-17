@@ -34,4 +34,11 @@ export {
   type EntryDraft,
   type EntryLine,
   type EntryStamp,
+  createPostEntry,
+  type PostEntry,
+  type PostEntryDependencies,
+  createListEntries,
+  type ListEntries,
+  type ListEntriesDependencies,
+  type EntryRepository,
 } from './entries/index';
