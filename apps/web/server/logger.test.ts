@@ -1,4 +1,4 @@
-import { describeError } from '@repo/core';
+import { describeError, type LogFields } from '@repo/core';
 import { describe, expect, it } from 'vitest';
 import { createLogger } from './logger';
 
@@ -44,5 +44,34 @@ describe('createLogger', () => {
     logger.error({ event: 'second' }, 'two');
 
     expect(lines().map((line) => (line as { event: string }).event)).toEqual(['first', 'second']);
+  });
+});
+
+describe('LogFields', () => {
+  /**
+   * A compile-time check, run by `tsc` over this file: each directive fails the
+   * typecheck gate if the line under it ever starts compiling.
+   */
+  it('takes an error only as describeError describes it', () => {
+    const raw = Object.assign(new Error('Failed query: insert into "entries"\nparams: Secret memo'), {
+      params: ['Secret memo'],
+    });
+    const caught: unknown = raw;
+
+    const refused: readonly LogFields[] = [
+      // @ts-expect-error -- an Error looks like a description, and is not one
+      { event: 'raw', error: raw },
+      // @ts-expect-error -- a caught value is unknown
+      { event: 'caught', error: caught },
+      // @ts-expect-error -- any other object could carry a row
+      { event: 'object', params: { memo: 'Secret memo' } },
+    ];
+    const accepted: LogFields = { event: 'described', error: describeError(raw), attempt: 1 };
+
+    expect(refused).toHaveLength(3);
+    expect(accepted['error']).toEqual({
+      name: 'Error',
+      message: 'A query failed; its text and parameters are not logged.',
+    });
   });
 });

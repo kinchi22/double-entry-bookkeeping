@@ -28,6 +28,11 @@ included, copies all of it.
   `error(fields, message)`. `fields` carries an `event`, a stable dotted name
   such as `entries.list_failed`. Adapters take a logger as an argument, as they
   take a connection string.
+- **The compiler keeps raw errors out.** A field holds a string, a number, a
+  boolean or an `ErrorDescription`, and `ErrorDescription` is branded, so only
+  `describeError` makes one. Unbranded, an `Error` would pass for a description,
+  since it has a `name` and a `message` too. A caught `unknown` and any other
+  object are refused as well.
 - **`describeError`** in `packages/core/src/logging/domain` is the only way an
   error reaches a log line. It follows `cause`, and the first error of an
   `AggregateError`, to the innermost error, and keeps its name, a string `code`
@@ -65,7 +70,12 @@ logged, so the cost lands on requests that are already failing.
 
 The adapters' integration tests pass a recording logger and assert the event,
 the code and, for a refused write, that the memo is absent. The pino logger has
-a unit test of its own. Nothing tests that the platform keeps stderr.
+a unit test of its own, and `@ts-expect-error` lines beside it fail the
+typecheck if a raw error, a caught value or an object ever becomes a valid
+field. Nothing tests that the platform keeps stderr.
+
+A field cannot hold a nested object. When one is needed, the value type grows
+by a named, branded shape, as `ErrorDescription` did.
 
 Adding a logged event means naming it and choosing its fields in the adapter;
 the port does not grow a method until a second level is needed.

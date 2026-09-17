@@ -1,3 +1,5 @@
+import { type Brand } from '@repo/contracts';
+
 /**
  * What of a thrown error may be written to a log: its name, its code, and its
  * message. Pure, so the rule is measured rather than trusted. ADR-0018.
@@ -9,12 +11,22 @@
  * is never read at all.
  */
 
-export type ErrorDescription = {
+/**
+ * Branded, so `describeError` is the only way to make one. Without the brand an
+ * `Error` would pass for a description -- it has a `name` and a `message` too --
+ * and a raw driver error could reach a log line through the type system.
+ */
+type Described = {
   readonly name: string;
   /** A SQLSTATE such as `42P01`, or a system code such as `ECONNREFUSED`. */
   readonly code?: string;
   readonly message: string;
 };
+
+export type ErrorDescription = Brand<Described, 'ErrorDescription'>;
+
+/** The one place a description is branded. */
+const describe = (fields: Described): ErrorDescription => fields as ErrorDescription;
 
 /** Far deeper than any real chain, and a stop for a cycle. */
 const MAX_DEPTH = 8;
@@ -60,14 +72,14 @@ function codeOf(error: Error): string | undefined {
 export function describeError(thrown: unknown): ErrorDescription {
   const error = innermost(thrown);
   if (!(error instanceof Error)) {
-    return { name: typeof error, message: 'A value that is not an Error was thrown.' };
+    return describe({ name: typeof error, message: 'A value that is not an Error was thrown.' });
   }
 
   // A query error with nothing inside it still quotes its parameters.
   const message =
     'params' in error ? 'A query failed; its text and parameters are not logged.' : error.message;
   const code = codeOf(error);
-  return code === undefined
-    ? { name: error.name, message }
-    : { name: error.name, code, message };
+  return describe(
+    code === undefined ? { name: error.name, message } : { name: error.name, code, message },
+  );
 }

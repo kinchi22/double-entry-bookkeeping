@@ -8,4 +8,4 @@
 export { describeError } from './domain/describe-error';
 export type { ErrorDescription } from './domain/describe-error';
 
-export type { LogFields, Logger } from './ports/logger';
+export type { LogFields, LogValue, Logger } from './ports/logger';

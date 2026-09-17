@@ -47,5 +47,6 @@ export {
   describeError,
   type ErrorDescription,
   type LogFields,
+  type LogValue,
   type Logger,
 } from './logging/index';
