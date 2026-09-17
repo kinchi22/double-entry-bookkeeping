@@ -1,6 +1,15 @@
 import 'server-only';
-import { createGetHealth, type GetHealth } from '@repo/core';
-import { createPostgresHealthProbe } from '@repo/core/server';
+import { entryIdSchema } from '@repo/contracts';
+import {
+  createGetHealth,
+  createListEntries,
+  createPostEntry,
+  type GetHealth,
+  type ListEntries,
+  type PostEntry,
+} from '@repo/core';
+import { createPostgresEntryRepository, createPostgresHealthProbe } from '@repo/core/server';
+import { v7 as uuidv7 } from 'uuid';
 import { type Env, parseEnv } from './env';
 
 /**
@@ -15,16 +24,27 @@ import { type Env, parseEnv } from './env';
  */
 export type Container = {
   readonly getHealth: GetHealth;
+  readonly postEntry: PostEntry;
+  readonly listEntries: ListEntries;
 };
 
 export function createContainer({ databaseUrl }: Env): Container {
   const postgres = createPostgresHealthProbe(databaseUrl);
+  const entries = createPostgresEntryRepository(databaseUrl);
 
   return {
     getHealth: createGetHealth({
       probes: [postgres],
       now: () => new Date(),
     }),
+    postEntry: createPostEntry({
+      entries,
+      // Parsing brands the id, and would fail loudly if the generator ever
+      // stopped producing v7.
+      newEntryId: () => entryIdSchema.parse(uuidv7()),
+      now: () => new Date(),
+    }),
+    listEntries: createListEntries({ entries }),
   };
 }
 

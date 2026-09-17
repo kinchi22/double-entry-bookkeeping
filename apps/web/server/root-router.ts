@@ -1,8 +1,10 @@
 import { createCallerFactory, router } from './trpc';
+import { entriesRouter } from './routers/entries';
 import { healthRouter } from './routers/health';
 
 export const appRouter = router({
   health: healthRouter,
+  entries: entriesRouter,
 });
 
 export type AppRouter = typeof appRouter;

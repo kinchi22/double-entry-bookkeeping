@@ -1,4 +1,5 @@
 import { Panel, StatusDot } from '@repo/ui';
+import Link from 'next/link';
 import { type ReactNode } from 'react';
 import { RefreshButton } from '../../components/refresh-button';
 import { en } from '../../messages/en';
@@ -20,6 +21,11 @@ export default async function HomePage(): Promise<ReactNode> {
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 p-8">
       <h1 className="text-xl font-semibold">{en.app.name}</h1>
+      <nav>
+        <Link href="/entries" className="text-sm underline">
+          {en.home.entriesLink}
+        </Link>
+      </nav>
 
       <Panel title={en.healthPanel.title}>
         <div className="flex flex-col gap-2" data-testid="health">
