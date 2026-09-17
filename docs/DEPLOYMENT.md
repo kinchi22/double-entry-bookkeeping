@@ -77,6 +77,15 @@ running rather than failing.
 It is a workflow of its own, defining no job a ruleset requires, because the
 event also arrives for previews on the commit a pull request is judged by.
 
+The event is not Vercel's alone. GitHub records a deployment for a job that
+runs in an environment, and fires the event for each status it passes through
+(`waiting`, `queued`, `in_progress`, `success`). Each one starts an
+`E2E deployed` run that skips its job and costs no runner time. `Apply
+migrations` adds about five of them to a push with a pending migration, and
+must: ADR-0019 reads those deployments. `Migrate preview` sets
+`deployment: false`, so it adds none, and a push with no migration starts one
+run.
+
 `environment_url` is the deployment's own URL, which Standard Protection puts
 behind a Vercel login. `playwright.config.ts` sends the bypass secret as the
 `x-vercel-protection-bypass` header whenever it is set. The job uploads no
