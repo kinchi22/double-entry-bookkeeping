@@ -87,6 +87,13 @@ A green `E2E` does not prove the database is reachable, because the health specs
 accept either answer. After changing `DATABASE_URL`, open the production domain
 and check that the health panel reports `postgres: reachable`.
 
+When something fails against the database, the deployment's runtime logs say
+what. Each failure is one JSON line on stderr with an `event` --
+`health.probe_unreachable`, `entries.list_failed`, `entries.save_failed`,
+`entries.stored_entry_invalid` -- and, for a driver error, its `code`: a
+SQLSTATE such as `42P01` (table missing), or a system code such as
+`ECONNREFUSED`. ADR-0018.
+
 ## Migrations
 
 Migrations are applied to Production by the `Apply migrations` job in

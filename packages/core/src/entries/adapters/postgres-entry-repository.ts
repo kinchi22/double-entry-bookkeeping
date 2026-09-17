@@ -10,6 +10,8 @@ import {
   type Result,
 } from '@repo/contracts';
 import { createDatabase, schema } from '@repo/db';
+import { describeError } from '../../logging/domain/describe-error';
+import { type Logger } from '../../logging/ports/logger';
 import { money } from '../../money/domain/money';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
 import { type EntryRepository } from '../ports/entry-repository';
@@ -30,9 +32,13 @@ type LineRow = typeof schema.entryLines.$inferSelect;
  *
  * A database failure is a returned `DEPENDENCY_UNAVAILABLE`, never a thrown
  * error. Its message stays generic, because a driver's message names hosts and
- * ports, and a message can reach an HTTP response.
+ * ports, and a message can reach an HTTP response. What went wrong goes to the
+ * logger instead, described by `describeError`. ADR-0018.
  */
-export function createPostgresEntryRepository(connectionString: string): PostgresEntryRepository {
+export function createPostgresEntryRepository(
+  connectionString: string,
+  logger: Logger,
+): PostgresEntryRepository {
   const { database, close } = createDatabase(connectionString);
 
   return {
@@ -60,7 +66,11 @@ export function createPostgresEntryRepository(connectionString: string): Postgre
           );
         });
         return ok(undefined);
-      } catch {
+      } catch (error) {
+        logger.error(
+          { event: 'entries.save_failed', entryId: entry.id, error: describeError(error) },
+          'An entry could not be stored.',
+        );
         return unavailable('The entry could not be stored.');
       }
     },
@@ -87,7 +97,11 @@ export function createPostgresEntryRepository(connectionString: string): Postgre
           .select()
           .from(schema.entryLines)
           .orderBy(asc(schema.entryLines.entryId), asc(schema.entryLines.lineNumber));
-      } catch {
+      } catch (error) {
+        logger.error(
+          { event: 'entries.list_failed', error: describeError(error) },
+          'The entries could not be read.',
+        );
         return unavailable('The entries could not be read.');
       }
 
@@ -102,6 +116,10 @@ export function createPostgresEntryRepository(connectionString: string): Postgre
       for (const row of entryRows) {
         const entry = restore(row, linesByEntry.get(row.id) ?? []);
         if (!entry.ok) {
+          logger.error(
+            { event: 'entries.stored_entry_invalid', entryId: row.id, reason: entry.error.message },
+            'A stored entry breaks a rule, so the entries were not listed.',
+          );
           return entry;
         }
         entries.push(entry.value);

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { isErr, isOk, type EntryId, type Money } from '@repo/contracts';
 import { createDatabase } from '@repo/db';
+import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
 import { createPostgresEntryRepository } from './postgres-entry-repository';
 
@@ -26,8 +27,16 @@ if (databaseUrl === undefined) {
 /** Port 1 is reserved and nothing binds it, so the connection is refused immediately. */
 const UNREACHABLE_URL = 'postgresql://absent:absent@127.0.0.1:1/absent';
 
-const repository = createPostgresEntryRepository(databaseUrl);
-const dead = createPostgresEntryRepository(UNREACHABLE_URL);
+/** A logger that keeps what it is given, so a test can read what was reported. */
+const logged: LogFields[] = [];
+const logger: Logger = {
+  error: (fields) => {
+    logged.push(fields);
+  },
+};
+
+const repository = createPostgresEntryRepository(databaseUrl, logger);
+const dead = createPostgresEntryRepository(UNREACHABLE_URL, logger);
 const { database, close } = createDatabase(databaseUrl);
 
 afterAll(async () => {
@@ -36,6 +45,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await database.execute(sql`truncate table entry_lines, entries`);
+  logged.length = 0;
 });
 
 let sequence = 0;
@@ -91,6 +101,7 @@ describe('createPostgresEntryRepository', () => {
 
     expect(isOk(result)).toBe(true);
     expect(await listed()).toEqual([saved]);
+    expect(logged).toEqual([]);
   });
 
   it('keeps an amount at the edge of the safe integer range exact', async () => {
@@ -147,6 +158,14 @@ describe('createPostgresEntryRepository', () => {
     if (!isErr(result)) return;
     expect(result.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(await countEntries()).toBe(0);
+    expect(logged).toEqual([
+      {
+        event: 'entries.save_failed',
+        entryId: valid.id,
+        // invalid_text_representation: Postgres read "NaN" as a bigint.
+        error: expect.objectContaining({ code: '22P02' }) as unknown,
+      },
+    ]);
   });
 
   it('refuses a second entry with the same id and keeps the first', async () => {
@@ -157,6 +176,16 @@ describe('createPostgresEntryRepository', () => {
 
     expect(isErr(result)).toBe(true);
     expect(await listed()).toEqual([saved]);
+    // unique_violation, and not a word of the refused row: the memo travels in
+    // the query's params, which are never logged.
+    expect(logged).toEqual([
+      {
+        event: 'entries.save_failed',
+        entryId: saved.id,
+        error: expect.objectContaining({ code: '23505' }) as unknown,
+      },
+    ]);
+    expect(JSON.stringify(logged)).not.toContain('Overwritten');
   });
 
   it('reports a stored entry that breaks a rule rather than listing it', async () => {
@@ -172,6 +201,13 @@ describe('createPostgresEntryRepository', () => {
     if (!isErr(result)) return;
     expect(result.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(result.error.message).toContain(saved.id);
+    expect(logged).toEqual([
+      {
+        event: 'entries.stored_entry_invalid',
+        entryId: saved.id,
+        reason: expect.stringContaining('differ') as unknown,
+      },
+    ]);
   });
 
   it('reports a stored line with a side that is not debit or credit', async () => {
@@ -195,5 +231,13 @@ describe('createPostgresEntryRepository', () => {
 
     expect(isErr(saved) && saved.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(isErr(read) && read.error.code).toBe('DEPENDENCY_UNAVAILABLE');
+    expect(logged.map((fields) => fields.event)).toEqual([
+      'entries.save_failed',
+      'entries.list_failed',
+    ]);
+    expect(logged.map((fields) => fields['error'])).toEqual([
+      expect.objectContaining({ code: 'ECONNREFUSED' }),
+      expect.objectContaining({ code: 'ECONNREFUSED' }),
+    ]);
   });
 });
