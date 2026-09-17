@@ -65,7 +65,8 @@ for Automation secret, which `playwright.config.ts` sends as
 
 - Every push to `main` waits for an approval, whether or not it carries a
   migration. A newer push cancels a run still waiting; the next approved run
-  applies everything pending.
+  applies everything pending. (Since ADR-0019, a push waits only while a
+  migration is pending.)
 - New code reaches Production before its migration is approved. The
   migration-first rule is what keeps that safe, and no gate enforces it.
 - A smoke failure is read in the job log, where GitHub masks the secret. There

@@ -103,15 +103,20 @@ for every preview and must never touch the production database, and Vercel
 offers no hook that runs exactly once per production deploy.
 
 The job runs in the GitHub environment `production-database`, which accepts only
-`main` and requires the owner's approval. Every push to `main` therefore waits
-for that approval before migrating. `PRODUCTION_DATABASE_URL`, the production
+`main` and requires the owner's approval. It runs only when a migration is
+pending: the `Pending migrations` job before it compares `packages/db/drizzle/`
+at this commit with the last commit Production was migrated at, which it reads
+from the environment's successful deployments, and skips `Apply migrations`
+when nothing there changed. A push with no migration asks for nothing (ADR-0019). `PRODUCTION_DATABASE_URL`, the production
 project's direct URL, is a secret of that environment rather than of the
 repository, so no other job can read it. Without it the step reports that it is
 unset and succeeds.
 
 A newer push to `main` cancels the run before it, including a migrate job still
-waiting for approval. Nothing is lost: the next approved run applies every
-migration not yet applied.
+waiting for approval. Nothing is lost: the cancelled run left no successful
+deployment, so the migration is still pending, the next push asks again, and
+the next approved run applies every migration not yet applied. A rejected
+approval works the same way.
 
 Vercel deploys on merge without waiting for this job, so new code reaches
 Production before its migration is approved. Two rules follow, and no gate
