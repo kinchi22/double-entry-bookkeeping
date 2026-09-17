@@ -235,11 +235,20 @@ jobs:
   # PREVIEW_DATABASE_URL. What could still reach it is a change to this file or
   # to a package script this job runs; what it would leak is a disposable
   # database.
+  #
+  # `deployment: false`: the job still reads the environment's secret and is
+  # still held to its branch policy, but GitHub records no deployment for it.
+  # Each status of a recorded deployment fires `deployment_status`, so every
+  # push to `main` used to start four skipped `E2E deployed` runs beside the one
+  # for Vercel. Nothing reads these deployments. `Apply migrations` keeps its
+  # own: ADR-0019 reads them.
   migrate-preview:
     name: Migrate preview
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [gates, integration]
-    environment: preview-database
+    environment:
+      name: preview-database
+      deployment: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

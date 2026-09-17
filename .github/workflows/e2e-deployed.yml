@@ -15,6 +15,10 @@ name: E2E deployed
 # skipped by `if:`, beside the real ones on that commit, and a job skipped by
 # `if:` reports success to a required check. This workflow names no required
 # check, so its runs cannot stand in for one.
+#
+# The event also arrives for each status of a deployment GitHub records for a
+# job in `ci.yml` that runs in an environment, so a push to `main` can start
+# several skipped runs beside the real one. docs/DEPLOYMENT.md counts them.
 
 on:
   deployment_status:
