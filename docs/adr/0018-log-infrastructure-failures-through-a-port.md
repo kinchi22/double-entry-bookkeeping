@@ -42,6 +42,13 @@ included, copies all of it.
 - **What is logged:** a failed read or write in the entry repository, a stored
   entry that breaks a rule, and a health probe that could not reach Postgres.
   Each is an `error`.
+- **A request that fails on the server is logged too**, through Next's
+  `onRequestError` hook in `apps/web/instrumentation.ts`, as `request.failed`:
+  the method, `routePath`, `routeType`, `renderSource`, the digest Next prints,
+  and the error as `describeError` describes it. The headers, which carry
+  cookies, and the path, which carries the query string, are left out.
+  `apps/web/server/request-error.ts` builds the line, so it is unit tested and
+  measured; `instrumentation.ts` only wires it.
 - **pino writes the lines**, in `apps/web` alone. The composition root builds
   one logger (`apps/web/server/logger.ts`) that writes one JSON object per line
   to stderr, synchronously: the level as a label, the time as ISO 8601, and no
@@ -65,6 +72,18 @@ a server log and is why the HTTP message stays generic. A message that quotes a
 value from a column whose input syntax failed, such as a malformed date, can
 still reach the log; the app parses those before they reach the driver.
 
+Next prints a request error in its own format as well, and that cannot be
+switched off. A failed read of entries is therefore three records: the
+adapter's line with the driver's code, the `request.failed` line with the
+route, and Next's own. The first two share nothing but their time, until a
+request id exists to join them.
+
+`apps/web/instrumentation.ts` sits outside the folders
+`eslint-plugin-boundaries` classifies, like `next.config.ts`. It imports two
+files from `server/` and holds no logic, and the logic it wires is checked
+where it lives. It builds a logger of its own, because it cannot import the
+composition root.
+
 Synchronous writes to stderr cost a system call per line. Only failures are
 logged, so the cost lands on requests that are already failing.
 
@@ -81,6 +100,10 @@ Adding a logged event means naming it and choosing its fields in the adapter;
 the port does not grow a method until a second level is needed.
 
 ## Rejected alternatives
+
+**Wrapping each page and action in a try/catch that logs.** It repeats in
+every route what the framework already reports once, and a route that forgot
+it would fail silently.
 
 **`console.error` in each adapter.** No dependency and the smallest change. It
 cannot be tested without spying on `console`, and each adapter would decide for

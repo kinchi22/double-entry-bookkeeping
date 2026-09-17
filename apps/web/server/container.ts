@@ -9,10 +9,9 @@ import {
   type PostEntry,
 } from '@repo/core';
 import { createPostgresEntryRepository, createPostgresHealthProbe } from '@repo/core/server';
-import pino from 'pino';
 import { v7 as uuidv7 } from 'uuid';
 import { type Env, parseEnv } from './env';
-import { createLogger } from './logger';
+import { createLogger, stderr } from './logger';
 
 /**
  * DI composition root.
@@ -31,9 +30,7 @@ export type Container = {
 };
 
 export function createContainer({ databaseUrl }: Env): Container {
-  // stderr, written synchronously, so a line is not lost when the function is
-  // frozen after its response. ADR-0018.
-  const logger = createLogger(pino.destination({ dest: 2, sync: true }));
+  const logger = createLogger(stderr());
   const postgres = createPostgresHealthProbe(databaseUrl, logger);
   const entries = createPostgresEntryRepository(databaseUrl, logger);
 

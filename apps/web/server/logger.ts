@@ -9,12 +9,19 @@ import pino, { type DestinationStream } from 'pino';
  * ISO 8601, and pino's `pid` and `hostname` are left out, because the platform
  * already stamps every line with where it ran.
  *
- * The destination is an argument so a test can read what was written.
- * `container.ts` passes stderr, written synchronously: a buffered write can be
- * lost when a serverless function is frozen after its response.
+ * The destination is an argument so a test can read what was written. The app
+ * passes `stderr()`, from `container.ts` and from `instrumentation.ts`.
  *
  * Like `env.ts`, this file does not import `server-only`, so it stays testable.
  */
+/**
+ * Standard error, written synchronously. A buffered write can be lost when a
+ * serverless function is frozen after its response.
+ */
+export function stderr(): DestinationStream {
+  return pino.destination({ dest: 2, sync: true });
+}
+
 export function createLogger(destination: DestinationStream): Logger {
   const logger = pino(
     {
