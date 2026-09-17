@@ -54,6 +54,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
 | [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Deferred |
 | [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
+| [ADR-0019: Ask for a migration approval only when one is pending](adr/0019-ask-for-a-migration-approval-only-when-one-is-pending.md) | Accepted |
 
 ## Package layout
 
@@ -139,7 +140,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context.|
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
+| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at (ADR-0019). A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |

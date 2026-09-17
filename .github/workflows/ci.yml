@@ -253,6 +253,43 @@ jobs:
           fi
           pnpm --filter @repo/db db:migrate
 
+  # ADR-0019. Whether `Apply migrations` has anything to apply: a file under
+  # packages/db/drizzle/ changed since the last commit Production was migrated
+  # at, read from the `production-database` deployments. No secret and no
+  # environment, so it never waits and cannot read the database URL. Every doubt
+  # it meets resolves to "pending", which asks the owner, as every push did
+  # before.
+  #
+  # Full history, because the last migrated commit can be any number of pushes
+  # back: a run waiting for approval is cancelled by the next push, and the
+  # migration it carried is still pending. No install step: the script has no
+  # dependencies, and Node 24 runs the TypeScript file directly.
+  pending-migrations:
+    name: Pending migrations
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      pending: ${{ steps.find.outputs.pending }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # package-manager-cache off for the reason the isolation job gives: pnpm
+      # is not installed here.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Find pending migrations
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/find-pending-migrations.ts
+
   # Migrations are applied from CI, not from the Vercel build: a build runs for
   # every preview and must never touch the production database, and Vercel gives
   # no hook that runs once per production deploy.
@@ -261,10 +298,20 @@ jobs:
   # requires the owner's approval, so the job waits before it can read the URL,
   # and no other job can read it at all. Without the secret the step reports
   # that it is unset and succeeds. See docs/DEPLOYMENT.md.
+  #
+  # Skipped when `Pending migrations` finds nothing to apply, so a push with no
+  # migration asks nobody for anything (ADR-0019). The condition names every
+  # result rather than relying on the implicit success(): if that job fails or
+  # is skipped its output is empty, which is not 'false', so this still runs and
+  # asks. A broken check fails towards the approval, never past it.
   migrate:
     name: Apply migrations
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [gates, integration]
+    if: >-
+      !cancelled() &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.gates.result == 'success' && needs.integration.result == 'success' &&
+      needs.pending-migrations.outputs.pending != 'false'
+    needs: [gates, integration, pending-migrations]
     environment: production-database
     runs-on: ubuntu-latest
     timeout-minutes: 10

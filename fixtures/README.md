@@ -91,7 +91,7 @@ rather than unwritten:
 
 ## Gates with no fixture
 
-Five gates are pure functions rather than tool runs, so their deliberate
+Six gates are pure functions rather than tool runs, so their deliberate
 breakages are inputs in their own test file instead of files here. Nothing
 resolves a path in any of them, which is what a fixture directory exists to
 catch:
@@ -105,6 +105,11 @@ catch:
   spec moved out of `e2e/`, a file list that never arrived, and four branch names
   that look like a milestone and are not. That test also runs the file as a
   command, because CI depends on its exit status rather than on what it returns.
+- `tools/find-pending-migrations.ts` -- whether `Apply migrations` has anything
+  to apply (ADR-0019), broken in `pending-migrations-gate.test.ts` by cancelled,
+  rejected and waiting runs, a path that only starts like the migrations folder,
+  no applied commit, and one git cannot compare. That test also runs the file as
+  a command against a stub `gh`, because CI depends on the output file it writes.
 - `tools/gates/review-surface-gate.test.ts` -- that `docs/ARCHITECTURE.md` and
   `.github/CODEOWNERS` name the same review surface. Its two readers are
   functions over file content, broken in the same file by a comment line, an
