@@ -53,6 +53,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0015: Model accounts as data](adr/0015-model-accounts-as-data.md) | Deferred |
 | [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
 | [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Deferred |
+| [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
 
 ## Package layout
 
@@ -70,6 +71,11 @@ holds the vocabulary any feature that touches an amount depends on, so it has
 `domain/` and nothing else. An amount has no ports, no adapters, and nothing to
 orchestrate. It is the only directory under `core/src` that is allowed to be
 shaped that way, and a second one needs a reason in review.
+
+`packages/core/src/logging/` is the other module that is not a product feature:
+how any adapter reports a failure. It has `domain/` (`describeError`, what of an
+error may be logged) and `ports/` (`Logger`), and no adapter: the implementation
+is pino, built in the composition root. ADR-0018 gives the reason it is shared.
 
 `packages/infra` deliberately does not exist yet. Adapters live in
 `core/src/<feature>/adapters/` and are promoted to their own package once there
@@ -137,6 +143,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
+| Logging              | Adapters report an infrastructure failure through the `Logger` port, as an event name and fields, describing any error with `describeError` and never logging one raw. pino writes one JSON object per line to stderr, built in the composition root; core never imports it. ADR-0018. |
 | Environment          | `DATABASE_URL` only, validated by `parseEnv` in `apps/web/server/env.ts` and read in `apps/web/server/container.ts` alone, at first use rather than at import. Missing or malformed fails the request; unreachable degrades to the probe's amber dot. ADR-0005. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 | User-facing copy     | In `apps/web/messages/en.ts`, a plain object read by import, grouped by the part of the UI that renders it. `repo/no-inline-copy` rejects copy written as a literal in `apps/web/app` or `apps/web/components`. ADR-0007. Localization is decided and not built: ADR-0008, Deferred. |
@@ -150,7 +157,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | `ports/**`                   | Nothing. An interface has no behaviour to test.        |
 | `adapters/**`                | `*.integration.test.ts` against a real Postgres. Unmeasured: the mutation runner does not run that suite. |
 | `packages/contracts`         | Unit tests, pure. Measured since ADR-0004.             |
-| `apps/web/server`            | The half a unit test can import -- `domain-error.ts` and `env.ts` today -- unit tested and measured. |
+| `apps/web/server`            | The half a unit test can import -- `domain-error.ts`, `env.ts` and `logger.ts` today -- unit tested and measured. |
 | the composition root, `routers/**`, `app/**` | Playwright, against a production build in CI (`E2E build`), on a Postgres service container migrated before the suite. Nothing else reaches them. |
 
 "Measured" means the mutation score, which is the only coverage floor here:

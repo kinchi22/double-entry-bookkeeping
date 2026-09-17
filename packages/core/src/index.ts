@@ -42,3 +42,10 @@ export {
   type ListEntriesDependencies,
   type EntryRepository,
 } from './entries/index';
+
+export {
+  describeError,
+  type ErrorDescription,
+  type LogFields,
+  type Logger,
+} from './logging/index';
