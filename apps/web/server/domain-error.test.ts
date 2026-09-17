@@ -21,6 +21,8 @@ const EXPECTED_STATUS: Record<DomainErrorCode, TRPCError['code']> = {
   // A dependency this app could not reach is this app's failure rather than the
   // caller's, so it is the one code that must not come back as a 4xx.
   DEPENDENCY_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
+  // Well-formed, and breaks a bookkeeping rule: 422 rather than 400.
+  UNBALANCED: 'UNPROCESSABLE_CONTENT',
 };
 
 describe('toTrpcError', () => {

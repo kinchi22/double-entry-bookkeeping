@@ -23,3 +23,15 @@ export {
   negateMoney,
   sumMoney,
 } from './money/index';
+
+export {
+  CHART_OF_ACCOUNTS,
+  MEMO_MAX_LENGTH,
+  isAccountCode,
+  makeEntry,
+  type AccountCode,
+  type Entry,
+  type EntryDraft,
+  type EntryLine,
+  type EntryStamp,
+} from './entries/index';

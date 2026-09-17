@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
     "./health": "./src/health/index.ts",
+    "./entries": "./src/entries/index.ts",
     "./money": "./src/money/index.ts"
   },
   "scripts": {
