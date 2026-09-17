@@ -9,3 +9,6 @@ import 'server-only';
  */
 export { createPostgresHealthProbe } from './health/adapters/postgres-health-probe';
 export type { PostgresHealthProbe } from './health/adapters/postgres-health-probe';
+
+export { createPostgresEntryRepository } from './entries/adapters/postgres-entry-repository';
+export type { PostgresEntryRepository } from './entries/adapters/postgres-entry-repository';

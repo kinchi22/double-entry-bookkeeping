@@ -30,4 +30,47 @@ export const en = {
     idle: 'Re-check',
     pending: 'Checking...',
   },
+  home: {
+    entriesLink: 'Entries',
+  },
+  entriesPage: {
+    title: 'Entries',
+  },
+  /**
+   * `line` is a prefix rendered before the line's number, as `checkedAt` is
+   * before an instant, and needs the same rewrite for a language that orders
+   * them differently.
+   */
+  entryForm: {
+    title: 'New entry',
+    date: 'Date',
+    memo: 'Memo',
+    line: 'Line',
+    account: 'Account',
+    chooseAccount: 'Choose an account',
+    side: 'Side',
+    amount: 'Amount',
+    submit: 'Add entry',
+    pending: 'Adding...',
+    unbalanced: 'Debits and credits must balance. Check the amount on each side.',
+    invalid: 'The entry was not added. Check the date, the memo and each line.',
+    unavailable: 'The entry could not be saved just now. Try again.',
+  },
+  entryList: {
+    title: 'Entries',
+    empty: 'No entries yet.',
+    total: 'Total',
+  },
+  /** One name per code in the chart of accounts. ADR-0010. */
+  accounts: {
+    cash: 'Cash',
+    payable: 'Accounts payable',
+    capital: 'Capital',
+    sales: 'Sales',
+    expense: 'Expenses',
+  },
+  sides: {
+    debit: 'Debit',
+    credit: 'Credit',
+  },
 } as const;
