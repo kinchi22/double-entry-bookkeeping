@@ -83,17 +83,21 @@ const isBlank = (text) => text.trim() === '';
  * The list is closed on purpose. Any other attribute given a literal is copy
  * until its name is added here, so a new prop that carries text fails lint
  * instead of passing because nobody thought to name it. `tone` is StatusDot's,
- * an enum of two signals.
+ * an enum of two signals. `aria-labelledby` holds ids, `inputMode` a keyboard
+ * hint, and `pattern` a regular expression the browser validates against.
  */
 const MARKUP_ATTRIBUTES = new Set([
   'aria-hidden',
+  'aria-labelledby',
   'className',
   'dateTime',
   'href',
   'htmlFor',
   'id',
+  'inputMode',
   'key',
   'lang',
+  'pattern',
   'role',
   'tone',
   'type',
