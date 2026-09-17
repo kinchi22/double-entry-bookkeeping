@@ -13,6 +13,7 @@ const STATUS_BY_CODE: Record<DomainErrorCode, TRPCError['code']> = {
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
   DEPENDENCY_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
+  UNBALANCED: 'UNPROCESSABLE_CONTENT',
 };
 
 export function toTrpcError(error: DomainError): TRPCError {
