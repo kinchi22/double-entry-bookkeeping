@@ -107,8 +107,14 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Vitest adds its `github-actions` reporter whenever `GITHUB_ACTIONS` is
+      # set, and that reporter appends a "Vitest Test Report" to the job summary
+      # at the end of every run. Stryker runs Vitest once per mutant, so the
+      # summary becomes hundreds of reports of runs that failed on purpose.
+      # Unsetting the path turns only the summary off; the workers' stdout, where
+      # the annotations go, never reaches the log anyway.
       - name: 5. test:mutation
-        run: pnpm test:mutation
+        run: env -u GITHUB_STEP_SUMMARY pnpm test:mutation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -141,8 +147,9 @@ jobs:
       - name: server-only build fixture
         run: pnpm verify:gates:build
 
+      # Stryker, so the same flood as `5. test:mutation`; see there.
       - name: Mutation threshold fixture
-        run: pnpm verify:gates:mutation
+        run: env -u GITHUB_STEP_SUMMARY pnpm verify:gates:mutation
 
       - name: Migration drift fixture
         run: pnpm verify:gates:migration
