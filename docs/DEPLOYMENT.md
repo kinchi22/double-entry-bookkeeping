@@ -209,6 +209,7 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Vercel Preview + Production (the secret marked Sensitive), and local `.env`; placeholders in the `test:e2e` step of `E2E build` | The Google OAuth client. Required everywhere, like `DATABASE_URL`; only Production and a local server can finish a Google sign-in. ADR-0021 |
 | `AUTH_TEST_LOGIN` | Vercel Preview only, local `.env`, and the `test:e2e` step of `E2E build` | Set to anything non-empty, `/sign-in` also offers the test sign-in. `parseEnv` refuses it when `VERCEL_ENV` is `production` |
 | `SMOKE_SESSION_TOKEN` | GitHub repository secret, read by the `E2E` job | The Smoke User's session token, presented as the `session` cookie. See [Authentication](#authentication) |
+| `SMOKE_SESSION_EXPIRES_ON` | GitHub repository variable, read by `Smoke token expiry` | The day `SMOKE_SESSION_TOKEN` expires, `YYYY-MM-DD`, printed by `tools/seed-smoke-user.ts` |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.
 Configuration enters through `apps/web/server/container.ts`, which validates it
@@ -240,13 +241,17 @@ rotate its token, from a checkout:
 node tools/seed-smoke-user.ts > smoke-user.sql   # the token is printed on stderr
 # run smoke-user.sql on Production: Neon's SQL editor, or psql with the direct URL
 gh secret set SMOKE_SESSION_TOKEN               # paste the token
+gh variable set SMOKE_SESSION_EXPIRES_ON --body <the date printed on stderr>
 rm smoke-user.sql
 ```
 
 Run the SQL before setting the secret: from the moment it commits, the old token
 signs nobody in. The User and its Entry are kept across runs; only the Session
 is replaced. Rotate before the year is up, because the smoke run fails on the
-day the Session ends.
+day the Session ends. The `Smoke token expiry` workflow
+(`.github/workflows/smoke-token-expiry.yml`) checks `SMOKE_SESSION_EXPIRES_ON`
+every Monday and opens a `Rotate SMOKE_SESSION_TOKEN` issue from 30 days
+before, or at once when the variable is unset.
 
 Seed it before `milestone/authentication` reaches `main`, so the first smoke
 run of that code has a Session to read with.

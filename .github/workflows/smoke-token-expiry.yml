@@ -1,0 +1,52 @@
+name: Smoke token expiry
+
+# The Smoke User's Session ends a year after it is seeded and does not slide
+# (ADR-0021), so the smoke run fails on the day SMOKE_SESSION_TOKEN expires.
+# This opens an issue a month before, from the date tools/seed-smoke-user.ts
+# prints and the owner stores as the repository variable
+# SMOKE_SESSION_EXPIRES_ON. Rotating the token and updating the variable moves
+# the reminder a year on; nothing else needs changing.
+#
+# It is not a check on any branch: it runs on a schedule, and its only effect is
+# an issue.
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  expiry:
+    name: Smoke token expiry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Open an issue when the token is within 30 days of expiring
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EXPIRES_ON: ${{ vars.SMOKE_SESSION_EXPIRES_ON }}
+        run: |
+          set -euo pipefail
+          title='Rotate SMOKE_SESSION_TOKEN'
+          if [ -z "$EXPIRES_ON" ]; then
+            reason='The repository variable SMOKE_SESSION_EXPIRES_ON is not set, so nothing knows when SMOKE_SESSION_TOKEN expires.'
+          else
+            days=$(( ( $(date -ud "$EXPIRES_ON" +%s) - $(date -u +%s) ) / 86400 ))
+            reason="SMOKE_SESSION_TOKEN expires on $EXPIRES_ON, in $days day(s)."
+            echo "$reason"
+            if [ "$days" -gt 30 ]; then exit 0; fi
+          fi
+
+          open=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq length)
+          if [ "$open" -gt 0 ]; then
+            echo 'The reminder is already open.'
+            exit 0
+          fi
+
+          gh issue create --title "$title" --body "$reason
+
+          Rotate it as docs/DEPLOYMENT.md#the-smoke-user says: run \`node tools/seed-smoke-user.ts\`, apply the SQL on Production, then set the secret and the variable it prints. Close this issue once the variable holds the new date."

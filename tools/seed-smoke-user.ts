@@ -7,7 +7,9 @@ import { createHash, randomBytes } from 'node:crypto';
  *
  * Standard output is SQL, to run once against the production database -- in
  * Neon's SQL editor, or `psql "$DIRECT_URL" -f smoke-user.sql`. Standard error
- * is the Session's token, for `gh secret set SMOKE_SESSION_TOKEN`. The token
+ * is the Session's token, for `gh secret set SMOKE_SESSION_TOKEN`, and the day
+ * it expires, for the repository variable `SMOKE_SESSION_EXPIRES_ON` that the
+ * `Smoke token expiry` workflow reminds from. The token
  * appears nowhere else: the SQL carries only its hash, as the sessions table
  * does, so the file is not a credential.
  *
@@ -29,6 +31,15 @@ const SMOKE_ENTRY_ID = '01995d40-0000-7000-8000-000000000002';
 const token = randomBytes(32).toString('base64url');
 const tokenHash = createHash('sha256').update(token).digest('hex');
 
+/**
+ * A year from now, stated here rather than as `now()` in the SQL, so the day the
+ * reminder counts to is the day the Session ends. The SQL runs a little after
+ * this, so the Session ends a little after the day printed, never before.
+ */
+const expiresAt = new Date();
+expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
+const expiresOn = expiresAt.toISOString().slice(0, 10);
+
 process.stdout.write(`begin;
 
 insert into users (id, email, name, created_at)
@@ -48,12 +59,15 @@ on conflict (entry_id, line_number) do nothing;
 delete from sessions where user_id = '${SMOKE_USER_ID}';
 
 insert into sessions (token_hash, user_id, expires_at)
-values ('${tokenHash}', '${SMOKE_USER_ID}', now() + interval '1 year');
+values ('${tokenHash}', '${SMOKE_USER_ID}', '${expiresAt.toISOString()}');
 
 commit;
 `);
 
 process.stderr.write(
   `SMOKE_SESSION_TOKEN=${token}\n` +
-    'Run the SQL on Production first, then: gh secret set SMOKE_SESSION_TOKEN\n',
+    `SMOKE_SESSION_EXPIRES_ON=${expiresOn}\n` +
+    'Run the SQL on Production first, then:\n' +
+    '  gh secret set SMOKE_SESSION_TOKEN\n' +
+    `  gh variable set SMOKE_SESSION_EXPIRES_ON --body ${expiresOn}\n`,
 );
