@@ -224,6 +224,22 @@ describe('the deferred-to-adopted path', () => {
     );
     expect(check(file)).toEqual([]);
   });
+  it('accepts a deferred ADR that was replaced rather than adopted', () => {
+    const first = adr(
+      '0001',
+      '**Status:** Superseded by ADR-0002\n**Date:** 2026-09-12\n**Trigger:** the second locale ships.',
+    );
+    const second = accepted('0002');
+    expect(
+      findAdrProblems(
+        [first, second],
+        [
+          { file: `adr/${first.name}`, status: 'Superseded by ADR-0002' },
+          { file: `adr/${second.name}`, status: 'Accepted' },
+        ],
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('the index', () => {

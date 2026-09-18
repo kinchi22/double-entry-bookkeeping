@@ -23,6 +23,7 @@ it here in the same commit that introduces it.
 | Entry line       | One line of an Entry: an Account, a Side, and an amount greater than zero. |
 | Entry total      | The sum of an Entry's debit amounts, which is the sum of its credit amounts because the Entry is Balanced. Computed in `domain/`; never summed by a client. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`, `stryker.config.mjs`. Declared in `.github/CODEOWNERS`, justified in ADR-0002 and ADR-0004. |
+| Identity         | One way a User signs in: a provider and that provider's subject for the person, such as Google's `sub`. A User is found by its Identity, never by its email. Never called an account: Account already means what an Entry line is posted against. ADR-0021. |
 | Logger           | The port an Adapter reports an infrastructure failure through: an event name such as `entries.list_failed`, fields, and a message. A field holds a primitive or an `ErrorDescription`, which is branded so an error reaches the logger only as `describeError` describes it. ADR-0018. |
 | Message catalogue | `apps/web/messages/{locale}.ts`: the copy for one locale, a plain object keyed in English, grouped by the part of the UI that renders it. `en.ts` is the only one until ADR-0008 is adopted. |
 | Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
@@ -35,13 +36,16 @@ it here in the same commit that introduces it.
 | Shared kernel    | Vocabulary several features depend on, held in `core/src/<name>/domain` with no ports or adapters. `money` is the only one. |
 | Result           | `Ok<T>` or `Err<E>`. The return type of any domain operation that can fail. |
 | Server Action    | The app's write path. Parses input, invokes a use case through `createCaller`, invalidates what it made stale. |
+| Session          | A User's signed-in state: a random token in an `HttpOnly` cookie, stored in `sessions` only as its SHA-256 hash, with an expiry that slides, except the Smoke User's. Signing out deletes it. ADR-0021. |
 | Side             | The direction of an Entry line, `debit` or `credit`. The amount never carries it. |
 | Smoke run        | The `E2E` job: the specs against a Production deployment after it is live. Not a merge gate; that is `E2E build`. ADR-0006, ADR-0009. |
 | Smoke tag        | `{ tag: '@smoke' }` on a spec, the allowlist the Smoke run filters by. Only a read may carry it: an untagged spec never runs against Production. ADR-0014. |
+| Smoke User       | The User the Smoke run reads Production as. It has no Identity, owns a fixed set of Entries, and its one Session is the `SMOKE_SESSION_TOKEN` secret. ADR-0021. |
 | Spec isolation   | The rule that one pull request changes `e2e/` or the rest of the repository, never both. Decided by `tools/check-pr-isolation.ts`. |
 | Test collection  | The set of test files a vitest project actually runs. Compared against the working tree by `tools/gates/test-collection-gate.test.ts`, so a test nothing runs fails CI. |
 | Trigger          | The condition that would adopt a Deferred ADR, stated in that ADR.           |
 | Unbalanced       | The `DomainErrorCode` for an Entry whose debits and credits differ. The one broken Entry rule with a code of its own, so the form can say the balance is what is wrong; every other broken rule is `INVALID_INPUT`. Mapped to `UNPROCESSABLE_CONTENT`. |
+| User             | A person who keeps books here, created the first time they sign in. Every Entry belongs to one User, and no User sees another's. ADR-0021. |
 | Use case         | One application operation. Owns orchestration, and any transaction boundary wider than one Aggregate. ADR-0011. |
 
 ## Naming rules

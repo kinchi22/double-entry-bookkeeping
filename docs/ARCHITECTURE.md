@@ -52,10 +52,11 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0014: Keep Production out of the write specs](adr/0014-keep-production-out-of-the-write-specs.md) | Accepted |
 | [ADR-0015: Model accounts as data](adr/0015-model-accounts-as-data.md) | Deferred |
 | [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
-| [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Deferred |
+| [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Superseded by ADR-0021 |
 | [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
 | [ADR-0019: Ask for a migration approval only when one is pending](adr/0019-ask-for-a-migration-approval-only-when-one-is-pending.md) | Accepted |
 | [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
+| [ADR-0021: Authenticate every user with Google](adr/0021-authenticate-every-user-with-google.md) | Accepted |
 
 ## Package layout
 
