@@ -76,3 +76,8 @@ jobs:
         env:
           E2E_BASE_URL: ${{ github.event.deployment_status.environment_url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # The Smoke User's session token (ADR-0021): Production has no test
+          # sign-in, so the smoke specs that read signed in present this as the
+          # session cookie. e2e/session.ts falls back to the test sign-in when it
+          # is unset, which fails here, so an unset secret shows up as red.
+          SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}
