@@ -26,7 +26,11 @@ The health panel should report `postgres: reachable`.
 
 The app also renders without a *reachable* database: the probe reports
 `postgres` as unreachable and the status degrades rather than erroring. That is
-deliberate, so a deployment whose database is down still passes E2E.
+deliberate: a page must not fail because a probe did.
+
+The smoke run against Production says so out loud instead of accepting it. The
+spec that calls `health.get` asserts `healthy`, so a deployment whose database
+is down fails that run while its pages still render. ADR-0020.
 
 `DATABASE_URL` itself is not optional. It is validated on the first request, in
 `apps/web/server/env.ts`, and a missing or malformed one fails that request
