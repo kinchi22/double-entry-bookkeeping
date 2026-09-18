@@ -55,6 +55,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Deferred |
 | [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
 | [ADR-0019: Ask for a migration approval only when one is pending](adr/0019-ask-for-a-migration-approval-only-when-one-is-pending.md) | Accepted |
+| [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
 
 ## Package layout
 
@@ -146,6 +147,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
 | Logging              | Adapters report an infrastructure failure through the `Logger` port, as an event name and fields, describing any error with `describeError`; a field's type admits no raw error or object. pino writes one JSON object per line to stderr, built in the composition root; core never imports it. A request that fails on the server is logged by `onRequestError` in `apps/web/instrumentation.ts`. ADR-0018. |
 | Environment          | `DATABASE_URL` only, validated by `parseEnv` in `apps/web/server/env.ts` and read in `apps/web/server/container.ts` alone, at first use rather than at import. Missing or malformed fails the request; unreachable degrades to the probe's amber dot. ADR-0005. |
+| Healthcheck          | `health.get` is the deployment's healthcheck, not a demonstration of the Phase 0 slice, and outlives the panel that renders it. Every external component the app depends on reports through it as a named component, and the smoke run asserts the strict answer: `healthy`, with `postgres` reachable. ADR-0020. |
 | Barrels              | One `index.ts` per public surface. No barrels inside a package.        |
 | User-facing copy     | In `apps/web/messages/en.ts`, a plain object read by import, grouped by the part of the UI that renders it. `repo/no-inline-copy` rejects copy written as a literal in `apps/web/app` or `apps/web/components`. ADR-0007. Localization is decided and not built: ADR-0008, Deferred. |
 
