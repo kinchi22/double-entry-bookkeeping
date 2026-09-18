@@ -5,7 +5,9 @@ export type BeginGoogleSignInDependencies = {
   readonly google: GoogleSignIn;
 };
 
-export type BeginGoogleSignIn = () => Promise<
+export type BeginGoogleSignIn = (
+  redirectUri: URL,
+) => Promise<
   Result<{ readonly authorizationUrl: URL; readonly pending: PendingSignIn }, DomainError>
 >;
 
@@ -14,5 +16,5 @@ export type BeginGoogleSignIn = () => Promise<
  * the controller's to keep, in a cookie, until the callback.
  */
 export function createBeginGoogleSignIn({ google }: BeginGoogleSignInDependencies): BeginGoogleSignIn {
-  return () => google.begin();
+  return (redirectUri) => google.begin(redirectUri);
 }
