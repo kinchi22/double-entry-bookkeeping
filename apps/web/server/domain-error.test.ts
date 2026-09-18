@@ -24,6 +24,8 @@ const EXPECTED_STATUS: Record<DomainErrorCode, TRPCError['code']> = {
   DEPENDENCY_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
   // Well-formed, and breaks a bookkeeping rule: 422 rather than 400.
   UNBALANCED: 'UNPROCESSABLE_CONTENT',
+  // No Session: 401, which the specs pin. ADR-0021.
+  UNAUTHENTICATED: 'UNAUTHORIZED',
 };
 
 describe('toTrpcError', () => {

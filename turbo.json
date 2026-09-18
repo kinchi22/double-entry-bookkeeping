@@ -33,7 +33,10 @@
       "cache": false,
       "persistent": true,
       "env": [
-        "DATABASE_URL"
+        "DATABASE_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "AUTH_TEST_LOGIN"
       ]
     }
   }

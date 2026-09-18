@@ -96,10 +96,18 @@ jobs:
       # and change what turbo hashes; moved into ci.yml's `env:`, it would reach
       # `Gates`, which proves the environment is validated lazily by building
       # with none at all.
+      # The specs sign in through the test sign-in (ADR-0021), which exists only
+      # where AUTH_TEST_LOGIN is set. The Google client is required by parseEnv
+      # and never used here: Google cannot redirect to this job, discovery is at
+      # first use, and no spec follows the Google link. So these are
+      # placeholders, not secrets.
       - name: 7. test:e2e
         run: pnpm test:e2e
         env:
           DATABASE_URL: postgres://e2e:e2e@127.0.0.1:5432/e2e
+          AUTH_TEST_LOGIN: '1'
+          GOOGLE_CLIENT_ID: e2e-build-placeholder
+          GOOGLE_CLIENT_SECRET: e2e-build-placeholder
 
       - uses: actions/upload-artifact@v4
         if: always()

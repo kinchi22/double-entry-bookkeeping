@@ -1,4 +1,5 @@
 import { type DomainError, type EntryId, type Result } from '@repo/contracts';
+import { requireUser, type AuthContext } from '../../auth/domain/auth-context';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
 import { type EntryRepository } from '../ports/entry-repository';
 
@@ -9,23 +10,33 @@ export type PostEntryDependencies = {
   readonly now: () => Date;
 };
 
-export type PostEntry = (draft: EntryDraft) => Promise<Result<Entry, DomainError>>;
+export type PostEntry = (
+  auth: AuthContext,
+  draft: EntryDraft,
+) => Promise<Result<Entry, DomainError>>;
 
 /**
  * Stamps a draft with an id and an instant, applies the entry's rules, and
- * stores what passes. A refused draft reaches no repository.
+ * stores what passes as the signed-in User's. Nobody signed in is
+ * `UNAUTHENTICATED`, before any rule is applied (ADR-0021). A refused draft
+ * reaches no repository.
  *
  * One aggregate is written, so the atomicity is the repository's (ADR-0011)
  * and this use case opens no boundary of its own.
  */
 export function createPostEntry({ entries, newEntryId, now }: PostEntryDependencies): PostEntry {
-  return async (draft: EntryDraft): Promise<Result<Entry, DomainError>> => {
+  return async (auth, draft) => {
+    const userId = requireUser(auth);
+    if (!userId.ok) {
+      return userId;
+    }
+
     const entry = makeEntry(draft, { id: newEntryId(), createdAt: now() });
     if (!entry.ok) {
       return entry;
     }
 
-    const saved = await entries.save(entry.value);
+    const saved = await entries.save(userId.value, entry.value);
     return saved.ok ? entry : saved;
   };
 }

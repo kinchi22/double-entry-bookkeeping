@@ -50,7 +50,10 @@ Account is not used, because the glossary already means the chart of accounts.
 
 **The mechanism.** `openid-client` performs the Google flow -- discovery,
 authorization code with PKCE, ID token signature and claim validation -- behind a
-port in `auth/adapters/`. The session is ours:
+port in `auth/adapters/`. It checks the signature of an ID token that came
+straight from Google's token endpoint only when asked, because OpenID Connect
+Core 3.1.3.7 lets TLS stand in for it; the adapter asks, with
+`enableNonRepudiationChecks`. The session is ours:
 
 - A session token is 32 random bytes. The cookie carries the token; the
   `sessions` table stores its SHA-256 hash, the User and an expiry. Node's
@@ -60,18 +63,28 @@ port in `auth/adapters/`. The session is ours:
   It carries no `__Host-` prefix: `E2E build` serves the app over
   `http://127.0.0.1`, and the name is part of the specs.
 - A session lasts 30 days and slides: a request in its second half extends it.
+  A Session whose User has no Identity does not slide; that User is the smoke
+  User below. A page cannot set a cookie while it renders, so Next's proxy
+  (`apps/web/proxy.ts`) sets the cookie again for 30 days on every read request
+  that carries it, and the cookie slides with the Session. It reads nothing:
+  the table decides whether the token still signs anyone in. Writes, and
+  anything under `/sign-in` or `/auth`, set or clear the cookie themselves and
+  are left alone.
 - Signing out deletes the row, so it takes effect at once, and any session can be
   ended from the database.
 - OAuth `state` and the PKCE verifier live in a short-lived cookie of their own
-  for the length of the round trip.
+  for the length of the round trip: ten minutes, sent only to the callback.
 
-**The request path.** `apps/web/server/context.ts` resolves the cookie to an
-auth context and puts it on the request context. Each use case that touches user
+**The request path.** `apps/web/server/context.ts` puts the cookie's token on the
+request context, and `sessionProcedure` resolves it to an auth context for the
+procedures that touch user data, so `health.get` reads no session. A signed-out
+request still reaches the procedure. Each use case that touches user
 data takes it and checks it at its entry point: the fixed decision in
 `docs/ARCHITECTURE.md`, exercised for the first time. A procedure called without
 a Session answers `UNAUTHORIZED`, 401.
 
-Four things answer anybody: `/`, `/sign-in`, the Google callback at
+Four things answer anybody: `/`, `/sign-in` -- with the route under it that
+begins a sign-in with Google, `/sign-in/google` -- the Google callback at
 `/auth/callback/google`, and `health.get` (ADR-0020). `/` is the page a
 signed-out visitor meets, a welcome page in time, and it sends a signed-in User
 to `/entries`. Every other page sends a request with no Session to `/sign-in`;
@@ -83,12 +96,17 @@ creates no Session.
 
 **Configuration.** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` join
 `DATABASE_URL`, validated by `parseEnv` (ADR-0005), and are set in Vercel's
-project environment per deployment scope.
+project environment per deployment scope. They are required everywhere, like
+`DATABASE_URL`, so a Production without them fails rather than hides the Google
+link; `E2E build`, which never follows that link, sets placeholders. The redirect
+URI is this deployment's callback, read from the request, so it needs no
+variable of its own.
 
 **Test sign-in.** When `AUTH_TEST_LOGIN` is set, `/sign-in` also renders a form
 that signs in by an identifier, through a Server Action. One identifier is one
 User: its Identity has the provider `test` and the identifier as its subject, so
-a new identifier creates a User the way a first Google sign-in does. Each spec
+a new identifier creates a User the way a first Google sign-in does. That User's
+email is `<identifier>@test.invalid`, a reserved domain (RFC 2606). Each spec
 signs in as a User of its own, and a spec can sign in as two. It exists for
 `E2E build` and for Preview, where Google cannot redirect: Google accepts no
 wildcard redirect URI and every Preview has its own URL. `parseEnv` fails when `AUTH_TEST_LOGIN` is set and `VERCEL_ENV` is
@@ -100,7 +118,9 @@ there with no Identity, so there is no way to sign in as it, and owns a fixed se
 of Entries. Its one Session has a fixed expiry of one year and does not slide.
 The token is the GitHub secret `SMOKE_SESSION_TOKEN`; the database holds its
 hash. The owner creates the User, its Entries and its Session once, with a
-script, and rotates the token by running it again. `@smoke` specs stay reads
+script, and rotates the token by running it again. `tools/seed-smoke-user.ts`
+prints the SQL to run and the token, and holds no database credential; the SQL
+carries only the token's hash. `@smoke` specs stay reads
 (ADR-0014): the sign-in page, `health.get`, and the entries list of the smoke
 User.
 
@@ -114,7 +134,9 @@ User.
 3. A second migration on `main`, after the milestone merges, deletes every Entry
    with no User -- this is the wipe ADR-0009 promised -- and sets `user_id`
    `NOT NULL`.
-4. The smoke User is seeded after the second migration.
+4. The smoke User is seeded before the milestone merges, and
+   `SMOKE_SESSION_TOKEN` is set, so the first smoke run of the milestone's code
+   reads as it. Its Entries have a User, so the second migration keeps them.
 
 **When to look again.** Adding a sign-in method this app verifies itself -- a
 password, TOTP, a passkey -- re-evaluates `better-auth` against this design. A

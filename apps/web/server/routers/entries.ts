@@ -1,7 +1,7 @@
 import { postEntryInputSchema, postedEntrySchema, toPostedEntry } from '@repo/contracts';
 import { z } from 'zod';
 import { toTrpcError } from '../domain-error';
-import { publicProcedure, router } from '../trpc';
+import { router, sessionProcedure } from '../trpc';
 
 /**
  * Parse input, invoke the use case, map the response. Nothing else.
@@ -12,19 +12,19 @@ import { publicProcedure, router } from '../trpc';
  * health router gives.
  */
 export const entriesRouter = router({
-  list: publicProcedure.output(z.array(postedEntrySchema)).query(async ({ ctx }) => {
-    const result = await ctx.container.listEntries();
+  list: sessionProcedure.output(z.array(postedEntrySchema)).query(async ({ ctx }) => {
+    const result = await ctx.container.listEntries(ctx.auth);
     if (!result.ok) {
       throw toTrpcError(result.error);
     }
     return result.value.map((entry) => toPostedEntry(entry));
   }),
 
-  post: publicProcedure
+  post: sessionProcedure
     .input(postEntryInputSchema)
     .output(postedEntrySchema)
     .mutation(async ({ ctx, input }) => {
-      const result = await ctx.container.postEntry(input);
+      const result = await ctx.container.postEntry(ctx.auth, input);
       if (!result.ok) {
         throw toTrpcError(result.error);
       }

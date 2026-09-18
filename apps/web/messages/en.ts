@@ -33,6 +33,20 @@ export const en = {
   home: {
     entriesLink: 'Entries',
   },
+  signInPage: {
+    title: 'Sign in',
+    google: 'Sign in with Google',
+    failed: 'Signing in did not work. Try again.',
+  },
+  /** The test sign-in: only where `AUTH_TEST_LOGIN` is set. ADR-0021. */
+  testSignIn: {
+    title: 'Test sign-in',
+    identifier: 'Identifier',
+    submit: 'Sign in',
+  },
+  signOut: {
+    submit: 'Sign out',
+  },
   entriesPage: {
     title: 'Entries',
   },
@@ -55,6 +69,7 @@ export const en = {
     unbalanced: 'Debits and credits must balance. Check the amount on each side.',
     invalid: 'The entry was not added. Check the date, the memo and each line.',
     unavailable: 'The entry could not be saved just now. Try again.',
+    signedOut: 'You are signed out. Sign in again to add an entry.',
   },
   entryList: {
     title: 'Entries',

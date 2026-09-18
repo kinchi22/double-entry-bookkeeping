@@ -12,10 +12,10 @@
  * unimportable from vitest; this file has to stay importable to be tested at
  * all. Nothing secret lives here -- it validates a value, it does not hold one.
  *
- * It uses no schema library. One variable is two checks, and expressing them as
- * a `zod` object left a line -- joining the issues of a schema that can only
- * ever report one -- that no test could reach. ADR-0005 records the
- * measurement.
+ * It uses no schema library. Each variable is one or two checks, and
+ * expressing them as a `zod` object left a line -- joining the issues of a
+ * schema that can only ever report one -- that no test could reach. ADR-0005
+ * records the measurement.
  *
  * Validation is deliberately narrow. Being able to parse the URL is not being
  * able to reach the database: a host that refuses the connection is a runtime
@@ -51,9 +51,39 @@ function isPostgresConnectionString(value: string): boolean {
   return POSTGRES_PROTOCOLS.includes(url.protocol) && url.hostname !== '';
 }
 
+/**
+ * A value that must be present and not blank, and that this file never quotes:
+ * a client secret is a credential, like a connection string.
+ */
+function required(record: Record<string, string | undefined>, name: string): string {
+  const value = record[name];
+  if (value === undefined) throw new Error(`${name} is not set.`);
+  if (value.trim() === '') throw new Error(`${name} is empty.`);
+  return value;
+}
+
 export type Env = {
   readonly databaseUrl: string;
+  /** The OAuth client Google knows this app by. ADR-0021. */
+  readonly google: {
+    readonly clientId: string;
+    readonly clientSecret: string;
+  };
+  /**
+   * Whether `/sign-in` offers the test sign-in, which signs in by an identifier
+   * alone. Set for `E2E build` and Preview, where Google cannot redirect; never
+   * on Production. ADR-0021.
+   */
+  readonly testSignIn: boolean;
 };
+
+/**
+ * The test sign-in is a way into the app that exists in product code, and this
+ * refusal is what keeps it off Production (ADR-0021). `VERCEL_ENV` is set by
+ * Vercel on every deployment; it is read here and nowhere else.
+ */
+const TEST_SIGN_IN_ON_PRODUCTION =
+  'AUTH_TEST_LOGIN is set on Production, where the test sign-in must not exist.';
 
 /**
  * Throws, where the rest of this repository returns a `Result`.
@@ -69,5 +99,15 @@ export function parseEnv(record: Record<string, string | undefined>): Env {
   if (databaseUrl === undefined) throw new Error(NOT_SET);
   if (!isPostgresConnectionString(databaseUrl)) throw new Error(MALFORMED);
 
-  return { databaseUrl };
+  const google = {
+    clientId: required(record, 'GOOGLE_CLIENT_ID'),
+    clientSecret: required(record, 'GOOGLE_CLIENT_SECRET'),
+  };
+
+  const testSignIn = (record['AUTH_TEST_LOGIN'] ?? '') !== '';
+  if (testSignIn && record['VERCEL_ENV'] === 'production') {
+    throw new Error(TEST_SIGN_IN_ON_PRODUCTION);
+  }
+
+  return { databaseUrl, google, testSignIn };
 }

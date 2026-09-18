@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator } from '@playwright/test';
+import { signIn, signInForSmoke } from './session';
 
 /**
  * Phase 1: create an entry, then list it. The model is ADR-0010.
@@ -12,6 +13,9 @@ import { expect, test, type Locator } from '@playwright/test';
  * Production (ADR-0014). They run in `E2E build`, beside each other and against
  * one database, and a retry writes again. So each entry is found by a memo no
  * other run can have written, never by counting or by position in the list.
+ *
+ * Every page here needs a Session (ADR-0021). Each spec signs in as a new User,
+ * so it starts with books nobody else has written in.
  */
 
 const DAY = '2026-09-15';
@@ -79,6 +83,7 @@ async function expectListedAsSubmitted(entry: Locator): Promise<void> {
  */
 test('lists a balanced entry once it is submitted, and after a reload', async ({ page }) => {
   const memo = `Office supplies ${randomUUID()}`;
+  await signIn(page);
   await page.goto('/entries');
 
   const form = page.getByRole('form', { name: 'New entry' });
@@ -113,6 +118,7 @@ test('lists a balanced entry once it is submitted, and after a reload', async ({
  */
 test('refuses an entry whose debits and credits differ', async ({ page }) => {
   const memo = `Unbalanced ${randomUUID()}`;
+  await signIn(page);
   await page.goto('/entries');
 
   const form = page.getByRole('form', { name: 'New entry' });
@@ -144,10 +150,48 @@ test('refuses an entry whose debits and credits differ', async ({ page }) => {
  * `entries`, so there it also shows that the production database carries the
  * migration (ADR-0014). The list may be empty, so the section has to be visible
  * without any entry in it.
+ *
+ * Against Production it reads as the Smoke User; anywhere else, as a new User.
  */
-test('renders the entry form and the list of entries', { tag: '@smoke' }, async ({ page }) => {
+test('renders the entry form and the list of entries', { tag: '@smoke' }, async ({ page, context, baseURL }) => {
+  await signInForSmoke(page, context, baseURL);
   await page.goto('/entries');
 
   await expect(page.getByRole('form', { name: 'New entry' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Entries' })).toBeVisible();
+});
+
+/**
+ * 4. Books are the User's own
+ *
+ * Given one User has posted an entry
+ * When a different User opens the entries page
+ * Then that entry is not in their list
+ *
+ * "Not in the list" is checked once the list has visibly rendered, so an empty
+ * page cannot satisfy it. ADR-0021.
+ */
+test("does not show one User's entries to another", async ({ browser }) => {
+  const memo = `Private ${randomUUID()}`;
+
+  const owner = await browser.newContext();
+  const ownerPage = await owner.newPage();
+  await signIn(ownerPage);
+  await submitEntry(ownerPage.getByRole('form', { name: 'New entry' }), {
+    memo,
+    lines: [
+      { account: 'expense', side: 'debit', amount: '12500' },
+      { account: 'cash', side: 'credit', amount: '12500' },
+    ],
+  });
+  await expectListedAsSubmitted(ownerPage.getByTestId('entry').filter({ hasText: memo }));
+
+  const other = await browser.newContext();
+  const otherPage = await other.newPage();
+  await signIn(otherPage);
+  await expect(otherPage.getByRole('region', { name: 'Entries' })).toBeVisible();
+  await expect(otherPage.getByTestId('entry').filter({ hasText: memo })).toHaveCount(0);
+
+  await owner.close();
+  await other.close();
 });

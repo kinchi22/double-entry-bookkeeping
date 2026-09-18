@@ -1,5 +1,6 @@
 import { Panel, StatusDot } from '@repo/ui';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { type ReactNode } from 'react';
 import { RefreshButton } from '../../components/refresh-button';
 import { en } from '../../messages/en';
@@ -11,11 +12,17 @@ import { recheckHealth } from './actions';
 export const dynamic = 'force-dynamic';
 
 /**
- * Composition only. The page calls one procedure and renders the result; it
- * contains no rule about what healthy means.
+ * Composition only. The page asks whether anybody is signed in, calls the
+ * health procedure and renders the result; it contains no rule about what
+ * healthy means.
  */
 export default async function HomePage(): Promise<ReactNode> {
-  const caller = createCaller(createContext());
+  const caller = createCaller(await createContext());
+  // A signed-in User's home is their books (ADR-0021). A session store that
+  // cannot answer leaves them here, on the page that reports it (ADR-0020).
+  if (await caller.auth.signedIn().catch(() => false)) {
+    redirect('/entries');
+  }
   const health = await caller.health.get();
 
   return (
