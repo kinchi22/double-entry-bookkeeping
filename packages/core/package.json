@@ -20,6 +20,7 @@
     "@repo/contracts": "workspace:*",
     "@repo/db": "workspace:*",
     "drizzle-orm": "^0.45.0",
+    "openid-client": "^6.8.8",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

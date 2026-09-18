@@ -118,10 +118,12 @@ const hash = (token: string): SessionTokenHash => `sha256(${token})` as SessionT
  */
 function google(claims: GoogleClaims): GoogleSignIn {
   return {
-    begin: () =>
+    begin: (redirectUri) =>
       Promise.resolve(
         ok({
-          authorizationUrl: new URL('https://accounts.google.test/auth?state=issued'),
+          authorizationUrl: new URL(
+            `https://accounts.google.test/auth?state=issued&redirect_uri=${encodeURIComponent(redirectUri.href)}`,
+          ),
           pending: { state: 'issued', codeVerifier: 'verifier' },
         }),
       ),
@@ -451,10 +453,12 @@ describe('createBeginGoogleSignIn', () => {
   it("answers with Google's authorization URL and what the browser must bring back", async () => {
     const begin = createBeginGoogleSignIn({ google: google(ADA) });
 
-    const result = await begin();
+    const result = await begin(new URL('https://app.test/auth/callback/google'));
 
     expect(isOk(result) && result.value).toEqual({
-      authorizationUrl: new URL('https://accounts.google.test/auth?state=issued'),
+      authorizationUrl: new URL(
+        'https://accounts.google.test/auth?state=issued&redirect_uri=https%3A%2F%2Fapp.test%2Fauth%2Fcallback%2Fgoogle',
+      ),
       pending: PENDING,
     });
   });
