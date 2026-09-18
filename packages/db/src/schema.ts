@@ -88,11 +88,14 @@ export const entries = pgTable(
     memo: text('memo').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     /**
-     * Nullable until the contract step of ADR-0021: the code deployed before
-     * `milestone/authentication` writes no owner. A second migration deletes the
-     * rows still without one and sets `NOT NULL`.
+     * The User whose books the entry is in. ADR-0021. It was nullable while the
+     * code before `milestone/authentication` wrote no owner; the migration that
+     * set `NOT NULL` first deleted the entries still without one, which was the
+     * wipe ADR-0009 promised.
      */
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
   },
   (table) => [index('entries_user_id_idx').on(table.userId)],
 );
