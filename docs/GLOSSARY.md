@@ -9,6 +9,7 @@ it here in the same commit that introduces it.
 | Account          | What an Entry line is posted against, named by a code from the Chart of accounts. |
 | Adapter          | A concrete implementation of a Port. The only place infrastructure appears.  |
 | Aggregate        | The entity a repository loads and saves as one thing, together with the entities it owns. An Entry owns its Entry lines. A write of one aggregate is atomic; ADR-0011. |
+| Auth context     | Who a request is made by: the User its Session belongs to, or nobody. A controller resolves it from the session cookie and passes it on; a use case that touches a User's data checks it at its entry point, and without a User answers `UNAUTHENTICATED`, mapped to 401. ADR-0021. |
 | Balanced         | The property that makes an Entry postable: its debit amounts sum to its credit amounts. Checked in `domain/`, never in SQL. |
 | Branded type     | A primitive carrying a compile-time name, so two `number`s stop being interchangeable. Erased at runtime. |
 | Chart of accounts | The set of Accounts an Entry line may name. A constant in `domain/` today -- `cash`, `payable`, `capital`, `sales`, `expense` -- until ADR-0015 is adopted. |

@@ -17,6 +17,9 @@ export { moneySchema } from './money';
 
 export { uuidV7Schema } from './id';
 
+export type { UserId } from './auth';
+export { userIdSchema } from './auth';
+
 export type { HealthComponent, HealthState, HealthStatus } from './health';
 export {
   healthComponentSchema,

@@ -50,3 +50,23 @@ export {
   type LogValue,
   type Logger,
 } from './logging/index';
+
+export {
+  SIGNED_OUT,
+  requireUser,
+  type AuthContext,
+  createBeginGoogleSignIn,
+  createFinishGoogleSignIn,
+  createResolveSession,
+  createSignOut,
+  createTestSignIn,
+  type BeginGoogleSignIn,
+  type FinishGoogleSignIn,
+  type IssuedSession,
+  type PendingSignIn,
+  type ResolveSession,
+  type SessionToken,
+  type SessionTokenHash,
+  type SignOut,
+  type TestSignIn,
+} from './auth/index';

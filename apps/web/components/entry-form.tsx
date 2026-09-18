@@ -39,6 +39,7 @@ const REFUSAL: Readonly<Record<DomainErrorCode, string>> = {
   NOT_FOUND: en.entryForm.invalid,
   CONFLICT: en.entryForm.unavailable,
   DEPENDENCY_UNAVAILABLE: en.entryForm.unavailable,
+  UNAUTHENTICATED: en.entryForm.signedOut,
 };
 
 /** The Phase 1 form has two lines (ADR-0010), a debit above a credit. */
