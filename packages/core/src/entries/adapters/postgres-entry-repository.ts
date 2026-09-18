@@ -29,8 +29,7 @@ type LineRow = typeof schema.entryLines.$inferSelect;
  * `entry_lines`, numbered from 1 in the order the lines were entered.
  *
  * Every row in `entries` is written with its User, and every read filters on
- * it, so another User's entries -- and the entries written before there were
- * Users, which have none -- are never read. ADR-0021.
+ * it, so another User's entries are never read. ADR-0021.
  *
  * It takes a connection string for the reason the health probe does: the
  * composition root may not import @repo/db.

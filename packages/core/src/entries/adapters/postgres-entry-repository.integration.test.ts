@@ -269,13 +269,11 @@ describe('createPostgresEntryRepository', () => {
     expect(await listed(ADA)).toEqual([]);
   });
 
-  it('lists no entry written before there were Users, which has none', async () => {
-    const owned = entry();
-    await repository.save(ADA, owned);
-    await database.execute(
+  it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {
+    const refused = database.execute(
       sql`insert into entries (id, entry_date, memo, created_at) values ('01920000-0000-7000-8000-0000000000ff', '2026-09-15', 'Ownerless', now())`,
     );
 
-    expect(await listed(ADA)).toEqual([owned]);
+    await expect(refused).rejects.toMatchObject({ cause: { code: '23502' } });
   });
 });
