@@ -44,6 +44,7 @@ it here in the same commit that introduces it.
 | Smoke User       | The User the Smoke run reads Production as. It has no Identity, owns a fixed set of Entries, and its one Session is the `SMOKE_SESSION_TOKEN` secret. ADR-0021. |
 | Spec isolation   | The rule that one pull request changes `e2e/` or the rest of the repository, never both. Decided by `tools/check-pr-isolation.ts`. |
 | Test collection  | The set of test files a vitest project actually runs. Compared against the working tree by `tools/gates/test-collection-gate.test.ts`, so a test nothing runs fails CI. |
+| Test sign-in     | A form on `/sign-in` that signs in by an identifier alone, where `AUTH_TEST_LOGIN` is set: `E2E build`, Preview, a local server, never Production. One identifier is one User, with an Identity of provider `test`. ADR-0021. |
 | Trigger          | The condition that would adopt a Deferred ADR, stated in that ADR.           |
 | Unbalanced       | The `DomainErrorCode` for an Entry whose debits and credits differ. The one broken Entry rule with a code of its own, so the form can say the balance is what is wrong; every other broken rule is `INVALID_INPUT`. Mapped to `UNPROCESSABLE_CONTENT`. |
 | User             | A person who keeps books here, created the first time they sign in. Every Entry belongs to one User, and no User sees another's. ADR-0021. |

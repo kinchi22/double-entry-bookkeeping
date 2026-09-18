@@ -189,10 +189,10 @@ Three decisions worth knowing:
    Because `--env-file` is rejected inside `NODE_OPTIONS`, the scripts invoke
    the real JS entrypoints (`node_modules/turbo/bin/turbo`,
    `node_modules/drizzle-kit/bin.cjs`) instead of the `.bin` shell shims.
-3. **`DATABASE_URL` is declared on the `dev` task in `turbo.json`.** Turborepo
-   runs tasks in strict env mode, so an undeclared variable is invisible to
-   `next dev` even when it is present in the parent shell. A future task that
-   needs the database must declare it too.
+3. **`DATABASE_URL` is declared on the `dev` task in `turbo.json`**, and so are
+   the sign-in variables. Turborepo runs tasks in strict env mode, so an
+   undeclared variable is invisible to `next dev` even when it is present in
+   the parent shell. A future task that needs one must declare it too.
 
 The container is stock `postgres:18-alpine` with no extensions, matching the
 portability rule below: the same migrations run here, on Neon, or on RDS.
@@ -206,11 +206,50 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 | `PRODUCTION_DATABASE_URL` | Secret of the GitHub environment `production-database` | Direct connection string the `Apply migrations` job applies migrations through |
 | `PREVIEW_DATABASE_URL` | Secret of the GitHub environment `preview-database` | Direct connection string the `Migrate preview` job applies migrations through |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub repository secret, read by the `E2E` job | Sent as `x-vercel-protection-bypass`, so Playwright gets past Deployment Protection |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Vercel Preview + Production (the secret marked Sensitive), and local `.env`; placeholders in the `test:e2e` step of `E2E build` | The Google OAuth client. Required everywhere, like `DATABASE_URL`; only Production and a local server can finish a Google sign-in. ADR-0021 |
+| `AUTH_TEST_LOGIN` | Vercel Preview only, local `.env`, and the `test:e2e` step of `E2E build` | Set to anything non-empty, `/sign-in` also offers the test sign-in. `parseEnv` refuses it when `VERCEL_ENV` is `production` |
+| `SMOKE_SESSION_TOKEN` | GitHub repository secret, read by the `E2E` job | The Smoke User's session token, presented as the `session` cookie. See [Authentication](#authentication) |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.
 Configuration enters through `apps/web/server/container.ts`, which validates it
 through `apps/web/server/env.ts` and passes it down as arguments. That is what
 keeps core testable and portable.
+
+## Authentication
+
+Google is the only way to sign in on Production. ADR-0021. Set up once:
+
+1. In the Google Cloud console, create an OAuth client of type **Web
+   application**, with the OAuth consent screen published for external users.
+   Authorized redirect URIs: `https://<production domain>/auth/callback/google`,
+   and `http://localhost:3000/auth/callback/google` for local development. No
+   Preview URI: Google accepts no wildcard, and every Preview has its own URL.
+2. In Vercel, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (Sensitive) for
+   Production and for Preview. Preview cannot finish a Google sign-in, but
+   `parseEnv` requires both, as it requires `DATABASE_URL`.
+3. In Vercel, `AUTH_TEST_LOGIN=1` for Preview only. Never Production: a
+   deployment with it set answers its first request with a 500.
+
+### The Smoke User
+
+The smoke run reads Production signed in as the Smoke User, a User with no
+Identity whose one Session does not slide and ends after a year. Seed it, or
+rotate its token, from a checkout:
+
+```bash
+node tools/seed-smoke-user.ts > smoke-user.sql   # the token is printed on stderr
+# run smoke-user.sql on Production: Neon's SQL editor, or psql with the direct URL
+gh secret set SMOKE_SESSION_TOKEN               # paste the token
+rm smoke-user.sql
+```
+
+Run the SQL before setting the secret: from the moment it commits, the old token
+signs nobody in. The User and its Entry are kept across runs; only the Session
+is replaced. Rotate before the year is up, because the smoke run fails on the
+day the Session ends.
+
+Seed it before `milestone/authentication` reaches `main`, so the first smoke
+run of that code has a Session to read with.
 
 ## AWS migration readiness
 
