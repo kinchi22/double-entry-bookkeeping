@@ -279,7 +279,7 @@ branched from `main`, named `milestone/<name>`.
 | --------------------------- | ----------- | ------ | --------- |
 | specs -> `milestone/x`      | the owner, as code owner | not run (the specs would fail by design) | e2e only |
 | feature -> `milestone/x`    | nobody      | not run (the specs would fail until the behaviour lands) | no specs |
-| `main` -> `milestone/x`     | the owner if the sync carries an owned path | - | exempt |
+| `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | - | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
 A feature branch merges with no approval at all: what it may do was settled when
@@ -291,6 +291,16 @@ Nothing forces product code through this route. A pull request straight into
 `main` is allowed and sometimes right -- a spec correction, a tooling change, a
 fix with no criterion behind it. What stops a behaviour from arriving with no
 specification is the approval on that pull request, not a rule about paths.
+
+Every pull request onto a milestone is squashed, and the `milestone/**` ruleset
+allows no other merge method, so a feature branch cannot land as a merge
+commit. That is why a sync from `main` is not a pull request. A squashed sync
+copies `main`'s commits without making them ancestors of the milestone, and
+the first later edit to a file they touched conflicts when the milestone meets
+`main`: `milestone/authentication` did exactly that, over one ADR. The owner, the
+one bypass actor on that ruleset, syncs instead with `git merge origin/main` and
+a push, and only when the milestone needs something from `main`. Most
+milestones need no sync at all: they branch from `main` and return to it soon.
 
 A migration is the one thing a milestone does not carry. Vercel deploys a merge
 to `main` while `Apply migrations` is still waiting for the owner, so a schema
@@ -313,7 +323,8 @@ ADR-0012, ADR-0014.
 Required checks belong to a ruleset, and there are two: `main`, which requires
 one approval, a code owner's where one applies, and six checks -- `Gates`,
 `Integration`, `Mutation testing`, `Gate liveness`, `Spec isolation` and
-`E2E build`; and `milestone/**`, which requires the first five and no approval.
+`E2E build`; and `milestone/**`, which requires the first five and no approval, allows squash
+alone, and lets the owner bypass it to push a sync.
 That is how the suite is required on the trunk alone: it is a line in the first
 of them and not in the second. ADR-0006.
 
