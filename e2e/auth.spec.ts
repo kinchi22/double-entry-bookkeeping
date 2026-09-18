@@ -132,12 +132,16 @@ test('treats an unknown session token as signed out', { tag: '@smoke' }, async (
  *
  * The state is what ties a callback to the browser that began the round trip.
  * One the app did not issue is a forged or replayed sign-in.
+ *
+ * The alert is looked for in the page's main content: Next renders a route
+ * announcer with `role="alert"` on every page, so the page as a whole always
+ * has one.
  */
 test('refuses a Google callback whose state it did not issue', async ({ page }) => {
   await page.goto(`/auth/callback/google?state=${randomUUID()}&code=${randomUUID()}`);
 
   await expect(page).toHaveURL(SIGN_IN);
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
 
   await page.goto('/entries');
   await expect(page).toHaveURL(SIGN_IN);
