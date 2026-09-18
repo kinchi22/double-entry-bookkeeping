@@ -55,8 +55,10 @@ port in `auth/adapters/`. The session is ours:
 - A session token is 32 random bytes. The cookie carries the token; the
   `sessions` table stores its SHA-256 hash, the User and an expiry. Node's
   `crypto` does both, with no further dependency.
-- The cookie is `HttpOnly`, `Secure`, `SameSite=Lax` (Lax, because the return
-  from Google is a top-level cross-site navigation).
+- The cookie is named `session`, and is `HttpOnly`, `Secure`, `SameSite=Lax`
+  (Lax, because the return from Google is a top-level cross-site navigation).
+  It carries no `__Host-` prefix: `E2E build` serves the app over
+  `http://127.0.0.1`, and the name is part of the specs.
 - A session lasts 30 days and slides: a request in its second half extends it.
 - Signing out deletes the row, so it takes effect at once, and any session can be
   ended from the database.
@@ -66,20 +68,30 @@ port in `auth/adapters/`. The session is ours:
 **The request path.** `apps/web/server/context.ts` resolves the cookie to an
 auth context and puts it on the request context. Each use case that touches user
 data takes it and checks it at its entry point: the fixed decision in
-`docs/ARCHITECTURE.md`, exercised for the first time. `app/(app)/layout.tsx`
-redirects a request with no session to `/sign-in`; that redirect is a courtesy,
-and the use case check is the one that holds. After signing in, the User returns
-to the path they asked for, accepted only as a same-origin relative path.
-`health.get` stays public (ADR-0020).
+`docs/ARCHITECTURE.md`, exercised for the first time. A procedure called without
+a Session answers `UNAUTHORIZED`, 401.
+
+Four things answer anybody: `/`, `/sign-in`, the Google callback at
+`/auth/callback/google`, and `health.get` (ADR-0020). `/` is the page a
+signed-out visitor meets, a welcome page in time, and it sends a signed-in User
+to `/entries`. Every other page sends a request with no Session to `/sign-in`;
+that redirect is a courtesy, and the use case check is the one that holds. After
+signing in, the User returns to the path they asked for, accepted only as a
+same-origin relative path, or lands on `/entries` when there is none. A callback
+whose `state` the app did not issue returns to `/sign-in` with an error and
+creates no Session.
 
 **Configuration.** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` join
 `DATABASE_URL`, validated by `parseEnv` (ADR-0005), and are set in Vercel's
 project environment per deployment scope.
 
-**Test sign-in.** A Server Action signs in as a fixed test User when
-`AUTH_TEST_LOGIN` is set. It exists for `E2E build` and for Preview, where Google
-cannot redirect: Google accepts no wildcard redirect URI and every Preview has
-its own URL. `parseEnv` fails when `AUTH_TEST_LOGIN` is set and `VERCEL_ENV` is
+**Test sign-in.** When `AUTH_TEST_LOGIN` is set, `/sign-in` also renders a form
+that signs in by an identifier, through a Server Action. One identifier is one
+User: its Identity has the provider `test` and the identifier as its subject, so
+a new identifier creates a User the way a first Google sign-in does. Each spec
+signs in as a User of its own, and a spec can sign in as two. It exists for
+`E2E build` and for Preview, where Google cannot redirect: Google accepts no
+wildcard redirect URI and every Preview has its own URL. `parseEnv` fails when `AUTH_TEST_LOGIN` is set and `VERCEL_ENV` is
 `production`, and its unit test asserts that refusal. Real Google sign-in works
 on Production and on a local development server only.
 
@@ -122,6 +134,10 @@ validating the ID token -- is not.
 The test sign-in is a way into the app that exists in product code. What keeps it
 out of Production is a check at startup and the unit test on that check, not its
 absence.
+
+On Preview, anyone who gets past Vercel's Deployment Protection can sign in as
+any test identifier. Preview's database is disposable, and nothing on it belongs
+to a real User.
 
 Preview cannot exercise real Google sign-in. The first place the real flow runs
 against a deployment is Production.
@@ -183,6 +199,10 @@ session before it expires.
 **An OAuth callback proxy for Preview**, bouncing Google's redirect to the
 Preview URL carried in `state`. It works, and it is an open redirect unless the
 target list is exact; the test sign-in gives Preview what it needs without one.
+
+**One fixed test User.** Every spec would write into the same books, and no spec
+could show that one User cannot see another's entries, which is the property this
+decision exists for.
 
 **Seed E2E sessions directly in the database from Playwright**, with no test
 sign-in in product code. It keeps the back door out of the app, and leaves Preview
