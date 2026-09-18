@@ -10,7 +10,8 @@
     "./health": "./src/health/index.ts",
     "./entries": "./src/entries/index.ts",
     "./money": "./src/money/index.ts",
-    "./logging": "./src/logging/index.ts"
+    "./logging": "./src/logging/index.ts",
+    "./auth": "./src/auth/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

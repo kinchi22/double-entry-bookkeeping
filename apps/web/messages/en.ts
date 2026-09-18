@@ -55,6 +55,7 @@ export const en = {
     unbalanced: 'Debits and credits must balance. Check the amount on each side.',
     invalid: 'The entry was not added. Check the date, the memo and each line.',
     unavailable: 'The entry could not be saved just now. Try again.',
+    signedOut: 'You are signed out. Sign in again to add an entry.',
   },
   entryList: {
     title: 'Entries',
