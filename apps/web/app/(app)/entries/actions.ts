@@ -26,7 +26,7 @@ export async function postEntry(
   }
 
   try {
-    await createCaller(createContext()).entries.post(input.value);
+    await createCaller(await createContext()).entries.post(input.value);
   } catch (thrown) {
     return { outcome: 'rejected', code: fromTrpcError(thrown).code };
   }

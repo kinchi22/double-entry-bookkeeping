@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  * contains no rule about what healthy means.
  */
 export default async function HomePage(): Promise<ReactNode> {
-  const caller = createCaller(createContext());
+  const caller = createCaller(await createContext());
   const health = await caller.health.get();
 
   return (

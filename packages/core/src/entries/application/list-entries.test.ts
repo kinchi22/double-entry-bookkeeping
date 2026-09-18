@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { domainError, err, isErr, isOk, ok, type EntryId, type Money } from '@repo/contracts';
+import {
+  domainError,
+  err,
+  isErr,
+  isOk,
+  ok,
+  type EntryId,
+  type Money,
+  type UserId,
+} from '@repo/contracts';
+import { SIGNED_OUT } from '../../auth/domain/auth-context';
 import { makeEntry, type Entry } from '../domain/entry';
 import { type EntryRepository } from '../ports/entry-repository';
 import { createListEntries } from './list-entries';
@@ -19,6 +29,8 @@ const made = makeEntry(
   },
 );
 
+const ADA = '01920000-0000-7000-8000-0000000000a1' as UserId;
+
 /** A stub repository that answers `list` with a fixed result. */
 const holding = (listed: EntryRepository['list']): EntryRepository => ({
   save: () => Promise.resolve(ok(undefined)),
@@ -34,7 +46,7 @@ describe('createListEntries', () => {
       entries: holding(() => Promise.resolve(ok([later, made.value]))),
     });
 
-    const listed = await listEntries();
+    const listed = await listEntries({ userId: ADA });
 
     expect(isOk(listed)).toBe(true);
     if (!isOk(listed)) return;
@@ -48,10 +60,33 @@ describe('createListEntries', () => {
       ),
     });
 
-    const listed = await listEntries();
+    const listed = await listEntries({ userId: ADA });
 
     expect(isErr(listed)).toBe(true);
     if (!isErr(listed)) return;
     expect(listed.error.code).toBe('DEPENDENCY_UNAVAILABLE');
+  });
+
+  it('lists the books of the signed-in User, and nobody else', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const own = made.value;
+    const listEntries = createListEntries({
+      entries: holding((userId) => Promise.resolve(ok(userId === ADA ? [own] : []))),
+    });
+
+    const listed = await listEntries({ userId: ADA });
+
+    expect(isOk(listed) && listed.value).toEqual([own]);
+  });
+
+  it('refuses to list for nobody, as unauthenticated', async () => {
+    const listEntries = createListEntries({
+      entries: holding(() => Promise.resolve(ok([]))),
+    });
+
+    const listed = await listEntries(SIGNED_OUT);
+
+    expect(isErr(listed) && listed.error.code).toBe('UNAUTHENTICATED');
   });
 });

@@ -4,11 +4,18 @@ import {
   createGetHealth,
   createListEntries,
   createPostEntry,
+  createResolveSession,
   type GetHealth,
   type ListEntries,
   type PostEntry,
+  type ResolveSession,
 } from '@repo/core';
-import { createPostgresEntryRepository, createPostgresHealthProbe } from '@repo/core/server';
+import {
+  createPostgresEntryRepository,
+  createPostgresHealthProbe,
+  createPostgresSessionRepository,
+  hashSessionToken,
+} from '@repo/core/server';
 import { v7 as uuidv7 } from 'uuid';
 import { type Env, parseEnv } from './env';
 import { createLogger, stderr } from './logger';
@@ -27,12 +34,14 @@ export type Container = {
   readonly getHealth: GetHealth;
   readonly postEntry: PostEntry;
   readonly listEntries: ListEntries;
+  readonly resolveSession: ResolveSession;
 };
 
 export function createContainer({ databaseUrl }: Env): Container {
   const logger = createLogger(stderr());
   const postgres = createPostgresHealthProbe(databaseUrl, logger);
   const entries = createPostgresEntryRepository(databaseUrl, logger);
+  const sessions = createPostgresSessionRepository(databaseUrl, logger);
 
   return {
     getHealth: createGetHealth({
@@ -47,6 +56,7 @@ export function createContainer({ databaseUrl }: Env): Container {
       now: () => new Date(),
     }),
     listEntries: createListEntries({ entries }),
+    resolveSession: createResolveSession({ sessions, hashSessionToken, now: () => new Date() }),
   };
 }
 
