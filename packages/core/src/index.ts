@@ -52,6 +52,7 @@ export {
 } from './logging/index';
 
 export {
+  SESSION_LIFETIME_DAYS,
   SIGNED_OUT,
   requireUser,
   type AuthContext,

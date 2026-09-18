@@ -33,6 +33,20 @@ export const en = {
   home: {
     entriesLink: 'Entries',
   },
+  signInPage: {
+    title: 'Sign in',
+    google: 'Sign in with Google',
+    failed: 'Signing in did not work. Try again.',
+  },
+  /** The test sign-in: only where `AUTH_TEST_LOGIN` is set. ADR-0021. */
+  testSignIn: {
+    title: 'Test sign-in',
+    identifier: 'Identifier',
+    submit: 'Sign in',
+  },
+  signOut: {
+    submit: 'Sign out',
+  },
   entriesPage: {
     title: 'Entries',
   },
