@@ -1,20 +1,31 @@
 import 'server-only';
-import { entryIdSchema } from '@repo/contracts';
+import { domainError, entryIdSchema, err, userIdSchema } from '@repo/contracts';
 import {
+  createBeginGoogleSignIn,
+  createFinishGoogleSignIn,
   createGetHealth,
   createListEntries,
   createPostEntry,
   createResolveSession,
+  createSignOut,
+  createTestSignIn,
+  type BeginGoogleSignIn,
+  type FinishGoogleSignIn,
   type GetHealth,
   type ListEntries,
   type PostEntry,
   type ResolveSession,
+  type SignOut,
+  type TestSignIn,
 } from '@repo/core';
 import {
+  createOpenIdGoogleSignIn,
   createPostgresEntryRepository,
   createPostgresHealthProbe,
   createPostgresSessionRepository,
+  createPostgresUserRepository,
   hashSessionToken,
+  newSessionToken,
 } from '@repo/core/server';
 import { v7 as uuidv7 } from 'uuid';
 import { type Env, parseEnv } from './env';
@@ -35,13 +46,32 @@ export type Container = {
   readonly postEntry: PostEntry;
   readonly listEntries: ListEntries;
   readonly resolveSession: ResolveSession;
+  readonly beginGoogleSignIn: BeginGoogleSignIn;
+  readonly finishGoogleSignIn: FinishGoogleSignIn;
+  /** Whether `/sign-in` offers the test sign-in: `AUTH_TEST_LOGIN`. */
+  readonly testSignInOffered: boolean;
+  readonly testSignIn: TestSignIn;
+  readonly signOut: SignOut;
 };
 
-export function createContainer({ databaseUrl }: Env): Container {
+/** Where there is no test sign-in, signing in by an identifier finds nothing. */
+const noTestSignIn: TestSignIn = () =>
+  Promise.resolve(err(domainError('NOT_FOUND', 'There is no test sign-in here.')));
+
+export function createContainer({ databaseUrl, google, testSignIn }: Env): Container {
   const logger = createLogger(stderr());
   const postgres = createPostgresHealthProbe(databaseUrl, logger);
   const entries = createPostgresEntryRepository(databaseUrl, logger);
   const sessions = createPostgresSessionRepository(databaseUrl, logger);
+  const signIn = {
+    users: createPostgresUserRepository(databaseUrl, logger),
+    sessions,
+    newUserId: () => userIdSchema.parse(uuidv7()),
+    newSessionToken,
+    hashSessionToken,
+    now: () => new Date(),
+  };
+  const googleSignIn = createOpenIdGoogleSignIn(google, logger);
 
   return {
     getHealth: createGetHealth({
@@ -57,6 +87,11 @@ export function createContainer({ databaseUrl }: Env): Container {
     }),
     listEntries: createListEntries({ entries }),
     resolveSession: createResolveSession({ sessions, hashSessionToken, now: () => new Date() }),
+    beginGoogleSignIn: createBeginGoogleSignIn({ google: googleSignIn }),
+    finishGoogleSignIn: createFinishGoogleSignIn({ ...signIn, google: googleSignIn }),
+    testSignInOffered: testSignIn,
+    testSignIn: testSignIn ? createTestSignIn(signIn) : noTestSignIn,
+    signOut: createSignOut({ sessions, hashSessionToken }),
   };
 }
 

@@ -17,8 +17,18 @@ export { moneySchema } from './money';
 
 export { uuidV7Schema } from './id';
 
-export type { UserId } from './auth';
-export { userIdSchema } from './auth';
+export type { BeganSignIn, IssuedSessionOutput, PendingSignInInput, UserId } from './auth';
+export {
+  TEST_SIGN_IN_FIELDS,
+  beganSignInSchema,
+  finishGoogleSignInInputSchema,
+  issuedSessionSchema,
+  pendingSignInSchema,
+  testSignInInputSchema,
+  toBeganSignIn,
+  toIssuedSession,
+  userIdSchema,
+} from './auth';
 
 export type { HealthComponent, HealthState, HealthStatus } from './health';
 export {
