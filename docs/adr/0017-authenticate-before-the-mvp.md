@@ -1,6 +1,6 @@
 # ADR-0017: Authenticate before the MVP
 
-**Status:** Deferred
+**Status:** Superseded by ADR-0021
 **Date:** 2026-09-16
 **Trigger:** Before the production database stops being disposable -- that is,
 before the wipe in ADR-0009 and the first real books entered after it.

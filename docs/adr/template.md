@@ -10,7 +10,9 @@ Status is one of:
   saying what has to be true before it is. Adopting it means editing this file:
   change the status to `Accepted`, add `**Adopted:** YYYY-MM-DD, PR #N`, and
   leave the rest of the ADR intact so the reasoning stays readable.
-- `Superseded by ADR-NNNN` -- replaced. The replacement must exist.
+- `Superseded by ADR-NNNN` -- replaced. The replacement must exist. A
+  `Deferred` ADR replaced before it was adopted keeps its trigger and takes no
+  `**Adopted:**` line.
 
 ## Problem
 

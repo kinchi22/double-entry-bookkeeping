@@ -95,8 +95,10 @@ const statusProblems = (
     // Adopted and Deferred together says the record was adopted and the status
     // never followed, which is the drift this whole gate exists to catch.
     if (adopted !== undefined) problems.push(`${file.name}: adopted, but still marked Deferred`);
-  } else if (hasTrigger && adopted === undefined) {
+  } else if (superseded === null && hasTrigger && adopted === undefined) {
     // A trigger on a record that is in force means it waited and then landed.
+    // A superseded one may have waited and been replaced instead, never built,
+    // so it keeps its trigger and has no adoption to record.
     problems.push(`${file.name}: was deferred, so it needs an '**Adopted:** ...' line`);
   }
 
