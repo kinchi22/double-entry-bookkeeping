@@ -92,9 +92,16 @@ behind a Vercel login. `playwright.config.ts` sends the bypass secret as the
 report, because a failed request's error text lists its headers: read a failure
 in the job log, where GitHub masks the secret.
 
-A green `E2E` does not prove the database is reachable, because the health specs
-accept either answer. After changing `DATABASE_URL`, open the production domain
-and check that the health panel reports `postgres: reachable`.
+A green `E2E` proves the production database answered. The spec that calls
+`health.get` asserts the strict answer -- `healthy`, with `postgres` reachable
+-- so a deployment whose database is unreachable fails the smoke run instead of
+reporting a degraded status to nobody. That endpoint is the healthcheck and
+stays when the health panel goes; every component added later reports through
+it, and `healthy` means all of them answered. ADR-0020.
+
+So a `DATABASE_URL` change needs no manual check: redeploy and read the smoke
+run. The probe issues `select 1`, so it says nothing about migrations, and the
+entries page spec is what covers the schema (ADR-0014).
 
 When something fails against the database, the deployment's runtime logs say
 what. Each failure is one JSON line on stderr with an `event` --
