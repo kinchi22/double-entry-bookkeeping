@@ -20,7 +20,7 @@ export const metadata = {
  * balances are all decided in core.
  */
 export default async function EntriesPage(): Promise<ReactNode> {
-  const caller = createCaller(createContext());
+  const caller = createCaller(await createContext());
   const entries = await caller.entries.list();
 
   return (

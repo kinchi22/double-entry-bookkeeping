@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { isErr, isOk, type EntryId, type Money } from '@repo/contracts';
+import { isErr, isOk, type EntryId, type Money, type UserId } from '@repo/contracts';
 import { createDatabase } from '@repo/db';
 import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
@@ -43,8 +43,19 @@ afterAll(async () => {
   await Promise.all([repository.close(), dead.close(), close()]);
 });
 
+const ADA = '01920000-0000-7000-8000-0000000000a1' as UserId;
+const GRACE = '01920000-0000-7000-8000-0000000000a2' as UserId;
+
 beforeEach(async () => {
-  await database.execute(sql`truncate table entry_lines, entries`);
+  await database.execute(sql`truncate table users, entry_lines, entries cascade`);
+  for (const [id, email] of [
+    [ADA, 'ada@example.com'],
+    [GRACE, 'grace@example.com'],
+  ]) {
+    await database.execute(
+      sql`insert into users (id, email, created_at) values (${id}, ${email}, now())`,
+    );
+  }
   logged.length = 0;
 });
 
@@ -73,8 +84,8 @@ function entry(overrides: Partial<EntryDraft> & { readonly createdAt?: Date } = 
   return isOk(made) ? made.value : ({} as Entry);
 }
 
-async function listed(): Promise<readonly Entry[]> {
-  const result = await repository.list();
+async function listed(userId: UserId = ADA): Promise<readonly Entry[]> {
+  const result = await repository.list(userId);
   expect(isOk(result)).toBe(true);
   return isOk(result) ? result.value : [];
 }
@@ -97,7 +108,7 @@ describe('createPostgresEntryRepository', () => {
       createdAt: new Date('2026-09-15T09:30:00.123+09:00'),
     });
 
-    const result = await repository.save(saved);
+    const result = await repository.save(ADA, saved);
 
     expect(isOk(result)).toBe(true);
     expect(await listed()).toEqual([saved]);
@@ -112,7 +123,7 @@ describe('createPostgresEntryRepository', () => {
       ],
     });
 
-    await repository.save(saved);
+    await repository.save(ADA, saved);
 
     expect((await listed())[0]?.total).toBe(Number.MAX_SAFE_INTEGER);
   });
@@ -126,7 +137,7 @@ describe('createPostgresEntryRepository', () => {
     const future = on('2126-01-01', '2026-09-10T00:00:00Z');
 
     for (const saved of [earlyDayLate, lateDayEarly, lateDayLate, future]) {
-      await repository.save(saved);
+      await repository.save(ADA, saved);
     }
 
     expect((await listed()).map((listedEntry) => listedEntry.id)).toEqual([
@@ -152,7 +163,7 @@ describe('createPostgresEntryRepository', () => {
       ),
     };
 
-    const result = await repository.save(refused);
+    const result = await repository.save(ADA, refused);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -170,9 +181,9 @@ describe('createPostgresEntryRepository', () => {
 
   it('refuses a second entry with the same id and keeps the first', async () => {
     const saved = entry();
-    await repository.save(saved);
+    await repository.save(ADA, saved);
 
-    const result = await repository.save({ ...saved, memo: 'Overwritten' });
+    const result = await repository.save(ADA, { ...saved, memo: 'Overwritten' });
 
     expect(isErr(result)).toBe(true);
     expect(await listed()).toEqual([saved]);
@@ -190,12 +201,12 @@ describe('createPostgresEntryRepository', () => {
 
   it('reports a stored entry that breaks a rule rather than listing it', async () => {
     const saved = entry();
-    await repository.save(saved);
+    await repository.save(ADA, saved);
     await database.execute(
       sql`update entry_lines set amount = 12000 where entry_id = ${saved.id} and line_number = 2`,
     );
 
-    const result = await repository.list();
+    const result = await repository.list(ADA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -212,12 +223,12 @@ describe('createPostgresEntryRepository', () => {
 
   it('reports a stored line with a side that is not debit or credit', async () => {
     const saved = entry();
-    await repository.save(saved);
+    await repository.save(ADA, saved);
     await database.execute(
       sql`update entry_lines set side = 'minus' where entry_id = ${saved.id} and line_number = 1`,
     );
 
-    const result = await repository.list();
+    const result = await repository.list(ADA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -226,8 +237,8 @@ describe('createPostgresEntryRepository', () => {
   });
 
   it('reports an unreachable database as a result on both paths, never by throwing', async () => {
-    const saved = await dead.save(entry());
-    const read = await dead.list();
+    const saved = await dead.save(ADA, entry());
+    const read = await dead.list(ADA);
 
     expect(isErr(saved) && saved.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(isErr(read) && read.error.code).toBe('DEPENDENCY_UNAVAILABLE');
@@ -239,5 +250,32 @@ describe('createPostgresEntryRepository', () => {
       expect.objectContaining({ code: 'ECONNREFUSED' }),
       expect.objectContaining({ code: 'ECONNREFUSED' }),
     ]);
+  });
+
+  it("lists one User's entries to nobody else (ADR-0021)", async () => {
+    const adas = entry({ memo: 'Ada' });
+    const graces = entry({ memo: 'Grace' });
+
+    await repository.save(ADA, adas);
+    await repository.save(GRACE, graces);
+
+    expect(await listed(ADA)).toEqual([adas]);
+    expect(await listed(GRACE)).toEqual([graces]);
+  });
+
+  it('lists nothing for a User who has written nothing, whatever others have', async () => {
+    await repository.save(GRACE, entry());
+
+    expect(await listed(ADA)).toEqual([]);
+  });
+
+  it('lists no entry written before there were Users, which has none', async () => {
+    const owned = entry();
+    await repository.save(ADA, owned);
+    await database.execute(
+      sql`insert into entries (id, entry_date, memo, created_at) values ('01920000-0000-7000-8000-0000000000ff', '2026-09-15', 'Ownerless', now())`,
+    );
+
+    expect(await listed(ADA)).toEqual([owned]);
   });
 });

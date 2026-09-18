@@ -1,4 +1,4 @@
-import { asc, desc } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import {
   domainError,
   err,
@@ -8,6 +8,7 @@ import {
   type EntryId,
   type Err,
   type Result,
+  type UserId,
 } from '@repo/contracts';
 import { createDatabase, schema } from '@repo/db';
 import { describeError } from '../../logging/domain/describe-error';
@@ -26,6 +27,10 @@ type LineRow = typeof schema.entryLines.$inferSelect;
 /**
  * Entries in Postgres: a row in `entries` and one row per line in
  * `entry_lines`, numbered from 1 in the order the lines were entered.
+ *
+ * Every row in `entries` is written with its User, and every read filters on
+ * it, so another User's entries -- and the entries written before there were
+ * Users, which have none -- are never read. ADR-0021.
  *
  * It takes a connection string for the reason the health probe does: the
  * composition root may not import @repo/db.
@@ -46,11 +51,12 @@ export function createPostgresEntryRepository(
      * One transaction, because an entry without all of its lines is a ledger
      * that no longer balances and says nothing about it. ADR-0011.
      */
-    save: async (entry: Entry): Promise<Result<void, DomainError>> => {
+    save: async (userId: UserId, entry: Entry): Promise<Result<void, DomainError>> => {
       try {
         await database.transaction(async (transaction) => {
           await transaction.insert(schema.entries).values({
             id: entry.id,
+            userId,
             entryDate: entry.entryDate,
             memo: entry.memo,
             createdAt: entry.createdAt,
@@ -81,21 +87,31 @@ export function createPostgresEntryRepository(
      * for, and those are ignored; an entry the first read saw has all of its
      * lines committed already, because they were written in its transaction.
      */
-    list: async (): Promise<Result<readonly Entry[], DomainError>> => {
+    list: async (userId: UserId): Promise<Result<readonly Entry[], DomainError>> => {
       let entryRows: EntryRow[];
       let lineRows: LineRow[];
       try {
         entryRows = await database
           .select()
           .from(schema.entries)
+          .where(eq(schema.entries.userId, userId))
           .orderBy(
             desc(schema.entries.entryDate),
             desc(schema.entries.createdAt),
             desc(schema.entries.id),
           );
+        // A line belongs to a User through its entry.
         lineRows = await database
-          .select()
+          .select({
+            entryId: schema.entryLines.entryId,
+            lineNumber: schema.entryLines.lineNumber,
+            account: schema.entryLines.account,
+            side: schema.entryLines.side,
+            amount: schema.entryLines.amount,
+          })
           .from(schema.entryLines)
+          .innerJoin(schema.entries, eq(schema.entries.id, schema.entryLines.entryId))
+          .where(eq(schema.entries.userId, userId))
           .orderBy(asc(schema.entryLines.entryId), asc(schema.entryLines.lineNumber));
       } catch (error) {
         logger.error(
