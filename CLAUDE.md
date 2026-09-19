@@ -39,6 +39,15 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 
+## Work tracking
+
+The work lives in GitHub Issues and the project board, not in a session. Read
+`docs/agents/issue-tracker.md` before opening, refining or implementing an
+issue; `/implement-issue` builds a Task, or a whole Feature.
+
+The domain glossary is `docs/GLOSSARY.md`. A term resolved while designing,
+`/grill-with-docs` included, goes into its table.
+
 ## Where code goes
 
 Feature-first. A new feature named `x` looks like:
