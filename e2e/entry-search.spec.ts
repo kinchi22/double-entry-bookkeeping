@@ -26,13 +26,16 @@ import { signIn, signInForSmoke } from './session';
  * carries no `@smoke` tag and never runs against Production (ADR-0014). They
  * run in `E2E build`, beside each other and against one database, and a retry
  * writes again -- so each Entry is found by a memo no other run can have
- * written, never by counting or by position.
+ * written, never by counting or by position. Spec 11 is the exception that
+ * proves it: the order *is* what it asserts, so it reads position -- but only
+ * within the Entries this run wrote, never as an index into the whole list.
  *
  * Writing an Entry means driving the form on `/entries`, so a spec that needs
  * three or more of them spends most of its budget before it searches at all.
- * Those carry `test.slow()`. The cost is paid by `Gate liveness`, where every
- * spec fails by timeout against the empty page, so a tripled timeout is a
- * tripled wait there; three specs is the most that seemed worth it.
+ * Every such spec carries `test.slow()`; four do today. The cost is paid by
+ * `Gate liveness`, where every spec fails by timeout against the empty page, so
+ * a tripled timeout is a tripled wait there -- which is the reason this is a
+ * rule about how much a spec writes, rather than a tag to reach for.
  *
  * Every page here needs a Session (ADR-0021). Each spec signs in as a new User,
  * so it searches books nobody else has written in.
@@ -422,7 +425,55 @@ test("never shows one User's Entry in another User's results", async ({ browser 
 });
 
 /**
- * 11. The page answers
+ * 11. The results are ordered as `/entries` orders them
+ *
+ * Given two Entries posted on one day, written one after the other, and a third
+ * posted on a later day
+ * When the User searches for all three
+ * Then they come back latest day first, and within the shared day the one
+ * written last comes first
+ *
+ * #52, US-20: the two pages must not disagree about what "latest" means, and
+ * the order is the repository's -- `entry_date` descending, then `created_at`.
+ * Both keys are asserted, because a page that dropped the tie-break would still
+ * look sorted.
+ *
+ * This is the one spec here where position is the subject rather than the
+ * means, which makes it the one most easily written wrongly. It still reads no
+ * global index: it writes its own three Entries, searches for the memo only
+ * this run can have written, and asserts those three in order relative to one
+ * another. Another User's books, or an earlier run's rows, cannot change the
+ * answer, and the count is asserted first so a page that rendered one of them
+ * cannot pass by accident.
+ */
+test('orders the results latest day first, and within a day the latest written', async ({ page }) => {
+  test.slow();
+  const run = randomUUID();
+  const writtenFirst = `Morning ${run}`;
+  const writtenSecond = `Afternoon ${run}`;
+  const laterDay = `Next day ${run}`;
+
+  await signIn(page);
+  // Posted in this order, so `writtenSecond` is the more recently created of
+  // the two sharing a day, and the tie-break has a known right answer.
+  await postEntries(page, [
+    { day: '2026-06-10', memo: writtenFirst, lines: lines('expense', 'cash') },
+    { day: '2026-06-10', memo: writtenSecond, lines: lines('expense', 'cash') },
+    { day: '2026-06-11', memo: laterDay, lines: lines('expense', 'cash') },
+  ]);
+
+  await page.goto(SEARCH);
+  await search(page, { memo: run });
+
+  const mine = results(page).getByTestId('entry').filter({ hasText: run });
+  await expect(mine).toHaveCount(3);
+  await expect(mine.nth(0)).toContainText(laterDay);
+  await expect(mine.nth(1)).toContainText(writtenSecond);
+  await expect(mine.nth(2)).toContainText(writtenFirst);
+});
+
+/**
+ * 12. The page answers
  *
  * Given the app is deployed
  * When a visitor opens the Entry search
