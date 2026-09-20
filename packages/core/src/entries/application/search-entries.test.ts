@@ -38,6 +38,13 @@ const holding = (searched: EntryRepository['search']): EntryRepository => ({
   search: searched,
 });
 
+/**
+ * There is no case here for the criteria reaching the port. `SearchCriteria`
+ * carries no criterion yet, so every value of it is the same value, and such a
+ * case could only assert that one object was forwarded rather than another --
+ * a mock assertion in a stub's clothes. It arrives with the first criterion,
+ * where there is finally something to tell apart.
+ */
 describe('createSearchEntries', () => {
   it('answers with what the repository holds, in the order it holds it', async () => {
     expect(isOk(made)).toBe(true);
@@ -52,23 +59,6 @@ describe('createSearchEntries', () => {
     expect(isOk(found)).toBe(true);
     if (!isOk(found)) return;
     expect(found.value).toEqual([later, made.value]);
-  });
-
-  it('gives the repository the criteria it was asked with', async () => {
-    expect(isOk(made)).toBe(true);
-    if (!isOk(made)) return;
-    const own = made.value;
-    const searchEntries = createSearchEntries({
-      // Answers only for the criteria it was given, so a use case that made up
-      // its own, or dropped them, comes back empty.
-      entries: holding((_userId, criteria) =>
-        Promise.resolve(ok(criteria === NO_CRITERIA ? [own] : [])),
-      ),
-    });
-
-    const found = await searchEntries({ userId: ADA }, NO_CRITERIA);
-
-    expect(isOk(found) && found.value).toEqual([own]);
   });
 
   it('passes a repository failure through as the result', async () => {

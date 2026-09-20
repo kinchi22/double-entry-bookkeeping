@@ -123,7 +123,7 @@ export function createPostgresEntryRepository(
           .orderBy(asc(schema.entryLines.entryId), asc(schema.entryLines.lineNumber));
       } catch (error) {
         logger.error(
-          { event: 'entries.list_failed', error: describeError(error) },
+          { event: 'entries.search_failed', error: describeError(error) },
           'The entries could not be read.',
         );
         return unavailable('The entries could not be read.');
@@ -142,7 +142,7 @@ export function createPostgresEntryRepository(
         if (!entry.ok) {
           logger.error(
             { event: 'entries.stored_entry_invalid', entryId: row.id, reason: entry.error.message },
-            'A stored entry breaks a rule, so the entries were not listed.',
+            'A stored entry breaks a rule, so the search did not answer.',
           );
           return entry;
         }
@@ -163,8 +163,8 @@ const unavailable = (message: string): Err<DomainError> =>
  *
  * The database enforces shape and none of the rules (ADR-0010), so a row
  * written around the app can hold an unbalanced entry or an unknown side. That
- * is reported as this app's failure rather than listed, and rather than blamed
- * on the caller with the code the rule would have given a draft.
+ * is reported as this app's failure rather than answered with, and rather than
+ * blamed on the caller with the code the rule would have given a draft.
  */
 function restore(row: EntryRow, lineRows: readonly LineRow[]): Result<Entry, DomainError> {
   const lines: EntryDraft['lines'][number][] = [];

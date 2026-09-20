@@ -20,8 +20,8 @@ import { createPostEntry, type PostEntry } from './post-entry';
 
 /**
  * A stub, not a mock: an in-memory repository that keeps what it is given, as
- * the User it was given for, and lists each User's back. What a test asserts is
- * what posting did to the entries a reader can list, never which methods were
+ * the User it was given for, and answers each User's back. What a test asserts
+ * is what posting did to the entries a reader can find, never which methods were
  * called.
  */
 function inMemoryEntries(): EntryRepository {
@@ -70,7 +70,7 @@ function useCases(entries: EntryRepository): {
 }
 
 describe('createPostEntry', () => {
-  it('stores a balanced entry, stamped with the injected id and clock, where it is listed', async () => {
+  it('stores a balanced entry, stamped with the injected id and clock, where it is found', async () => {
     const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(ADA, draft(12500, 12500));
@@ -81,10 +81,10 @@ describe('createPostEntry', () => {
     expect(posted.value.createdAt).toEqual(CREATED_AT);
     expect(posted.value.total).toBe(12500);
 
-    const listed = await searchEntries(ADA, NO_CRITERIA);
-    expect(isOk(listed)).toBe(true);
-    if (!isOk(listed)) return;
-    expect(listed.value).toEqual([posted.value]);
+    const found = await searchEntries(ADA, NO_CRITERIA);
+    expect(isOk(found)).toBe(true);
+    if (!isOk(found)) return;
+    expect(found.value).toEqual([posted.value]);
   });
 
   it('refuses an unbalanced entry and stores nothing', async () => {
@@ -96,10 +96,10 @@ describe('createPostEntry', () => {
     if (!isErr(posted)) return;
     expect(posted.error.code).toBe('UNBALANCED');
 
-    const listed = await searchEntries(ADA, NO_CRITERIA);
-    expect(isOk(listed)).toBe(true);
-    if (!isOk(listed)) return;
-    expect(listed.value).toEqual([]);
+    const found = await searchEntries(ADA, NO_CRITERIA);
+    expect(isOk(found)).toBe(true);
+    if (!isOk(found)) return;
+    expect(found.value).toEqual([]);
   });
 
   it('reports a failed save as its own result, rather than the entry it could not keep', async () => {
@@ -112,7 +112,7 @@ describe('createPostEntry', () => {
     expect(posted.error.code).toBe('DEPENDENCY_UNAVAILABLE');
   });
 
-  it("stores the entry as the signed-in User's, where no other User lists it", async () => {
+  it("stores the entry as the signed-in User's, where no other User finds it", async () => {
     const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(ADA, draft(12500, 12500));
