@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator } from '@playwright/test';
+import { submitEntry } from './entries';
 import { signIn, signInForSmoke } from './session';
 
 /**
  * Phase 1: create an entry, then list it. The model is ADR-0010.
  *
- * Every name a selector uses here -- the form, the fieldsets, the labels, the
- * button, the section, the test ids -- is the contract for `/entries`. Renaming
- * one is a spec change (ADR-0002).
+ * Every name a selector uses here, and in `entries.ts` beside it -- the form,
+ * the fieldsets, the labels, the button, the section, the test ids -- is the
+ * contract for `/entries`. Renaming one is a spec change (ADR-0002).
  *
  * The first two specs write, so they carry no `@smoke` tag and never run against
  * Production (ADR-0014). They run in `E2E build`, beside each other and against
@@ -20,35 +21,11 @@ import { signIn, signInForSmoke } from './session';
 
 const DAY = '2026-09-15';
 
-/** A line as the form takes it: an account code, a side, and plain digits. */
-type Line = {
-  readonly account: string;
-  readonly side: 'debit' | 'credit';
-  readonly amount: string;
-};
-
 /**
  * Grouped digits with no currency symbol, as ADR-0010 renders an amount. Word
  * boundaries so that `112,500` or `12,5000` does not pass for it.
  */
 const TWELVE_THOUSAND_FIVE_HUNDRED = /\b12,500\b/;
-
-async function submitEntry(
-  form: Locator,
-  entry: { readonly memo: string; readonly lines: readonly [Line, Line] },
-): Promise<void> {
-  await form.getByLabel('Date').fill(DAY);
-  await form.getByLabel('Memo').fill(entry.memo);
-
-  for (const [index, line] of entry.lines.entries()) {
-    const group = form.getByRole('group', { name: `Line ${String(index + 1)}` });
-    await group.getByLabel('Account').selectOption(line.account);
-    await group.getByLabel('Side').selectOption(line.side);
-    await group.getByLabel('Amount').fill(line.amount);
-  }
-
-  await form.getByRole('button', { name: 'Add entry' }).click();
-}
 
 /**
  * Lines are asserted in the order they were entered, because `line_number`
@@ -90,6 +67,7 @@ test('lists a balanced entry once it is submitted, and after a reload', async ({
   await expect(form).toBeVisible();
 
   await submitEntry(form, {
+    day: DAY,
     memo,
     lines: [
       { account: 'expense', side: 'debit', amount: '12500' },
@@ -125,6 +103,7 @@ test('refuses an entry whose debits and credits differ', async ({ page }) => {
   await expect(form).toBeVisible();
 
   await submitEntry(form, {
+    day: DAY,
     memo,
     lines: [
       { account: 'expense', side: 'debit', amount: '12500' },
@@ -178,6 +157,7 @@ test("does not show one User's entries to another", async ({ browser }) => {
   const ownerPage = await owner.newPage();
   await signIn(ownerPage);
   await submitEntry(ownerPage.getByRole('form', { name: 'New entry' }), {
+    day: DAY,
     memo,
     lines: [
       { account: 'expense', side: 'debit', amount: '12500' },
