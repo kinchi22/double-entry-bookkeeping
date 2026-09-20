@@ -63,7 +63,9 @@ Stop the loop and report where the Feature stands when:
 - **Every Task is closed.** Open the integration pull request,
   `milestone/<name> -> main`, titled after the criterion, its body
   `Closes #<feature>` and a line per merged Task. Set the Feature In Review.
-  The owner approves it.
+  The owner approves it. A Feature with no specs has no milestone branch, so
+  its last Task's pull request closes it: report that it is waiting on the
+  owner.
 - **The milestone needs something from `main`.** The owner syncs it (a merge
   commit they push, `docs/ARCHITECTURE.md`); a pull request cannot.
 

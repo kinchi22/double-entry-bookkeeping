@@ -67,6 +67,14 @@ Every Feature gets these Tasks beside its vertical slices:
 
 Every other Task stays out of `e2e/` and `packages/db/drizzle/`.
 
+## A Feature with no specs
+
+Tooling, deployment and documentation are tracked as Features and Tasks like
+anything else, and they state no acceptance criterion, so there is nothing to
+write as specs. Such a Feature has no milestone branch and no specs Task: each
+of its Tasks goes to `main` in a pull request of its own, which the owner
+approves, and the last of them carries `Closes #<feature>` as well.
+
 ## Base branch
 
 | Task                  | Pull request into |
@@ -74,6 +82,7 @@ Every other Task stays out of `e2e/` and `packages/db/drizzle/`.
 | Specs                 | `milestone/<name>`, which this Task creates from `main` when it does not exist |
 | Migration             | `main` |
 | Any other Feature Task | `milestone/<name>` |
+| A Task of a Feature with no specs | `main` |
 | Bug                   | `main` |
 
 A pull request is squashed, and its body carries `Closes #<task>`.
