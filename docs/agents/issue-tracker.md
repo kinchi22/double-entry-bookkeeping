@@ -37,8 +37,10 @@ that for a pull request into `main` alone; for one into `milestone/**`,
 ## Refinement
 
 Refinement is worked with the owner, in order: `/grill-with-docs #<feature>`,
-then `/to-spec #<feature>`, then `/to-tickets #<feature>`. Where those skills
-publish, they publish as follows.
+then `/to-spec #<feature>`, then `/to-tickets #<feature>`. Those skills, and
+`code-review`, come from the `mattpocock-skills` plugin, which
+`.claude/settings.json` enables for this repository. They are typed by hand: a
+skill cannot reach them. Where they publish, they publish as follows.
 
 **Publishing a spec** rewrites the Feature's body when the Feature exists, and
 otherwise opens one labelled `type:feature`. The body adds a section to the
