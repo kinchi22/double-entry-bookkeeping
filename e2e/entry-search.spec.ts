@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { postEntries, type Line } from './entries';
+import { AMOUNT, postEntries, TWELVE_THOUSAND_FIVE_HUNDRED, type Line } from './entries';
 import { signIn, signInForSmoke } from './session';
 
 /**
@@ -9,18 +9,30 @@ import { signIn, signInForSmoke } from './session';
  * memo. Each criterion is optional, an absent one matches every Entry, and
  * those present combine with `and`.
  *
- * Every name a selector uses here is the contract for the page: the form
- * `Search entries`, the fields `From`, `To`, `Account` and `Memo`, the button
- * `Search`, the region `Results`, the `Search` and `Back to entries` links, and
- * the `entry`, `entry-line` and `entry-total` test ids `/entries` already uses
- * -- an Entry looks the same wherever it is rendered. Renaming one is a spec
- * change (ADR-0002).
+ * Every name a selector uses here, and in `entries.ts` beside it, is the
+ * contract for the page: the form `Search entries`, the fields `From`, `To`,
+ * `Account` and `Memo`, the button `Search`, the region `Results`, the `Search`
+ * and `Back to entries` links, and the `entry`, `entry-line` and `entry-total`
+ * test ids `/entries` already uses -- an Entry looks the same wherever it is
+ * rendered. Renaming one is a spec change (ADR-0002).
+ *
+ * The two terms this page is written in, Entry search and Search criteria, are
+ * named in `docs/GLOSSARY.md`. That row does not travel with this pull request:
+ * it is not under `e2e/`, and a pull request changes `e2e/` or the rest of the
+ * repository, never both (ADR-0002). It lands with the first pull request that
+ * builds the page, as #52 says.
  *
  * Every spec but the last writes the Entries it then searches for, so it
  * carries no `@smoke` tag and never runs against Production (ADR-0014). They
  * run in `E2E build`, beside each other and against one database, and a retry
  * writes again -- so each Entry is found by a memo no other run can have
  * written, never by counting or by position.
+ *
+ * Writing an Entry means driving the form on `/entries`, so a spec that needs
+ * three or more of them spends most of its budget before it searches at all.
+ * Those carry `test.slow()`. The cost is paid by `Gate liveness`, where every
+ * spec fails by timeout against the empty page, so a tripled timeout is a
+ * tripled wait there; three specs is the most that seemed worth it.
  *
  * Every page here needs a Session (ADR-0021). Each spec signs in as a new User,
  * so it searches books nobody else has written in.
@@ -29,15 +41,6 @@ import { signIn, signInForSmoke } from './session';
 const SEARCH = '/entries/search';
 const SEARCH_URL = /\/entries\/search(\?.*)?$/;
 const ENTRIES_URL = /\/entries$/;
-
-/** One amount throughout: what an Entry matches on is its day, accounts and memo. */
-const AMOUNT = '12500';
-
-/**
- * Grouped digits with no currency symbol, as ADR-0010 renders an amount. Word
- * boundaries so that `112,500` or `12,5000` does not pass for it.
- */
-const TWELVE_THOUSAND_FIVE_HUNDRED = /\b12,500\b/;
 
 /** A balanced pair of lines: one debit and one credit, for the same amount. */
 const lines = (debit: string, credit: string): readonly [Line, Line] => [
@@ -150,27 +153,31 @@ test('renders the form and lists every Entry the User owns, opened cold', async 
 });
 
 /**
- * 3. A day range narrows, and includes both of its ends
+ * 3. A day range narrows at both of its ends, and includes both of them
  *
- * Given Entries posted on the first day of the range, on its last day, and
- * after it
+ * Given Entries posted the day before the range, on its first day, on its last
+ * day, and the day after it
  * When the User searches that range
- * Then the two on the ends are in the results and the one after it is not
+ * Then the two on the ends are in the results and the two outside it are not
  *
  * The Entries sit exactly on the ends on purpose: an end that is not inclusive
  * makes one of them silently missing, which is the failure this shape catches.
- * The absence is asserted after the presences, so a page that rendered nothing
- * at all cannot satisfy it.
+ * There is one Entry outside each end, not just one: with nothing before
+ * `from`, a page that ignored `from` altogether and filtered on `to` alone
+ * would pass. The absences are asserted after the presences, so a page that
+ * rendered nothing at all cannot satisfy them.
  */
 test('narrows the results to a day range, both of whose ends are included', async ({ page }) => {
   test.slow();
   const run = randomUUID();
+  const before = `Last month ${run}`;
   const opening = `Opening day ${run}`;
   const closing = `Closing day ${run}`;
   const after = `Next month ${run}`;
 
   await signIn(page);
   await postEntries(page, [
+    { day: '2026-05-31', memo: before, lines: lines('expense', 'cash') },
     { day: '2026-06-01', memo: opening, lines: lines('expense', 'cash') },
     { day: '2026-06-30', memo: closing, lines: lines('expense', 'cash') },
     { day: '2026-07-01', memo: after, lines: lines('expense', 'cash') },
@@ -181,6 +188,7 @@ test('narrows the results to a day range, both of whose ends are included', asyn
 
   await expect(resultFor(page, opening)).toHaveCount(1);
   await expect(resultFor(page, closing)).toHaveCount(1);
+  await expect(resultFor(page, before)).toHaveCount(0);
   await expect(resultFor(page, after)).toHaveCount(0);
 });
 
@@ -347,12 +355,18 @@ test('says that nothing matched, rather than rendering an empty region', async (
  *
  * Given a User who owns an Entry
  * When they search a range whose `from` is after its `to`
- * Then the page explains the refusal and shows no results region at all
+ * Then the page says the range is what is wrong, and shows no results region at
+ * all
  *
  * A refused search must not be shown results: they would be the answer to a
- * question other than the one asked. The alert is looked for inside the page's
- * main content, because Next renders a route announcer with `role="alert"` on
- * every page.
+ * question other than the one asked. The message only has to mention the range:
+ * its wording is copy, and this pins what the refusal is about rather than how
+ * it is put, exactly as the imbalance message is pinned on `/entries`. An alert
+ * that merely exists would be satisfied by an alert about anything.
+ *
+ * The alert is looked for inside the page's main content, because Next renders
+ * a route announcer with `role="alert"` on every page; `auth.spec.ts` scopes it
+ * the same way for the same reason.
  */
 test('refuses a reversed day range, explains itself, and shows no list', async ({ page }) => {
   const run = randomUUID();
@@ -366,7 +380,7 @@ test('refuses a reversed day range, explains itself, and shows no list', async (
   await page.goto(SEARCH);
   await search(page, { from: '2026-06-30', to: '2026-06-01' });
 
-  await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
+  await expect(page.getByRole('main').getByRole('alert')).toContainText(/range/i);
   await expect(results(page)).toHaveCount(0);
 });
 

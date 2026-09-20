@@ -10,6 +10,20 @@ import { expect, type Locator, type Page } from '@playwright/test';
  * for `/entries`. Renaming one is a spec change (ADR-0002).
  */
 
+/**
+ * The amount every spec here writes, as the form takes it: plain digits. One
+ * amount throughout, because what an Entry is matched on is its day, its
+ * accounts and its memo, never how much it was for.
+ */
+export const AMOUNT = '12500';
+
+/**
+ * That same amount as it is rendered: grouped digits with no currency symbol,
+ * as ADR-0010 renders an amount. Word boundaries so that `112,500` or `12,5000`
+ * does not pass for it. It lives beside `AMOUNT` so the two cannot drift.
+ */
+export const TWELVE_THOUSAND_FIVE_HUNDRED = /\b12,500\b/;
+
 /** A line as the form takes it: an account code, a side, and plain digits. */
 export type Line = {
   readonly account: string;

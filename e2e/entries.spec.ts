@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator } from '@playwright/test';
-import { submitEntry } from './entries';
+import { submitEntry, TWELVE_THOUSAND_FIVE_HUNDRED } from './entries';
 import { signIn, signInForSmoke } from './session';
 
 /**
@@ -20,12 +20,6 @@ import { signIn, signInForSmoke } from './session';
  */
 
 const DAY = '2026-09-15';
-
-/**
- * Grouped digits with no currency symbol, as ADR-0010 renders an amount. Word
- * boundaries so that `112,500` or `12,5000` does not pass for it.
- */
-const TWELVE_THOUSAND_FIVE_HUNDRED = /\b12,500\b/;
 
 /**
  * Lines are asserted in the order they were entered, because `line_number`
