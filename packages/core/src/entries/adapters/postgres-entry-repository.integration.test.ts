@@ -4,6 +4,7 @@ import { isErr, isOk, type EntryId, type Money, type UserId } from '@repo/contra
 import { createDatabase } from '@repo/db';
 import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
+import { NO_CRITERIA } from '../domain/search-criteria';
 import { createPostgresEntryRepository } from './postgres-entry-repository';
 
 /**
@@ -84,8 +85,8 @@ function entry(overrides: Partial<EntryDraft> & { readonly createdAt?: Date } = 
   return isOk(made) ? made.value : ({} as Entry);
 }
 
-async function listed(userId: UserId = ADA): Promise<readonly Entry[]> {
-  const result = await repository.list(userId);
+async function found(userId: UserId = ADA): Promise<readonly Entry[]> {
+  const result = await repository.search(userId, NO_CRITERIA);
   expect(isOk(result)).toBe(true);
   return isOk(result) ? result.value : [];
 }
@@ -98,7 +99,7 @@ async function countEntries(): Promise<number> {
 }
 
 describe('createPostgresEntryRepository', () => {
-  it('lists an entry as it was saved: day, memo, instant, lines in order, total', async () => {
+  it('answers with an entry as it was saved: day, memo, instant, lines in order, total', async () => {
     const saved = entry({
       lines: [
         { account: 'cash', side: 'credit', amount: 5000 as Money },
@@ -111,7 +112,7 @@ describe('createPostgresEntryRepository', () => {
     const result = await repository.save(ADA, saved);
 
     expect(isOk(result)).toBe(true);
-    expect(await listed()).toEqual([saved]);
+    expect(await found()).toEqual([saved]);
     expect(logged).toEqual([]);
   });
 
@@ -125,10 +126,10 @@ describe('createPostgresEntryRepository', () => {
 
     await repository.save(ADA, saved);
 
-    expect((await listed())[0]?.total).toBe(Number.MAX_SAFE_INTEGER);
+    expect((await found())[0]?.total).toBe(Number.MAX_SAFE_INTEGER);
   });
 
-  it('lists the latest day first, and the latest created first within a day', async () => {
+  it('answers with the latest day first, and the latest created first within a day', async () => {
     const on = (entryDate: string, createdAt: string): Entry =>
       entry({ entryDate, createdAt: new Date(createdAt) });
     const earlyDayLate = on('2026-09-14', '2026-09-17T00:00:00Z');
@@ -140,7 +141,7 @@ describe('createPostgresEntryRepository', () => {
       await repository.save(ADA, saved);
     }
 
-    expect((await listed()).map((listedEntry) => listedEntry.id)).toEqual([
+    expect((await found()).map((entryFound) => entryFound.id)).toEqual([
       future.id,
       lateDayLate.id,
       lateDayEarly.id,
@@ -148,8 +149,8 @@ describe('createPostgresEntryRepository', () => {
     ]);
   });
 
-  it('lists nothing when nothing was saved', async () => {
-    expect(await listed()).toEqual([]);
+  it('answers with nothing when nothing was saved', async () => {
+    expect(await found()).toEqual([]);
   });
 
   it('writes nothing when the database refuses one of the lines (ADR-0011)', async () => {
@@ -186,7 +187,7 @@ describe('createPostgresEntryRepository', () => {
     const result = await repository.save(ADA, { ...saved, memo: 'Overwritten' });
 
     expect(isErr(result)).toBe(true);
-    expect(await listed()).toEqual([saved]);
+    expect(await found()).toEqual([saved]);
     // unique_violation, and not a word of the refused row: the memo travels in
     // the query's params, which are never logged.
     expect(logged).toEqual([
@@ -199,14 +200,14 @@ describe('createPostgresEntryRepository', () => {
     expect(JSON.stringify(logged)).not.toContain('Overwritten');
   });
 
-  it('reports a stored entry that breaks a rule rather than listing it', async () => {
+  it('reports a stored entry that breaks a rule rather than answering with it', async () => {
     const saved = entry();
     await repository.save(ADA, saved);
     await database.execute(
       sql`update entry_lines set amount = 12000 where entry_id = ${saved.id} and line_number = 2`,
     );
 
-    const result = await repository.list(ADA);
+    const result = await repository.search(ADA, NO_CRITERIA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -228,7 +229,7 @@ describe('createPostgresEntryRepository', () => {
       sql`update entry_lines set side = 'minus' where entry_id = ${saved.id} and line_number = 1`,
     );
 
-    const result = await repository.list(ADA);
+    const result = await repository.search(ADA, NO_CRITERIA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -238,13 +239,13 @@ describe('createPostgresEntryRepository', () => {
 
   it('reports an unreachable database as a result on both paths, never by throwing', async () => {
     const saved = await dead.save(ADA, entry());
-    const read = await dead.list(ADA);
+    const read = await dead.search(ADA, NO_CRITERIA);
 
     expect(isErr(saved) && saved.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(isErr(read) && read.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(logged.map((fields) => fields.event)).toEqual([
       'entries.save_failed',
-      'entries.list_failed',
+      'entries.search_failed',
     ]);
     expect(logged.map((fields) => fields['error'])).toEqual([
       expect.objectContaining({ code: 'ECONNREFUSED' }),
@@ -252,21 +253,21 @@ describe('createPostgresEntryRepository', () => {
     ]);
   });
 
-  it("lists one User's entries to nobody else (ADR-0021)", async () => {
+  it("answers with one User's entries to nobody else (ADR-0021)", async () => {
     const adas = entry({ memo: 'Ada' });
     const graces = entry({ memo: 'Grace' });
 
     await repository.save(ADA, adas);
     await repository.save(GRACE, graces);
 
-    expect(await listed(ADA)).toEqual([adas]);
-    expect(await listed(GRACE)).toEqual([graces]);
+    expect(await found(ADA)).toEqual([adas]);
+    expect(await found(GRACE)).toEqual([graces]);
   });
 
-  it('lists nothing for a User who has written nothing, whatever others have', async () => {
+  it('answers with nothing for a User who has written nothing, whatever others have', async () => {
     await repository.save(GRACE, entry());
 
-    expect(await listed(ADA)).toEqual([]);
+    expect(await found(ADA)).toEqual([]);
   });
 
   it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {

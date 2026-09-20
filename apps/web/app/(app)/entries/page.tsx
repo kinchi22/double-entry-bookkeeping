@@ -24,7 +24,7 @@ export const metadata = {
 export default async function EntriesPage(): Promise<ReactNode> {
   const caller = createCaller(await createContext());
   // With no Session the procedure refuses, and the visitor is sent to sign in.
-  const entries = await orSignIn(caller.entries.list(), '/entries');
+  const entries = await orSignIn(caller.entries.search(), '/entries');
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">

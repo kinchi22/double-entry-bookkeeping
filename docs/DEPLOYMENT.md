@@ -105,7 +105,7 @@ entries page spec is what covers the schema (ADR-0014).
 
 When something fails against the database, the deployment's runtime logs say
 what. Each failure is one JSON line on stderr with an `event` --
-`health.probe_unreachable`, `entries.list_failed`, `entries.save_failed`,
+`health.probe_unreachable`, `entries.search_failed`, `entries.save_failed`,
 `entries.stored_entry_invalid` -- and, for a driver error, its `code`: a
 SQLSTATE such as `42P01` (table missing), or a system code such as
 `ECONNREFUSED`. A request that failed on the server adds `request.failed`, with

@@ -26,8 +26,8 @@ included, copies all of it.
 
 - **A `Logger` port** in `packages/core/src/logging/ports`, with one method,
   `error(fields, message)`. `fields` carries an `event`, a stable dotted name
-  such as `entries.list_failed`. Adapters take a logger as an argument, as they
-  take a connection string.
+  such as `entries.search_failed`. Adapters take a logger as an argument, as
+  they take a connection string.
 - **The compiler keeps raw errors out.** A field holds a string, a number, a
   boolean or an `ErrorDescription`, and `ErrorDescription` is branded, so only
   `describeError` makes one. Unbranded, an `Error` would pass for a description,
