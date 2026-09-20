@@ -4,17 +4,17 @@ import {
   createBeginGoogleSignIn,
   createFinishGoogleSignIn,
   createGetHealth,
-  createListEntries,
   createPostEntry,
   createResolveSession,
+  createSearchEntries,
   createSignOut,
   createTestSignIn,
   type BeginGoogleSignIn,
   type FinishGoogleSignIn,
   type GetHealth,
-  type ListEntries,
   type PostEntry,
   type ResolveSession,
+  type SearchEntries,
   type SignOut,
   type TestSignIn,
 } from '@repo/core';
@@ -44,7 +44,7 @@ import { createLogger, stderr } from './logger';
 export type Container = {
   readonly getHealth: GetHealth;
   readonly postEntry: PostEntry;
-  readonly listEntries: ListEntries;
+  readonly searchEntries: SearchEntries;
   readonly resolveSession: ResolveSession;
   readonly beginGoogleSignIn: BeginGoogleSignIn;
   readonly finishGoogleSignIn: FinishGoogleSignIn;
@@ -85,7 +85,7 @@ export function createContainer({ databaseUrl, google, testSignIn }: Env): Conta
       newEntryId: () => entryIdSchema.parse(uuidv7()),
       now: () => new Date(),
     }),
-    listEntries: createListEntries({ entries }),
+    searchEntries: createSearchEntries({ entries }),
     resolveSession: createResolveSession({ sessions, hashSessionToken, now: () => new Date() }),
     beginGoogleSignIn: createBeginGoogleSignIn({ google: googleSignIn }),
     finishGoogleSignIn: createFinishGoogleSignIn({ ...signIn, google: googleSignIn }),

@@ -15,6 +15,7 @@ import { describeError } from '../../logging/domain/describe-error';
 import { type Logger } from '../../logging/ports/logger';
 import { money } from '../../money/domain/money';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
+import { type SearchCriteria } from '../domain/search-criteria';
 import { type EntryRepository } from '../ports/entry-repository';
 
 export type PostgresEntryRepository = EntryRepository & {
@@ -85,8 +86,16 @@ export function createPostgresEntryRepository(
      * entry committed between them brings lines the first read has no entry
      * for, and those are ignored; an entry the first read saw has all of its
      * lines committed already, because they were written in its transaction.
+     *
+     * Matching happens in the query and never in memory. No criterion exists
+     * yet, so nothing narrows the `user_id` both reads already filter on: an
+     * absent criterion contributes no condition, and a search with none is
+     * every entry the User owns.
      */
-    list: async (userId: UserId): Promise<Result<readonly Entry[], DomainError>> => {
+    search: async (
+      userId: UserId,
+      _criteria: SearchCriteria,
+    ): Promise<Result<readonly Entry[], DomainError>> => {
       let entryRows: EntryRow[];
       let lineRows: LineRow[];
       try {

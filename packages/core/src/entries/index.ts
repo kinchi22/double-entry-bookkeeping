@@ -12,10 +12,13 @@ export {
 } from './domain/entry';
 export type { AccountCode, Entry, EntryDraft, EntryLine, EntryStamp } from './domain/entry';
 
+export { NO_CRITERIA } from './domain/search-criteria';
+export type { SearchCriteria } from './domain/search-criteria';
+
 export { createPostEntry } from './application/post-entry';
 export type { PostEntry, PostEntryDependencies } from './application/post-entry';
 
-export { createListEntries } from './application/list-entries';
-export type { ListEntries, ListEntriesDependencies } from './application/list-entries';
+export { createSearchEntries } from './application/search-entries';
+export type { SearchEntries, SearchEntriesDependencies } from './application/search-entries';
 
 export type { EntryRepository } from './ports/entry-repository';

@@ -13,8 +13,9 @@ import {
 } from '@repo/contracts';
 import { SIGNED_OUT, type AuthContext } from '../../auth/domain/auth-context';
 import { type Entry, type EntryDraft } from '../domain/entry';
+import { NO_CRITERIA } from '../domain/search-criteria';
 import { type EntryRepository } from '../ports/entry-repository';
-import { createListEntries, type ListEntries } from './list-entries';
+import { createSearchEntries, type SearchEntries } from './search-entries';
 import { createPostEntry, type PostEntry } from './post-entry';
 
 /**
@@ -30,7 +31,7 @@ function inMemoryEntries(): EntryRepository {
       stored.push({ userId, entry });
       return Promise.resolve(ok(undefined));
     },
-    list: (userId: UserId): Promise<Result<readonly Entry[], DomainError>> =>
+    search: (userId: UserId): Promise<Result<readonly Entry[], DomainError>> =>
       Promise.resolve(
         ok(stored.filter((row) => row.userId === userId).map((row) => row.entry)),
       ),
@@ -43,7 +44,7 @@ const GRACE: AuthContext = { userId: '01920000-0000-7000-8000-0000000000a2' as U
 /** A repository whose database is down: every write fails and nothing is kept. */
 const unavailableEntries: EntryRepository = {
   save: () => Promise.resolve(err(domainError('DEPENDENCY_UNAVAILABLE', 'The database is down.'))),
-  list: () => Promise.resolve(ok([])),
+  search: () => Promise.resolve(ok([])),
 };
 
 const ENTRY_ID = '01920000-0000-7000-8000-000000000001' as EntryId;
@@ -60,17 +61,17 @@ const draft = (debit: number, credit: number): EntryDraft => ({
 
 function useCases(entries: EntryRepository): {
   postEntry: PostEntry;
-  listEntries: ListEntries;
+  searchEntries: SearchEntries;
 } {
   return {
     postEntry: createPostEntry({ entries, newEntryId: () => ENTRY_ID, now: () => CREATED_AT }),
-    listEntries: createListEntries({ entries }),
+    searchEntries: createSearchEntries({ entries }),
   };
 }
 
 describe('createPostEntry', () => {
   it('stores a balanced entry, stamped with the injected id and clock, where it is listed', async () => {
-    const { postEntry, listEntries } = useCases(inMemoryEntries());
+    const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(ADA, draft(12500, 12500));
 
@@ -80,14 +81,14 @@ describe('createPostEntry', () => {
     expect(posted.value.createdAt).toEqual(CREATED_AT);
     expect(posted.value.total).toBe(12500);
 
-    const listed = await listEntries(ADA);
+    const listed = await searchEntries(ADA, NO_CRITERIA);
     expect(isOk(listed)).toBe(true);
     if (!isOk(listed)) return;
     expect(listed.value).toEqual([posted.value]);
   });
 
   it('refuses an unbalanced entry and stores nothing', async () => {
-    const { postEntry, listEntries } = useCases(inMemoryEntries());
+    const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(ADA, draft(12500, 12000));
 
@@ -95,7 +96,7 @@ describe('createPostEntry', () => {
     if (!isErr(posted)) return;
     expect(posted.error.code).toBe('UNBALANCED');
 
-    const listed = await listEntries(ADA);
+    const listed = await searchEntries(ADA, NO_CRITERIA);
     expect(isOk(listed)).toBe(true);
     if (!isOk(listed)) return;
     expect(listed.value).toEqual([]);
@@ -112,22 +113,22 @@ describe('createPostEntry', () => {
   });
 
   it("stores the entry as the signed-in User's, where no other User lists it", async () => {
-    const { postEntry, listEntries } = useCases(inMemoryEntries());
+    const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(ADA, draft(12500, 12500));
 
     expect(isOk(posted)).toBe(true);
     if (!isOk(posted)) return;
-    expect(await listEntries(ADA)).toEqual(ok([posted.value]));
-    expect(await listEntries(GRACE)).toEqual(ok([]));
+    expect(await searchEntries(ADA, NO_CRITERIA)).toEqual(ok([posted.value]));
+    expect(await searchEntries(GRACE, NO_CRITERIA)).toEqual(ok([]));
   });
 
   it('refuses to post for nobody, as unauthenticated, and stores nothing', async () => {
-    const { postEntry, listEntries } = useCases(inMemoryEntries());
+    const { postEntry, searchEntries } = useCases(inMemoryEntries());
 
     const posted = await postEntry(SIGNED_OUT, draft(12500, 12000));
 
     expect(isErr(posted) && posted.error.code).toBe('UNAUTHENTICATED');
-    expect(await listEntries(ADA)).toEqual(ok([]));
+    expect(await searchEntries(ADA, NO_CRITERIA)).toEqual(ok([]));
   });
 });

@@ -66,7 +66,7 @@ describe('renewsSessionCookie', () => {
     ['GET', '/entries'],
     ['HEAD', '/entries'],
     ['GET', '/'],
-    ['GET', '/api/trpc/entries.list'],
+    ['GET', '/api/trpc/entries.search'],
     ['GET', '/sign-inside'],
     ['GET', '/authors'],
   ])('renews it on %s %s', (method, pathname) => {

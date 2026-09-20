@@ -1,4 +1,5 @@
 import { postEntryInputSchema, postedEntrySchema, toPostedEntry } from '@repo/contracts';
+import { NO_CRITERIA } from '@repo/core';
 import { z } from 'zod';
 import { toTrpcError } from '../domain-error';
 import { router, sessionProcedure } from '../trpc';
@@ -12,8 +13,13 @@ import { router, sessionProcedure } from '../trpc';
  * health router gives.
  */
 export const entriesRouter = router({
-  list: sessionProcedure.output(z.array(postedEntrySchema)).query(async ({ ctx }) => {
-    const result = await ctx.container.listEntries(ctx.auth);
+  /**
+   * An Entry search. No criterion exists yet, so it takes no input and asks
+   * for the search with none: every entry the signed-in User owns, which is
+   * what `/entries` renders.
+   */
+  search: sessionProcedure.output(z.array(postedEntrySchema)).query(async ({ ctx }) => {
+    const result = await ctx.container.searchEntries(ctx.auth, NO_CRITERIA);
     if (!result.ok) {
       throw toTrpcError(result.error);
     }

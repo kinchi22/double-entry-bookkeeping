@@ -4,6 +4,7 @@ import { isErr, isOk, type EntryId, type Money, type UserId } from '@repo/contra
 import { createDatabase } from '@repo/db';
 import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
+import { NO_CRITERIA } from '../domain/search-criteria';
 import { createPostgresEntryRepository } from './postgres-entry-repository';
 
 /**
@@ -85,7 +86,7 @@ function entry(overrides: Partial<EntryDraft> & { readonly createdAt?: Date } = 
 }
 
 async function listed(userId: UserId = ADA): Promise<readonly Entry[]> {
-  const result = await repository.list(userId);
+  const result = await repository.search(userId, NO_CRITERIA);
   expect(isOk(result)).toBe(true);
   return isOk(result) ? result.value : [];
 }
@@ -206,7 +207,7 @@ describe('createPostgresEntryRepository', () => {
       sql`update entry_lines set amount = 12000 where entry_id = ${saved.id} and line_number = 2`,
     );
 
-    const result = await repository.list(ADA);
+    const result = await repository.search(ADA, NO_CRITERIA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -228,7 +229,7 @@ describe('createPostgresEntryRepository', () => {
       sql`update entry_lines set side = 'minus' where entry_id = ${saved.id} and line_number = 1`,
     );
 
-    const result = await repository.list(ADA);
+    const result = await repository.search(ADA, NO_CRITERIA);
 
     expect(isErr(result)).toBe(true);
     if (!isErr(result)) return;
@@ -238,7 +239,7 @@ describe('createPostgresEntryRepository', () => {
 
   it('reports an unreachable database as a result on both paths, never by throwing', async () => {
     const saved = await dead.save(ADA, entry());
-    const read = await dead.list(ADA);
+    const read = await dead.search(ADA, NO_CRITERIA);
 
     expect(isErr(saved) && saved.error.code).toBe('DEPENDENCY_UNAVAILABLE');
     expect(isErr(read) && read.error.code).toBe('DEPENDENCY_UNAVAILABLE');

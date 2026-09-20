@@ -22,6 +22,7 @@ it here in the same commit that introduces it.
 | E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Entry            | One posting: a calendar day, a memo, and two or more Entry lines that balance. The brief's word "record" means this and is not used. |
 | Entry line       | One line of an Entry: an Account, a Side, and an amount greater than zero. |
+| Entry search     | A read of one User's Entries narrowed by Search criteria, rendered at `/entries/search`. The issue's word "history" means this and is not used. The port method, the use case and the procedure are all named for it, and listing every Entry is an Entry search with no criterion. |
 | Entry total      | The sum of an Entry's debit amounts, which is the sum of its credit amounts because the Entry is Balanced. Computed in `domain/`; never summed by a client. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`, `stryker.config.mjs`. Declared in `.github/CODEOWNERS`, justified in ADR-0002 and ADR-0004. |
 | Identity         | One way a User signs in: a provider and that provider's subject for the person, such as Google's `sub`. A User is found by its Identity, never by its email. Never called an account: Account already means what an Entry line is posted against. ADR-0021. |
@@ -36,6 +37,7 @@ it here in the same commit that introduces it.
 | Public surface   | The entry points a package lists in its `exports` field.                     |
 | Shared kernel    | Vocabulary several features depend on, held in `core/src/<name>/domain` with no ports or adapters. `money` is the only one. |
 | Result           | `Ok<T>` or `Err<E>`. The return type of any domain operation that can fail. |
+| Search criteria  | What an Entry search is narrowed by: an inclusive range of calendar days, an Account any one line names, and a substring of the memo. Each is optional and an absent one matches every Entry; those present combine with `and`. Carried in the URL's query, shape parsed in `contracts`, and `from` no later than `to` decided in `domain/` as an Entry's rules are. |
 | Server Action    | The app's write path. Parses input, invokes a use case through `createCaller`, invalidates what it made stale. |
 | Session          | A User's signed-in state: a random token in an `HttpOnly` cookie, stored in `sessions` only as its SHA-256 hash, with an expiry that slides, except the Smoke User's. Signing out deletes it. ADR-0021. |
 | Side             | The direction of an Entry line, `debit` or `credit`. The amount never carries it. |
