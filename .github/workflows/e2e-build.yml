@@ -12,16 +12,22 @@ name: E2E build
 #
 # On a push to a milestone branch it is advisory, and part of it is red by
 # design: the criterion's specs land first and fail until each Task builds the
-# behaviour they describe (ADR-0002, ADR-0006). It is in no ruleset there and
-# blocks nothing. It runs after each Task lands so the milestone is judged by
-# the specs as it grows, and the driver reads it: a failure outside the
-# criterion's own spec file is a regression the milestone is carrying, not a
-# specification waiting for its behaviour. No gate can tell those two apart,
-# which is why this one reports and a person judges.
+# behaviour they describe. It is in no ruleset there and blocks nothing. It
+# runs as each Task merges so the milestone is judged by the specs as it grows,
+# and the driver reads it: a failure outside the criterion's own spec file is a
+# regression the milestone is carrying, not a specification waiting for its
+# behaviour. No gate can tell those two apart, which is why this one reports
+# and a person judges. That is #71's decision, not ADR-0006's: ADR-0006 rejected
+# a check allowed to be red on the ground that nobody reads it, and the answer
+# is the reader, written into `/implement-issue`'s loop.
 #
-# A pull request *onto* a milestone still runs nothing. It would be red by
-# design too, and ADR-0002 says the specs must not block the branch that exists
-# to satisfy them.
+# Two Task merges in quick succession cancel the earlier run, through the
+# `concurrency` group below. The survivor is the one built from the later tree,
+# which is the milestone as it now stands, so that is the run to read.
+#
+# A pull request onto a milestone still runs nothing: it would be red by design
+# too, and ADR-0002 says the specs must not block the branch that exists to
+# satisfy them.
 #
 # Its own workflow rather than a job in ci.yml behind `if:`, because the two fail
 # differently. A job skipped by `if:` reports success to a required check. A pull
