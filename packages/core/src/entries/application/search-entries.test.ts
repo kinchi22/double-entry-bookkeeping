@@ -39,18 +39,22 @@ const holding = (searched: EntryRepository['search']): EntryRepository => ({
 });
 
 /**
- * A stub repository that answers with the entries whose day is in the range it
- * was searched with. It is the port doing what a port does, not a spy: what
- * each case asserts is which entries came back, never that a call was made.
+ * A stub repository that answers with the entries the criteria it was searched
+ * with match, as a repository does: an absent criterion matches everything, and
+ * those present combine with `and`. It is the port doing what a port does, not
+ * a spy: what each case asserts is which entries came back, never that a call
+ * was made.
  */
-const holdingInRange = (held: readonly Entry[]): EntryRepository =>
+const holdingMatching = (held: readonly Entry[]): EntryRepository =>
   holding((_userId, criteria) =>
     Promise.resolve(
       ok(
         held.filter(
           (entry) =>
             (criteria.from === undefined || entry.entryDate >= criteria.from) &&
-            (criteria.to === undefined || entry.entryDate <= criteria.to),
+            (criteria.to === undefined || entry.entryDate <= criteria.to) &&
+            (criteria.account === undefined ||
+              entry.lines.some((line) => line.account === criteria.account)),
         ),
       ),
     ),
@@ -104,7 +108,7 @@ describe('createSearchEntries', () => {
     if (!isOk(made)) return;
     const september = made.value;
     const october: Entry = { ...september, entryDate: '2026-10-04' };
-    const searchEntries = createSearchEntries({ entries: holdingInRange([october, september]) });
+    const searchEntries = createSearchEntries({ entries: holdingMatching([october, september]) });
 
     const found = await searchEntries({ userId: ADA }, { from: '2026-10-01' });
 
@@ -116,7 +120,7 @@ describe('createSearchEntries', () => {
     if (!isOk(made)) return;
     const september = made.value;
     const october: Entry = { ...september, entryDate: '2026-10-04' };
-    const searchEntries = createSearchEntries({ entries: holdingInRange([october, september]) });
+    const searchEntries = createSearchEntries({ entries: holdingMatching([october, september]) });
 
     const upTo = await searchEntries({ userId: ADA }, { to: '2026-09-30' });
     const between = await searchEntries(
@@ -130,10 +134,58 @@ describe('createSearchEntries', () => {
     expect(isOk(everything) && everything.value).toEqual([october, september]);
   });
 
+  it('searches with the Account it was given, so it narrows the answer too', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const touchingCash = made.value;
+    const onAccount: Entry = {
+      ...touchingCash,
+      lines: [
+        { account: 'expense', side: 'debit', amount: 12500 as Money },
+        { account: 'payable', side: 'credit', amount: 12500 as Money },
+      ],
+    };
+    const searchEntries = createSearchEntries({
+      entries: holdingMatching([onAccount, touchingCash]),
+    });
+
+    const found = await searchEntries({ userId: ADA }, { account: 'cash' });
+
+    expect(isOk(found) && found.value).toEqual([touchingCash]);
+  });
+
+  it('narrows by the Account and the range together, with `and`', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const september = made.value;
+    const october: Entry = { ...september, entryDate: '2026-10-04' };
+    const searchEntries = createSearchEntries({ entries: holdingMatching([october, september]) });
+
+    const both = await searchEntries({ userId: ADA }, { from: '2026-10-01', account: 'cash' });
+    const otherAccount = await searchEntries(
+      { userId: ADA },
+      { from: '2026-10-01', account: 'sales' },
+    );
+
+    expect(isOk(both) && both.value).toEqual([october]);
+    expect(isOk(otherAccount) && otherAccount.value).toEqual([]);
+  });
+
+  it('refuses an Account outside the chart of accounts, and searches nothing', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const searchEntries = createSearchEntries({ entries: holdingMatching([made.value]) });
+
+    const found = await searchEntries({ userId: ADA }, { account: 'petty-cash' });
+
+    expect(isErr(found)).toBe(true);
+    expect(isErr(found) && found.error.code).toBe('INVALID_INPUT');
+  });
+
   it('refuses a range that ends before it starts, and searches nothing', async () => {
     expect(isOk(made)).toBe(true);
     if (!isOk(made)) return;
-    const searchEntries = createSearchEntries({ entries: holdingInRange([made.value]) });
+    const searchEntries = createSearchEntries({ entries: holdingMatching([made.value]) });
 
     const found = await searchEntries(
       { userId: ADA },

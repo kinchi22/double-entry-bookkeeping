@@ -1,4 +1,5 @@
 import { SEARCH_CRITERIA_FIELDS, type SearchCriteriaInput } from '@repo/contracts';
+import { CHART_OF_ACCOUNTS } from '@repo/core/entries';
 import { useId, type ReactNode } from 'react';
 import { en } from '../messages/en';
 import { ENTRY_SEARCH_PATH } from '../server/return-path';
@@ -62,6 +63,30 @@ export function EntrySearchForm({ criteria }: EntrySearchFormProps): ReactNode {
           defaultValue={criteria.to ?? ''}
           className={CONTROL}
         />
+      </div>
+
+      <div className={FIELD}>
+        <label htmlFor={`${id}-account`}>{en.entrySearch.account}</label>
+        {/*
+          A list of the Chart of accounts rather than a box, so an Account that
+          cannot exist cannot be searched for. "Any account" is the criterion
+          dropped, and it is a choice in the list rather than an empty box, so
+          it can be chosen back without clearing the other criteria. It submits
+          nothing, which is how an absent criterion reaches the page.
+        */}
+        <select
+          id={`${id}-account`}
+          name={SEARCH_CRITERIA_FIELDS.account}
+          defaultValue={criteria.account ?? ''}
+          className={CONTROL}
+        >
+          <option value="">{en.entrySearch.anyAccount}</option>
+          {CHART_OF_ACCOUNTS.map((code) => (
+            <option key={code} value={code}>
+              {en.accounts[code]}
+            </option>
+          ))}
+        </select>
       </div>
 
       <button
