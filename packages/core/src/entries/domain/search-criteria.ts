@@ -16,9 +16,11 @@ import { isAccountCode, type AccountCode } from './entry';
  * What is decided where follows `makeEntry`. A criterion's *shape* -- that a
  * day is `YYYY-MM-DD` -- is parsed in `@repo/contracts`, which is why a day is
  * a `string` here. Everything a criterion has to satisfy that needs to know the
- * model -- which codes the chart of accounts holds, and that a range does not
- * end before it starts -- is decided in this file, the one place the chart is
- * decided. The database enforces none of it.
+ * model -- that an Account is one the chart of accounts holds, and that a range
+ * does not end before it starts -- is decided in this file, the one place a
+ * criterion's rules are decided. The chart itself is `entry.ts`'s, which this
+ * file consults through `isAccountCode` rather than restating. The database
+ * enforces none of it.
  */
 
 /** Criteria as they were asked for, before any rule has been applied to them. */

@@ -70,7 +70,11 @@ describe('answerEntrySearch', () => {
     });
   });
 
-  it('refuses an Account the procedure refuses, and keeps it in the form', async () => {
+  // The criterion comes back with the refusal, which is what a caller can see
+  // here. What the form does with an Account no chart holds is the form's: a
+  // select over the chart cannot show one, so it shows "any Account" and the
+  // alert says why nothing was searched.
+  it('refuses an Account the procedure refuses, and carries the criterion back with it', async () => {
     const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { account: 'petty-cash' });
 
     expect(answer).toEqual({ outcome: 'refused', criteria: { account: 'petty-cash' } });
