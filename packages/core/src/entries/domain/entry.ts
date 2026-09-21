@@ -36,6 +36,22 @@ export function isAccountCode(value: string): value is AccountCode {
 /** Counted in code points once trimmed, so an emoji counts as one. */
 export const MEMO_MAX_LENGTH = 200;
 
+/**
+ * How long a memo is, and the one place that decides what a character is here.
+ *
+ * ADR-0010 limits a memo in code points, which is what spreading a string
+ * yields. The rule wants graphemes; a family emoji is then one character here
+ * and several there, and the ADR chose the count that needs no Intl data.
+ *
+ * A memo term is measured with this too, so the cap on a search term is the cap
+ * on the thing it could match, rather than a second count that could drift from
+ * it.
+ */
+export function memoLength(memo: string): number {
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread
+  return [...memo].length;
+}
+
 export type EntryLine = {
   readonly account: AccountCode;
   readonly side: Side;
@@ -81,12 +97,8 @@ const invalid = (message: string): Err<DomainError> =>
  */
 export function makeEntry(draft: EntryDraft, stamp: EntryStamp): Result<Entry, DomainError> {
   const memo = draft.memo.trim();
-  // ADR-0010 limits a memo in code points, which is what spreading a string
-  // yields. The rule wants graphemes; a family emoji is then one character here
-  // and several there, and the ADR chose the count that needs no Intl data.
-  // eslint-disable-next-line @typescript-eslint/no-misused-spread
-  const memoLength = [...memo].length;
-  if (memoLength === 0 || memoLength > MEMO_MAX_LENGTH) {
+  const length = memoLength(memo);
+  if (length === 0 || length > MEMO_MAX_LENGTH) {
     return invalid(`A memo must be 1 to ${String(MEMO_MAX_LENGTH)} characters once trimmed.`);
   }
 

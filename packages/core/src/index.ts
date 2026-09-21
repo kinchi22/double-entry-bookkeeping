@@ -37,9 +37,13 @@ export {
   createPostEntry,
   type PostEntry,
   type PostEntryDependencies,
-  createListEntries,
-  type ListEntries,
-  type ListEntriesDependencies,
+  NO_CRITERIA,
+  makeSearchCriteria,
+  type SearchCriteria,
+  type SearchCriteriaDraft,
+  createSearchEntries,
+  type SearchEntries,
+  type SearchEntriesDependencies,
   type EntryRepository,
 } from './entries/index';
 

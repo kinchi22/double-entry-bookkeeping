@@ -1,5 +1,6 @@
 import { type DomainError, type Result, type UserId } from '@repo/contracts';
 import { type Entry } from '../domain/entry';
+import { type SearchCriteria } from '../domain/search-criteria';
 
 /**
  * Where entries are kept, stated in domain terms.
@@ -19,8 +20,20 @@ export type EntryRepository = {
   /** Stores an entry and its lines, in order, atomically, as `userId`'s. */
   readonly save: (userId: UserId, entry: Entry) => Promise<Result<void, DomainError>>;
   /**
-   * Every entry `userId` owns, the latest day first, and entries on the same
-   * day most recently created first.
+   * The entries `userId` owns that the criteria match, the latest day first,
+   * and entries on the same day most recently created first.
+   *
+   * There is one read, not two: a search with no criterion is every entry the
+   * User owns, which is what `/entries` asks for.
+   *
+   * The criteria have passed `makeSearchCriteria`, so an implementation applies
+   * them rather than judging them, and matches in its query rather than in
+   * memory. A memo term arrives trimmed and is matched as a substring, case
+   * insensitively, and literally: what is in it is a character to find rather
+   * than a pattern to run.
    */
-  readonly list: (userId: UserId) => Promise<Result<readonly Entry[], DomainError>>;
+  readonly search: (
+    userId: UserId,
+    criteria: SearchCriteria,
+  ) => Promise<Result<readonly Entry[], DomainError>>;
 };

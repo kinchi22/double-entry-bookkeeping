@@ -97,6 +97,84 @@ export function toPostedEntry(entry: {
 }
 
 /**
+ * The names the Entry search gives its criteria.
+ *
+ * One set of names, used twice: the search form renders them as its field
+ * names, and, because that form is a `GET`, the browser writes those same names
+ * into the URL's query, which is where `parseSearchQuery` reads them back.
+ */
+export const SEARCH_CRITERIA_FIELDS = {
+  from: 'from',
+  to: 'to',
+  account: 'account',
+  memo: 'memo',
+} as const;
+
+/**
+ * Search criteria as they cross a wire: each one optional, and each one already
+ * the shape it has to be.
+ *
+ * A day is a calendar day here, because that is a shape and not a rule. An
+ * Account is any string, as it is on `entryLineSchema` and for the same reason:
+ * which codes the Chart of accounts holds is decided in
+ * `packages/core/src/entries/domain`, and this package cannot import the one
+ * that decides. So an Account outside the Chart is refused there, with the same
+ * `INVALID_INPUT` a malformed day is refused with here.
+ *
+ * A memo term is any text, for a third version of the same reason: how long a
+ * memo may be, and that a term of only whitespace is no criterion, are rules
+ * about the model rather than shapes, so `makeSearchCriteria` decides them. What
+ * is typed travels through here untouched -- a wildcard included, since the
+ * User typed a character to look for and not a pattern to run.
+ *
+ * The rule *between* two criteria -- that a range does not end before it
+ * starts -- is decided in the domain too.
+ */
+export const searchCriteriaSchema = z.object({
+  from: entryDateSchema.optional(),
+  to: entryDateSchema.optional(),
+  account: z.string().optional(),
+  memo: z.string().optional(),
+});
+
+export type SearchCriteriaInput = z.infer<typeof searchCriteriaSchema>;
+
+/** A URL's query, as a server component is handed it. */
+export type SearchQuery = {
+  readonly [name: string]: string | readonly string[] | undefined;
+};
+
+/**
+ * A parameter that is not there, and one that is there with nothing in it, are
+ * both an absent criterion: a `GET` form submits every field it has, so an
+ * empty box arrives as `from=` and means the User asked for no first day.
+ * Anything else is a criterion, and a malformed one is refused below rather
+ * than dropped.
+ */
+const asked = (value: SearchQuery[string]): SearchQuery[string] =>
+  value === '' ? undefined : value;
+
+/**
+ * Reads a URL's query into the criteria an Entry search takes.
+ *
+ * A criterion that does not parse -- a day that is not a calendar day, or a
+ * parameter repeated so that it arrives as a list -- refuses the whole search
+ * with `INVALID_INPUT`, so a typo narrows nothing silently.
+ */
+export function parseSearchQuery(query: SearchQuery): Result<SearchCriteriaInput, DomainError> {
+  const parsed = searchCriteriaSchema.safeParse({
+    from: asked(query[SEARCH_CRITERIA_FIELDS.from]),
+    to: asked(query[SEARCH_CRITERIA_FIELDS.to]),
+    account: asked(query[SEARCH_CRITERIA_FIELDS.account]),
+    memo: asked(query[SEARCH_CRITERIA_FIELDS.memo]),
+  });
+
+  return parsed.success
+    ? ok(parsed.data)
+    : err(domainError('INVALID_INPUT', 'The search criteria are malformed.'));
+}
+
+/**
  * The names the entry form gives its fields.
  *
  * The form renders them and `parseEntryForm` reads them, so they are written

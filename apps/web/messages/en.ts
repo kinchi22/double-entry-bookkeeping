@@ -49,6 +49,31 @@ export const en = {
   },
   entriesPage: {
     title: 'Entries',
+    search: 'Search',
+  },
+  /**
+   * The Entry search, `/entries/search`. `refused` covers every way criteria
+   * can be refused, because they are refused with one code: a day that is not
+   * a calendar day, a range the wrong way round, and an Account no chart of
+   * accounts holds are all `INVALID_INPUT`, and a message that named only one
+   * of them would be wrong for the others.
+   *
+   * `anyAccount` is the Account criterion's explicit default, so dropping it is
+   * a choice in the list rather than an empty box.
+   */
+  entrySearch: {
+    title: 'Search entries',
+    from: 'From',
+    to: 'To',
+    account: 'Account',
+    anyAccount: 'Any account',
+    memo: 'Memo',
+    submit: 'Search',
+    results: 'Results',
+    nothingMatched: 'Nothing matched what you asked for.',
+    refused:
+      'That search was not run. Check the day range -- each day is a calendar day, and From cannot be later than To -- that the account is one of those listed, and that the memo is no longer than a memo can be.',
+    backToEntries: 'Back to entries',
   },
   /**
    * `line` is a prefix rendered before the line's number, as `checkedAt` is

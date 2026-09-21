@@ -21,7 +21,7 @@ describe('createLogger', () => {
     const logger = createLogger(destination);
 
     logger.error(
-      { event: 'entries.list_failed', error: describeError(new Error('connection refused')) },
+      { event: 'entries.search_failed', error: describeError(new Error('connection refused')) },
       'The entries could not be read.',
     );
 
@@ -29,7 +29,7 @@ describe('createLogger', () => {
       {
         level: 'error',
         time: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/) as unknown,
-        event: 'entries.list_failed',
+        event: 'entries.search_failed',
         error: { name: 'Error', message: 'connection refused' },
         msg: 'The entries could not be read.',
       },

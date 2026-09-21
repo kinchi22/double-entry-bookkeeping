@@ -49,15 +49,15 @@ test('sends a signed-out visitor from the entries page to sign in', { tag: '@smo
  * 3. The procedures refuse a signed-out caller
  *
  * Given a caller with no Session
- * When they list entries, or post a balanced one, over the tRPC endpoint
+ * When they search entries, or post a balanced one, over the tRPC endpoint
  * Then both answer 401
  *
  * The posted entry is valid on purpose, so the refusal cannot be an input
  * error. This is the check the redirect above is only a courtesy for.
  */
 test('refuses the entries procedures without a Session', async ({ request }) => {
-  const list = await request.get('/api/trpc/entries.list');
-  expect(list.status()).toBe(401);
+  const search = await request.get('/api/trpc/entries.search');
+  expect(search.status()).toBe(401);
 
   const post = await request.post('/api/trpc/entries.post', {
     data: {

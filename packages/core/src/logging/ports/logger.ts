@@ -16,7 +16,7 @@ import { type ErrorDescription } from '../domain/describe-error';
 export type LogValue = string | number | boolean | ErrorDescription;
 
 export type LogFields = {
-  /** A stable dotted name to search by, such as `entries.list_failed`. */
+  /** A stable dotted name to search by, such as `entries.search_failed`. */
   readonly event: string;
   readonly [field: string]: LogValue | undefined;
 };

@@ -4,8 +4,10 @@ import {
   entryIdSchema,
   entryLineSchema,
   parseEntryForm,
+  parseSearchQuery,
   postEntryInputSchema,
   postedEntrySchema,
+  searchCriteriaSchema,
   sideSchema,
   toPostedEntry,
   type EntryId,
@@ -225,5 +227,174 @@ describe('parseEntryForm', () => {
     ['past the safe integer range', '9007199254740992'],
   ])('refuses an amount that is %s', (_, amount) => {
     expectRefused({ ...BALANCED, amount: [amount, '12500'] });
+  });
+});
+
+describe('searchCriteriaSchema', () => {
+  it('accepts a range of calendar days', () => {
+    expect(searchCriteriaSchema.parse({ from: '2026-06-01', to: '2026-06-30' })).toEqual({
+      from: '2026-06-01',
+      to: '2026-06-30',
+    });
+  });
+
+  it('accepts either end of a range on its own, and neither', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '2026-06-01' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({ to: '2026-06-30' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({}).success).toBe(true);
+  });
+
+  it('rejects an end that is not a calendar day', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '01/06/2026' }).success).toBe(false);
+    expect(searchCriteriaSchema.safeParse({ to: '2026-06-31' }).success).toBe(false);
+  });
+
+  it('leaves the rule between the ends to the domain: a reversed range parses', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '2026-06-30', to: '2026-06-01' }).success).toBe(
+      true,
+    );
+  });
+
+  it('accepts an Account beside the range, and without it', () => {
+    expect(
+      searchCriteriaSchema.parse({ from: '2026-06-01', to: '2026-06-30', account: 'cash' }),
+    ).toEqual({ from: '2026-06-01', to: '2026-06-30', account: 'cash' });
+    expect(searchCriteriaSchema.safeParse({ account: 'cash' }).success).toBe(true);
+  });
+
+  it('leaves which Accounts exist to the domain: an unknown code parses', () => {
+    expect(searchCriteriaSchema.safeParse({ account: 'petty-cash' }).success).toBe(true);
+  });
+
+  it('refuses an Account that is not one code', () => {
+    expect(searchCriteriaSchema.safeParse({ account: ['cash', 'sales'] }).success).toBe(false);
+  });
+
+  it('accepts a memo term beside the other criteria, and without them', () => {
+    expect(
+      searchCriteriaSchema.parse({ from: '2026-06-01', account: 'cash', memo: 'rent' }),
+    ).toEqual({ from: '2026-06-01', account: 'cash', memo: 'rent' });
+    expect(searchCriteriaSchema.safeParse({ memo: 'rent' }).success).toBe(true);
+  });
+
+  it('leaves what a term may hold to the domain: whitespace and a wildcard parse', () => {
+    expect(searchCriteriaSchema.safeParse({ memo: '   ' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({ memo: '100%' }).success).toBe(true);
+  });
+
+  it('refuses a memo term that is not one string', () => {
+    expect(searchCriteriaSchema.safeParse({ memo: ['rent', 'fuel'] }).success).toBe(false);
+  });
+});
+
+describe('parseSearchQuery', () => {
+  it('reads both ends of a range out of the query', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value).toEqual({ from: '2026-06-01', to: '2026-06-30' });
+  });
+
+  it('reads a query with no parameters as no criterion at all', () => {
+    const criteria = parseSearchQuery({});
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.from).toBeUndefined();
+    expect(criteria.value.to).toBeUndefined();
+  });
+
+  it('reads an empty parameter as an absent criterion, not as an empty day', () => {
+    const criteria = parseSearchQuery({ from: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.from).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('reads the Account out of the query, beside the range', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', account: 'cash' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ from: '2026-06-01', account: 'cash' });
+  });
+
+  it('reads an empty Account as the "any Account" choice, not as an Account named ""', () => {
+    const criteria = parseSearchQuery({ account: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.account).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('refuses an Account given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ account: ['cash', 'sales'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('ignores a parameter that is no criterion of this search', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', page: '2' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ from: '2026-06-01' });
+  });
+
+  it.each([
+    ['a day in another order', { from: '01/06/2026' }],
+    ['a day no calendar has', { to: '2026-02-30' }],
+    ['an instant rather than a day', { from: '2026-06-01T00:00:00Z' }],
+    ['a word', { to: 'june' }],
+  ])('refuses %s rather than searching without it', (_case, query) => {
+    const criteria = parseSearchQuery(query);
+
+    expect(isErr(criteria)).toBe(true);
+    if (!isErr(criteria)) return;
+    expect(criteria.error.code).toBe('INVALID_INPUT');
+    expect(criteria.error.message).toContain('search criteria');
+  });
+
+  it('refuses a criterion given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ from: ['2026-06-01', '2026-07-01'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('reads the memo term out of the query, beside the other criteria', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', account: 'cash', memo: 'rent' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({
+      from: '2026-06-01',
+      account: 'cash',
+      memo: 'rent',
+    });
+  });
+
+  it('reads an empty memo box as an absent criterion, not as a term of nothing', () => {
+    const criteria = parseSearchQuery({ memo: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.memo).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('carries a term of only whitespace through, for the domain to read as absent', () => {
+    const criteria = parseSearchQuery({ memo: '  ' });
+
+    expect(isOk(criteria) && criteria.value.memo).toBe('  ');
+  });
+
+  it('carries a wildcard in a term through unchanged, since it is a character to match', () => {
+    const criteria = parseSearchQuery({ memo: '100%_off' });
+
+    expect(isOk(criteria) && criteria.value.memo).toBe('100%_off');
+  });
+
+  it('refuses a memo term given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ memo: ['rent', 'fuel'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
   });
 });

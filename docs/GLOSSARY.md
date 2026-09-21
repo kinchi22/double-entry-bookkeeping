@@ -22,10 +22,11 @@ it here in the same commit that introduces it.
 | E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Entry            | One posting: a calendar day, a memo, and two or more Entry lines that balance. The brief's word "record" means this and is not used. |
 | Entry line       | One line of an Entry: an Account, a Side, and an amount greater than zero. |
+| Entry search     | A read of one User's Entries narrowed by Search criteria, rendered at `/entries/search`. The issue's word "history" means this and is not used. The port method, the use case and the procedure are all named for it, and listing every Entry is an Entry search with no criterion. |
 | Entry total      | The sum of an Entry's debit amounts, which is the sum of its credit amounts because the Entry is Balanced. Computed in `domain/`; never summed by a client. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`, `stryker.config.mjs`. Declared in `.github/CODEOWNERS`, justified in ADR-0002 and ADR-0004. |
 | Identity         | One way a User signs in: a provider and that provider's subject for the person, such as Google's `sub`. A User is found by its Identity, never by its email. Never called an account: Account already means what an Entry line is posted against. ADR-0021. |
-| Logger           | The port an Adapter reports an infrastructure failure through: an event name such as `entries.list_failed`, fields, and a message. A field holds a primitive or an `ErrorDescription`, which is branded so an error reaches the logger only as `describeError` describes it. ADR-0018. |
+| Logger           | The port an Adapter reports an infrastructure failure through: an event name such as `entries.search_failed`, fields, and a message. A field holds a primitive or an `ErrorDescription`, which is branded so an error reaches the logger only as `describeError` describes it. ADR-0018. |
 | Message catalogue | `apps/web/messages/{locale}.ts`: the copy for one locale, a plain object keyed in English, grouped by the part of the UI that renders it. `en.ts` is the only one until ADR-0008 is adopted. |
 | Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
 | Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |
@@ -36,6 +37,7 @@ it here in the same commit that introduces it.
 | Public surface   | The entry points a package lists in its `exports` field.                     |
 | Shared kernel    | Vocabulary several features depend on, held in `core/src/<name>/domain` with no ports or adapters. `money` is the only one. |
 | Result           | `Ok<T>` or `Err<E>`. The return type of any domain operation that can fail. |
+| Search criteria  | What an Entry search is narrowed by: an inclusive range of calendar days, an Account any one line names, and a substring of the memo. Each is optional and an absent one matches every Entry; those present combine with `and`. Carried in the URL's query, shape parsed in `contracts`, and everything that needs the model -- the Account being one the Chart of accounts holds, `from` no later than `to`, and a memo term trimmed and no longer than a memo -- decided in `domain/` as an Entry's rules are. A memo term is matched literally, so a wildcard in it is a character to find. |
 | Server Action    | The app's write path. Parses input, invokes a use case through `createCaller`, invalidates what it made stale. |
 | Session          | A User's signed-in state: a random token in an `HttpOnly` cookie, stored in `sessions` only as its SHA-256 hash, with an expiry that slides, except the Smoke User's. Signing out deletes it. ADR-0021. |
 | Side             | The direction of an Entry line, `debit` or `credit`. The amount never carries it. |

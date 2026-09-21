@@ -85,6 +85,8 @@ const isBlank = (text) => text.trim() === '';
  * instead of passing because nobody thought to name it. `tone` is StatusDot's,
  * an enum of two signals. `aria-labelledby` holds ids, `inputMode` a keyboard
  * hint, and `pattern` a regular expression the browser validates against.
+ * `method` is a form's verb: it names how a submission is sent, not anything a
+ * person reads.
  */
 const MARKUP_ATTRIBUTES = new Set([
   'aria-hidden',
@@ -97,6 +99,7 @@ const MARKUP_ATTRIBUTES = new Set([
   'inputMode',
   'key',
   'lang',
+  'method',
   'pattern',
   'role',
   'tone',
