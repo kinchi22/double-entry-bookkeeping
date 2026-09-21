@@ -277,9 +277,9 @@ branched from `main`, named `milestone/<name>`.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
-| specs -> `milestone/x`      | the owner, as code owner | not run (the specs would fail by design) | e2e only |
-| feature -> `milestone/x`    | nobody      | not run (the specs would fail until the behaviour lands) | no specs |
-| `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | - | exempt |
+| specs -> `milestone/x`      | the owner, as code owner | not on the pull request (the specs would fail by design); advisory on the merge | e2e only |
+| feature -> `milestone/x`    | nobody      | not on the pull request (the specs would fail until the behaviour lands); advisory on the merge | no specs |
+| `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | advisory, on the push | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
 A feature branch merges with no approval at all: what it may do was settled when
@@ -313,8 +313,13 @@ when both sides moved. It reads a pull request, so it has no local equivalent
 and `pnpm gates` does not run it.
 
 The E2E column is the `E2E build` workflow: the suite against a production build
-of the pull request, run on every pull request into `main` and on `main` itself,
-and on nothing aimed at a milestone. The job brings a `postgres:18-alpine`
+of the commit, run on every pull request into `main`, on `main` itself, and on a
+push to a `milestone/**` branch. A pull request onto a milestone does not run
+it: that one would be red by design, and ADR-0002 does not let the specs block
+it. The push run lands as each Task merges, and it is advisory -- in no ruleset,
+blocking no merge -- because no gate can tell a spec that is red by design from
+one that regressed: the run reports, and the driver reading it judges, which is
+a step in `/implement-issue`'s loop. The job brings a `postgres:18-alpine`
 service of its own and migrates it first, so a spec that writes is judged
 against the schema its own commit carries; the deployed smoke run in
 `E2E deployed` is not a required check and runs the `@smoke`-tagged reads alone.
