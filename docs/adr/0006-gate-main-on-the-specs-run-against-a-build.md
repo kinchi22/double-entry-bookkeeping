@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-14
+**Amended:** 2026-09-22, PR #77
 
 ## Problem
 
@@ -45,10 +46,10 @@ enforces validating the environment at first use rather than at import.
 
 **`E2E build` is the merge gate.** It is the one job in
 `.github/workflows/e2e-build.yml`, a workflow triggered by `pull_request` with
-`branches: [main]` and by push to `main`: install, install chromium,
-`pnpm build`, then `pnpm test:e2e`. `playwright.config.ts` already starts
-`next start` when `E2E_BASE_URL` is unset, so no server step is added. The job
-depends on no deployment.
+`branches: [main]` and by push to `main` and to `milestone/**`: install, install
+chromium, `pnpm build`, then `pnpm test:e2e`. `playwright.config.ts` already
+starts `next start` when `E2E_BASE_URL` is unset, so no server step is added. The
+job depends on no deployment.
 
 - `DATABASE_URL` is set to the dead URL above on the `test:e2e` step and nowhere
   wider. The build step has none, like `Gates`. A job- or workflow-level value
@@ -57,6 +58,10 @@ depends on no deployment.
   there by design until its behaviour lands, and ADR-0002 says the suite must not
   block it. The branch filter is on the workflow's trigger, not an `if:` on a job;
   the rejected alternatives say why.
+- The push to `milestone/**` is not a gate. That trigger was added by #71, after
+  this ADR, so the milestone is judged by its own specs as each Task merges. It
+  is in no ruleset and blocks no merge; the Consequences say what reading it is
+  for.
 - It is required by the `main` ruleset alone. That is a repository setting, not
   a file.
 
@@ -105,9 +110,14 @@ says anyone with write access, the machine account included, can set a check's
 state without the job running.
 No gate reads a ruleset, so either setting can be undone without a diff.
 
-A milestone's specs are not run by any job while it is a milestone, so ADR-0002's
-"red specs as a progress bar" is read by running the suite locally or by opening
-the pull request into `main`, not from a check on the milestone.
+ADR-0002's "red specs as a progress bar" is read from the push run on the
+milestone branch, which #71 added and #73 wrote into the workflow's header and
+`docs/ARCHITECTURE.md`. That run is advisory: it is in no ruleset, it blocks no
+merge, and it is read by the driver, at a named step in `/implement-issue`'s
+loop, after each Task merges. It has to be read rather than enforced, because no
+gate can tell a spec that is still waiting for its Task from one that regressed.
+A pull request onto a milestone runs nothing, so the suite before a merge is
+still read by running it locally.
 
 `E2E build` keeps the config's two retries in CI, so a flaky spec can pass the
 gate on its second attempt. Liveness runs with none, but it tests that a spec
@@ -149,8 +159,14 @@ suite there blocks the feature branches ADR-0002 says it must not, and supplying
 the variable there removes the only check that validation is lazy.
 
 **Run `E2E build` on every pull request and require it only on `main`.** On a
-milestone it is red on every feature pull request until the last one, and a
-check that is allowed to be red is a check nobody reads (ADR-0002).
+milestone it is red on every feature pull request until the last one, and a check
+allowed to be red is only worth having when someone's job is to read it. There
+nobody's is: ADR-0002 gives a feature pull request no reviewer, and the check
+would report on specs that branch was never meant to satisfy. The advisory push
+run is allowed to be red too, and the reader is what separates them -- it lands
+on the milestone as it now stands rather than on one branch's proposal, and
+`/implement-issue`'s loop names the driver as the one who reads it and tells a
+spec waiting for its Task from a regression (#71).
 
 **A job in `ci.yml`, scoped by `if:` to pull requests into `main`.** It was the
 first version of this change, chosen because `Spec isolation` and
