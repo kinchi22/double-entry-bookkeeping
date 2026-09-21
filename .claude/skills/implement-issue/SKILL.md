@@ -23,8 +23,19 @@ In Progress.
 
 ## The loop
 
-Take one Task at a time. The gates share one Postgres container, so two Tasks
-built at once would break each other's runs.
+Take one Task at a time in the repository's working tree: two agents editing
+the same tree collide whatever they are building. The gates do not force that on
+their own. `pnpm test:integration` starts a throwaway Postgres of its own
+through testcontainers, on a port it picks (`tools/integration/postgres-container.ts`);
+the container in `docker-compose.yml` is the development database and no gate
+touches it. `db:drift` and `db:check` read files and never connect. So a Task
+can be built in parallel in a `git worktree` of its own, which costs a cold
+`pnpm install` there.
+
+One thing is genuinely shared. `playwright.config.ts` binds `127.0.0.1:3000` and
+reuses a server already listening, so two local e2e runs at once silently test
+each other's code. Whoever drives parallel Tasks coordinates that run, or keeps
+it serial.
 
 1. **Pick.** The first frontier Task, specs first. An empty frontier is a stop.
 2. **Build.** Dispatch a `general-purpose` subagent with the prompt: "Implement
