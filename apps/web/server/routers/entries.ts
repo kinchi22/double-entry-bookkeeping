@@ -1,5 +1,9 @@
-import { postEntryInputSchema, postedEntrySchema, toPostedEntry } from '@repo/contracts';
-import { NO_CRITERIA } from '@repo/core';
+import {
+  postEntryInputSchema,
+  postedEntrySchema,
+  searchCriteriaSchema,
+  toPostedEntry,
+} from '@repo/contracts';
 import { z } from 'zod';
 import { toTrpcError } from '../domain-error';
 import { router, sessionProcedure } from '../trpc';
@@ -14,17 +18,21 @@ import { router, sessionProcedure } from '../trpc';
  */
 export const entriesRouter = router({
   /**
-   * An Entry search. No criterion exists yet, so it takes no input and asks
-   * for the search with none: every entry the signed-in User owns, which is
-   * what `/entries` renders.
+   * An Entry search. The criteria are shaped by the schema and judged by the
+   * use case: a range that ends before it starts parses here and comes back as
+   * `INVALID_INPUT`. A search with no criterion is every entry the signed-in
+   * User owns, which is what `/entries` renders.
    */
-  search: sessionProcedure.output(z.array(postedEntrySchema)).query(async ({ ctx }) => {
-    const result = await ctx.container.searchEntries(ctx.auth, NO_CRITERIA);
-    if (!result.ok) {
-      throw toTrpcError(result.error);
-    }
-    return result.value.map((entry) => toPostedEntry(entry));
-  }),
+  search: sessionProcedure
+    .input(searchCriteriaSchema)
+    .output(z.array(postedEntrySchema))
+    .query(async ({ ctx, input }) => {
+      const result = await ctx.container.searchEntries(ctx.auth, input);
+      if (!result.ok) {
+        throw toTrpcError(result.error);
+      }
+      return result.value.map((entry) => toPostedEntry(entry));
+    }),
 
   post: sessionProcedure
     .input(postEntryInputSchema)

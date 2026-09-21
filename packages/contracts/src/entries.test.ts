@@ -4,8 +4,10 @@ import {
   entryIdSchema,
   entryLineSchema,
   parseEntryForm,
+  parseSearchQuery,
   postEntryInputSchema,
   postedEntrySchema,
+  searchCriteriaSchema,
   sideSchema,
   toPostedEntry,
   type EntryId,
@@ -225,5 +227,85 @@ describe('parseEntryForm', () => {
     ['past the safe integer range', '9007199254740992'],
   ])('refuses an amount that is %s', (_, amount) => {
     expectRefused({ ...BALANCED, amount: [amount, '12500'] });
+  });
+});
+
+describe('searchCriteriaSchema', () => {
+  it('accepts a range of calendar days', () => {
+    expect(searchCriteriaSchema.parse({ from: '2026-06-01', to: '2026-06-30' })).toEqual({
+      from: '2026-06-01',
+      to: '2026-06-30',
+    });
+  });
+
+  it('accepts either end of a range on its own, and neither', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '2026-06-01' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({ to: '2026-06-30' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({}).success).toBe(true);
+  });
+
+  it('rejects an end that is not a calendar day', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '01/06/2026' }).success).toBe(false);
+    expect(searchCriteriaSchema.safeParse({ to: '2026-06-31' }).success).toBe(false);
+  });
+
+  it('leaves the rule between the ends to the domain: a reversed range parses', () => {
+    expect(searchCriteriaSchema.safeParse({ from: '2026-06-30', to: '2026-06-01' }).success).toBe(
+      true,
+    );
+  });
+});
+
+describe('parseSearchQuery', () => {
+  it('reads both ends of a range out of the query', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value).toEqual({ from: '2026-06-01', to: '2026-06-30' });
+  });
+
+  it('reads a query with no parameters as no criterion at all', () => {
+    const criteria = parseSearchQuery({});
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.from).toBeUndefined();
+    expect(criteria.value.to).toBeUndefined();
+  });
+
+  it('reads an empty parameter as an absent criterion, not as an empty day', () => {
+    const criteria = parseSearchQuery({ from: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.from).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('ignores a parameter that is no criterion of this search', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', page: '2' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ from: '2026-06-01' });
+  });
+
+  it.each([
+    ['a day in another order', { from: '01/06/2026' }],
+    ['a day no calendar has', { to: '2026-02-30' }],
+    ['an instant rather than a day', { from: '2026-06-01T00:00:00Z' }],
+    ['a word', { to: 'june' }],
+  ])('refuses %s rather than searching without it', (_case, query) => {
+    const criteria = parseSearchQuery(query);
+
+    expect(isErr(criteria)).toBe(true);
+    if (!isErr(criteria)) return;
+    expect(criteria.error.code).toBe('INVALID_INPUT');
+    expect(criteria.error.message).toContain('search criteria');
+  });
+
+  it('refuses a criterion given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ from: ['2026-06-01', '2026-07-01'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
   });
 });

@@ -1,3 +1,4 @@
+import { NO_CRITERIA } from '@repo/core';
 import Link from 'next/link';
 import { type ReactNode } from 'react';
 import { EntryForm } from '../../../components/entry-form';
@@ -24,7 +25,8 @@ export const metadata = {
 export default async function EntriesPage(): Promise<ReactNode> {
   const caller = createCaller(await createContext());
   // With no Session the procedure refuses, and the visitor is sent to sign in.
-  const entries = await orSignIn(caller.entries.search(), '/entries');
+  // An Entry search with no criterion is the listing this page has always done.
+  const entries = await orSignIn(caller.entries.search(NO_CRITERIA), '/entries');
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
@@ -32,7 +34,12 @@ export default async function EntriesPage(): Promise<ReactNode> {
         <h1 className="text-xl font-semibold">
           <Link href="/">{en.app.name}</Link>
         </h1>
-        <SignOutButton action={signOut} />
+        <div className="flex items-center gap-4">
+          <Link href="/entries/search" className="text-sm underline">
+            {en.entriesPage.search}
+          </Link>
+          <SignOutButton action={signOut} />
+        </div>
       </header>
       <EntryForm action={postEntry} />
       <EntryList entries={entries} />

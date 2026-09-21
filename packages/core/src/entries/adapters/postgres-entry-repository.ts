@@ -1,4 +1,4 @@
-import { asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
 import {
   domainError,
   err,
@@ -87,22 +87,22 @@ export function createPostgresEntryRepository(
      * for, and those are ignored; an entry the first read saw has all of its
      * lines committed already, because they were written in its transaction.
      *
-     * Matching happens in the query and never in memory. No criterion exists
-     * yet, so nothing narrows the `user_id` both reads already filter on: an
-     * absent criterion contributes no condition, and a search with none is
-     * every entry the User owns.
+     * Matching happens in the query and never in memory, and both reads are
+     * narrowed the same way, so the lines that come back are the lines of the
+     * entries that matched.
      */
     search: async (
       userId: UserId,
-      _criteria: SearchCriteria,
+      criteria: SearchCriteria,
     ): Promise<Result<readonly Entry[], DomainError>> => {
+      const matching = matches(userId, criteria);
       let entryRows: EntryRow[];
       let lineRows: LineRow[];
       try {
         entryRows = await database
           .select()
           .from(schema.entries)
-          .where(eq(schema.entries.userId, userId))
+          .where(matching)
           .orderBy(
             desc(schema.entries.entryDate),
             desc(schema.entries.createdAt),
@@ -119,7 +119,7 @@ export function createPostgresEntryRepository(
           })
           .from(schema.entryLines)
           .innerJoin(schema.entries, eq(schema.entries.id, schema.entryLines.entryId))
-          .where(eq(schema.entries.userId, userId))
+          .where(matching)
           .orderBy(asc(schema.entryLines.entryId), asc(schema.entryLines.lineNumber));
       } catch (error) {
         logger.error(
@@ -157,6 +157,24 @@ export function createPostgresEntryRepository(
 
 const unavailable = (message: string): Err<DomainError> =>
   err(domainError('DEPENDENCY_UNAVAILABLE', message));
+
+/**
+ * What a searched entry has to satisfy, as one condition for the query planner.
+ *
+ * The User is always part of it, so a read that forgot a criterion would still
+ * never cross into another User's books (ADR-0021). A criterion that was not
+ * asked for adds no condition, which is what makes a search with none every
+ * entry the User owns. Both ends of a day range are compared inclusively,
+ * against `entry_date` -- the day the entry was posted, not the instant it was
+ * typed.
+ */
+function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
+  return and(
+    eq(schema.entries.userId, userId),
+    ...(criteria.from === undefined ? [] : [gte(schema.entries.entryDate, criteria.from)]),
+    ...(criteria.to === undefined ? [] : [lte(schema.entries.entryDate, criteria.to)]),
+  );
+}
 
 /**
  * Rebuilds a stored entry through the same rules that admitted it.

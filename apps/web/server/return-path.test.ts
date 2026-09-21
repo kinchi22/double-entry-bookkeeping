@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { returnPath, signInPath } from './return-path';
+import { pathWithQuery, returnPath, signInPath } from './return-path';
 
 describe('returnPath', () => {
   it.each([
@@ -37,5 +37,41 @@ describe('signInPath', () => {
     const query = new URL(signInPath('/entries'), 'http://app.test').searchParams;
 
     expect(returnPath(query.get('returnTo'))).toBe('/entries');
+  });
+});
+
+describe('pathWithQuery', () => {
+  it('is the path alone when nothing was asked for', () => {
+    expect(pathWithQuery('/entries/search', {})).toBe('/entries/search');
+  });
+
+  it('carries the criteria that were asked for', () => {
+    expect(pathWithQuery('/entries/search', { from: '2026-06-01', to: '2026-06-30' })).toBe(
+      '/entries/search?from=2026-06-01&to=2026-06-30',
+    );
+  });
+
+  it('leaves out a parameter that was not given', () => {
+    expect(pathWithQuery('/entries/search', { from: '2026-06-01', to: undefined })).toBe(
+      '/entries/search?from=2026-06-01',
+    );
+  });
+
+  it('keeps a parameter given twice given twice', () => {
+    expect(pathWithQuery('/entries/search', { from: ['2026-06-01', '2026-07-01'] })).toBe(
+      '/entries/search?from=2026-06-01&from=2026-07-01',
+    );
+  });
+
+  it('escapes what it carries, so a criterion cannot add a parameter', () => {
+    expect(pathWithQuery('/entries/search', { memo: 'a&b=c' })).toBe(
+      '/entries/search?memo=a%26b%3Dc',
+    );
+  });
+
+  it('is read back by returnPath as the path and query it was given', () => {
+    expect(returnPath(pathWithQuery('/entries/search', { from: '2026-06-01' }))).toBe(
+      '/entries/search?from=2026-06-01',
+    );
   });
 });

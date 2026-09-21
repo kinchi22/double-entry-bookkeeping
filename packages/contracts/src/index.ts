@@ -43,17 +43,22 @@ export type {
   EntryLineInput,
   PostEntryInput,
   PostedEntry,
+  SearchCriteriaInput,
+  SearchQuery,
   Side,
   SubmittedFields,
 } from './entries';
 export {
   ENTRY_FORM_FIELDS,
+  SEARCH_CRITERIA_FIELDS,
   entryDateSchema,
   entryIdSchema,
   entryLineSchema,
   parseEntryForm,
+  parseSearchQuery,
   postEntryInputSchema,
   postedEntrySchema,
+  searchCriteriaSchema,
   sideSchema,
   toPostedEntry,
 } from './entries';

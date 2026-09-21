@@ -25,6 +25,10 @@ export type EntryRepository = {
    *
    * There is one read, not two: a search with no criterion is every entry the
    * User owns, which is what `/entries` asks for.
+   *
+   * The criteria have passed `makeSearchCriteria`, so an implementation applies
+   * them rather than judging them, and matches in its query rather than in
+   * memory.
    */
   readonly search: (
     userId: UserId,

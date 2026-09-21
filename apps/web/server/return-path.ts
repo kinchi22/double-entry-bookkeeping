@@ -33,3 +33,32 @@ export function returnPath(requested: unknown): string {
 export function signInPath(from: string): string {
   return `/sign-in?${new URLSearchParams({ returnTo: from }).toString()}`;
 }
+
+/** A query as a server component is handed one. */
+export type QueryParameters = Readonly<Record<string, string | readonly string[] | undefined>>;
+
+const values = (value: string | readonly string[] | undefined): readonly string[] => {
+  if (value === undefined) {
+    return [];
+  }
+  return typeof value === 'string' ? [value] : value;
+};
+
+/**
+ * A path with the query it was asked with, so that a page which sends a visitor
+ * to sign in can bring them back to the search they asked for rather than to
+ * the page with its criteria dropped.
+ *
+ * It rebuilds the query from the parameters rather than copying a string, so
+ * what comes back is escaped, and a parameter given twice stays given twice.
+ */
+export function pathWithQuery(path: string, query: QueryParameters): string {
+  const parameters = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    for (const one of values(value)) {
+      parameters.append(name, one);
+    }
+  }
+  const search = parameters.toString();
+  return search === '' ? path : `${path}?${search}`;
+}
