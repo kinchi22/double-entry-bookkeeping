@@ -21,6 +21,22 @@ name: E2E build
 # a check allowed to be red on the ground that nobody reads it, and the answer
 # is the reader, written into `/implement-issue`'s loop.
 #
+# That advisory run reports under a name of its own, `E2E build (advisory)`,
+# which is what the `name:` expression on the job below produces. The `main`
+# ruleset requires `E2E build` by name, and a required check's name has to mean
+# one thing: GitHub's "About protected branches" says to keep job names unique
+# across workflows, because a shared name "can cause ambiguous status check
+# results and block pull requests from being merged", and "Troubleshooting
+# required status checks" says that when a check and a status share a name, both
+# must pass for that name to pass. A milestone's final commit is the head of the
+# integration pull request and the tip of the milestone at once, so without the
+# second name one SHA would carry two runs called `E2E build` -- a green gate
+# and an advisory run that is red by design. Everything the ruleset reads keeps
+# the name `E2E build`: a pull request builds `refs/pull/N/merge`, which is not
+# a push, and a push to `main` is not `refs/heads/milestone/`.
+# https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches
+# https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks
+#
 # Two Task merges in quick succession cancel the earlier run, through the
 # `concurrency` group below. The survivor is the one built from the later tree,
 # which is the milestone as it now stands, so that is the run to read.
@@ -53,7 +69,10 @@ env:
 
 jobs:
   e2e-build:
-    name: E2E build
+    name: ${{ github.event_name == 'push'
+      && startsWith(github.ref, 'refs/heads/milestone/')
+      && 'E2E build (advisory)'
+      || 'E2E build' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
