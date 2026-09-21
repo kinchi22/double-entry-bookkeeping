@@ -22,9 +22,16 @@ export const entriesRouter = router({
    * use case: a range that ends before it starts parses here and comes back as
    * `INVALID_INPUT`. A search with no criterion is every entry the signed-in
    * User owns, which is what `/entries` renders.
+   *
+   * No input at all is that same search with no criterion, so the schema
+   * defaults to one rather than refusing it. The default is what keeps the rule
+   * in the use case: tRPC parses input after `sessionProcedure`'s middleware,
+   * which lets a signed-out caller through, so a required object would refuse a
+   * search with no input as `BAD_REQUEST` before anything could answer
+   * `UNAUTHENTICATED` (ADR-0021).
    */
   search: sessionProcedure
-    .input(searchCriteriaSchema)
+    .input(searchCriteriaSchema.default({}))
     .output(z.array(postedEntrySchema))
     .query(async ({ ctx, input }) => {
       const result = await ctx.container.searchEntries(ctx.auth, input);
