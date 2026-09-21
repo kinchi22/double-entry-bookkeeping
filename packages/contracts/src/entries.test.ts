@@ -254,6 +254,21 @@ describe('searchCriteriaSchema', () => {
       true,
     );
   });
+
+  it('accepts an Account beside the range, and without it', () => {
+    expect(
+      searchCriteriaSchema.parse({ from: '2026-06-01', to: '2026-06-30', account: 'cash' }),
+    ).toEqual({ from: '2026-06-01', to: '2026-06-30', account: 'cash' });
+    expect(searchCriteriaSchema.safeParse({ account: 'cash' }).success).toBe(true);
+  });
+
+  it('leaves which Accounts exist to the domain: an unknown code parses', () => {
+    expect(searchCriteriaSchema.safeParse({ account: 'petty-cash' }).success).toBe(true);
+  });
+
+  it('refuses an Account that is not one code', () => {
+    expect(searchCriteriaSchema.safeParse({ account: ['cash', 'sales'] }).success).toBe(false);
+  });
 });
 
 describe('parseSearchQuery', () => {
@@ -281,6 +296,27 @@ describe('parseSearchQuery', () => {
     if (!isOk(criteria)) return;
     expect(criteria.value.from).toBeUndefined();
     expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('reads the Account out of the query, beside the range', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', account: 'cash' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ from: '2026-06-01', account: 'cash' });
+  });
+
+  it('reads an empty Account as the "any Account" choice, not as an Account named ""', () => {
+    const criteria = parseSearchQuery({ account: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.account).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('refuses an Account given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ account: ['cash', 'sales'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
   });
 
   it('ignores a parameter that is no criterion of this search', () => {

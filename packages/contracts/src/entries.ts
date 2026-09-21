@@ -106,19 +106,27 @@ export function toPostedEntry(entry: {
 export const SEARCH_CRITERIA_FIELDS = {
   from: 'from',
   to: 'to',
+  account: 'account',
 } as const;
 
 /**
  * Search criteria as they cross a wire: each one optional, and each one already
  * the shape it has to be.
  *
- * The shape of a criterion is decided here; the rule *between* two of them --
- * that a range does not end before it starts -- is decided in
- * `packages/core/src/entries/domain`, for the reason this file's header gives.
+ * A day is a calendar day here, because that is a shape and not a rule. An
+ * Account is any string, as it is on `entryLineSchema` and for the same reason:
+ * which codes the Chart of accounts holds is decided in
+ * `packages/core/src/entries/domain`, and this package cannot import the one
+ * that decides. So an Account outside the Chart is refused there, with the same
+ * `INVALID_INPUT` a malformed day is refused with here.
+ *
+ * The rule *between* two criteria -- that a range does not end before it
+ * starts -- is decided in the domain too.
  */
 export const searchCriteriaSchema = z.object({
   from: entryDateSchema.optional(),
   to: entryDateSchema.optional(),
+  account: z.string().optional(),
 });
 
 export type SearchCriteriaInput = z.infer<typeof searchCriteriaSchema>;
@@ -149,6 +157,7 @@ export function parseSearchQuery(query: SearchQuery): Result<SearchCriteriaInput
   const parsed = searchCriteriaSchema.safeParse({
     from: asked(query[SEARCH_CRITERIA_FIELDS.from]),
     to: asked(query[SEARCH_CRITERIA_FIELDS.to]),
+    account: asked(query[SEARCH_CRITERIA_FIELDS.account]),
   });
 
   return parsed.success

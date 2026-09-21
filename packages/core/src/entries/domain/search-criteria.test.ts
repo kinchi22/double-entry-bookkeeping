@@ -56,6 +56,51 @@ describe('makeSearchCriteria', () => {
     expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
   });
 
+  it('keeps an Account that is in the chart of accounts', () => {
+    const criteria = makeSearchCriteria({ account: 'cash' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ account: 'cash' });
+  });
+
+  it('keeps the Account beside a range, so the two narrow together', () => {
+    const criteria = makeSearchCriteria({ from: '2026-06-01', to: '2026-06-30', account: 'sales' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({
+      from: '2026-06-01',
+      to: '2026-06-30',
+      account: 'sales',
+    });
+  });
+
+  it('reads an absent Account as no criterion rather than as a criterion of nothing', () => {
+    const criteria = makeSearchCriteria({ account: undefined });
+
+    expect(isOk(criteria) && Object.keys(criteria.value)).toEqual([]);
+  });
+
+  it.each([
+    ['one no chart has', 'petty-cash'],
+    ['one in the wrong case', 'Cash'],
+    ['nothing at all', ''],
+  ])('refuses an Account outside the chart of accounts: %s', (_case, account) => {
+    const criteria = makeSearchCriteria({ account });
+
+    expect(isErr(criteria)).toBe(true);
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('says which Account it was asked for', () => {
+    const criteria = makeSearchCriteria({ account: 'petty-cash' });
+
+    expect(isErr(criteria) && criteria.error.message).toContain('petty-cash');
+  });
+
+  it('refuses an Account outside the chart even when the range is a good one', () => {
+    const criteria = makeSearchCriteria({ from: '2026-06-01', to: '2026-06-30', account: 'bank' });
+
+    expect(isErr(criteria) && criteria.error.message).toContain('bank');
+  });
+
   it('says which way round the days it was given were', () => {
     const criteria = makeSearchCriteria({ from: '2026-06-30', to: '2026-06-01' });
 

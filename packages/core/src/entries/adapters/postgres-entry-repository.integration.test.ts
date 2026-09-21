@@ -329,6 +329,100 @@ describe('createPostgresEntryRepository', () => {
     expect(await found(ADA, { from: '2026-06-01', to: '2026-06-30' })).toEqual([inside]);
   });
 
+  it('answers with an entry whose debit line names the Account, and with one whose credit line does', async () => {
+    await repository.save(
+      ADA,
+      entry({
+        entryDate: '2026-06-10',
+        memo: 'Cash in',
+        lines: [
+          { account: 'cash', side: 'debit', amount: 300 as Money },
+          { account: 'sales', side: 'credit', amount: 300 as Money },
+        ],
+      }),
+    );
+    await repository.save(
+      ADA,
+      entry({
+        entryDate: '2026-06-11',
+        memo: 'Cash out',
+        lines: [
+          { account: 'expense', side: 'debit', amount: 300 as Money },
+          { account: 'cash', side: 'credit', amount: 300 as Money },
+        ],
+      }),
+    );
+    await repository.save(
+      ADA,
+      entry({
+        entryDate: '2026-06-12',
+        memo: 'No cash',
+        lines: [
+          { account: 'expense', side: 'debit', amount: 300 as Money },
+          { account: 'payable', side: 'credit', amount: 300 as Money },
+        ],
+      }),
+    );
+
+    expect(await memosFound({ account: 'cash' })).toEqual(['Cash out', 'Cash in']);
+  });
+
+  it('answers with the whole entry, though one of its lines named the Account', async () => {
+    const posting = entry({
+      memo: 'Rent',
+      lines: [
+        { account: 'expense', side: 'debit', amount: 700 as Money },
+        { account: 'cash', side: 'credit', amount: 400 as Money },
+        { account: 'payable', side: 'credit', amount: 300 as Money },
+      ],
+    });
+    await repository.save(ADA, posting);
+
+    expect(await found(ADA, { account: 'cash' })).toEqual([posting]);
+  });
+
+  it('answers with nothing for an Account nothing in the books touches', async () => {
+    await repository.save(ADA, entry());
+
+    expect(await memosFound({ account: 'capital' })).toEqual([]);
+  });
+
+  it('narrows by the Account and the day range together, with `and`', async () => {
+    const onCash = [
+      { account: 'expense', side: 'debit', amount: 300 as Money },
+      { account: 'cash', side: 'credit', amount: 300 as Money },
+    ] as const;
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'June, cash', lines: onCash }));
+    await repository.save(ADA, entry({ entryDate: '2026-07-15', memo: 'July, cash', lines: onCash }));
+    await repository.save(
+      ADA,
+      entry({
+        entryDate: '2026-06-16',
+        memo: 'June, on account',
+        lines: [
+          { account: 'expense', side: 'debit', amount: 300 as Money },
+          { account: 'payable', side: 'credit', amount: 300 as Money },
+        ],
+      }),
+    );
+
+    expect(
+      await memosFound({ from: '2026-06-01', to: '2026-06-30', account: 'cash' }),
+    ).toEqual(['June, cash']);
+  });
+
+  it("keeps an Account search inside one User's books (ADR-0021)", async () => {
+    const onCash = [
+      { account: 'expense', side: 'debit', amount: 300 as Money },
+      { account: 'cash', side: 'credit', amount: 300 as Money },
+    ] as const;
+    await repository.save(ADA, entry({ memo: 'Ada', lines: onCash }));
+    await repository.save(GRACE, entry({ memo: 'Grace', lines: onCash }));
+
+    expect(await memosFound({ account: 'cash' }, ADA)).toEqual(['Ada']);
+    expect(await memosFound({ account: 'cash' }, GRACE)).toEqual(['Grace']);
+  });
+
   it('keeps a range inside one User\'s books (ADR-0021)', async () => {
     await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'Ada' }));
     await repository.save(GRACE, entry({ entryDate: '2026-06-15', memo: 'Grace' }));

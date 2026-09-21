@@ -60,6 +60,22 @@ describe('answerEntrySearch', () => {
     expect(answer).toEqual({ outcome: 'answered', criteria: { from: '2026-07-01' }, entries: [] });
   });
 
+  it('reads the Account out of the query, and fills it back into the form', async () => {
+    const answer = await answerEntrySearch(holding([ENTRY]), { account: 'cash' });
+
+    expect(answer).toEqual({
+      outcome: 'answered',
+      criteria: { account: 'cash' },
+      entries: [ENTRY],
+    });
+  });
+
+  it('refuses an Account the procedure refuses, and keeps it in the form', async () => {
+    const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { account: 'petty-cash' });
+
+    expect(answer).toEqual({ outcome: 'refused', criteria: { account: 'petty-cash' } });
+  });
+
   it('refuses a malformed day, and fills no criterion back into the form', async () => {
     const answer = await answerEntrySearch(holding([ENTRY]), { from: 'june' });
 

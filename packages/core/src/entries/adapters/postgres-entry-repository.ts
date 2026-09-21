@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, gte, lte, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gte, lte, type SQL } from 'drizzle-orm';
+import { QueryBuilder } from 'drizzle-orm/pg-core';
 import {
   domainError,
   err,
@@ -14,7 +15,7 @@ import { createDatabase, schema } from '@repo/db';
 import { describeError } from '../../logging/domain/describe-error';
 import { type Logger } from '../../logging/ports/logger';
 import { money } from '../../money/domain/money';
-import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
+import { makeEntry, type AccountCode, type Entry, type EntryDraft } from '../domain/entry';
 import { type SearchCriteria } from '../domain/search-criteria';
 import { type EntryRepository } from '../ports/entry-repository';
 
@@ -173,6 +174,33 @@ function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
     eq(schema.entries.userId, userId),
     ...(criteria.from === undefined ? [] : [gte(schema.entries.entryDate, criteria.from)]),
     ...(criteria.to === undefined ? [] : [lte(schema.entries.entryDate, criteria.to)]),
+    ...(criteria.account === undefined ? [] : [touches(criteria.account)]),
+  );
+}
+
+/**
+ * That the entry has a line naming the account, as a condition on the entry.
+ *
+ * `exists` rather than a join: an entry with two lines on the account would
+ * come back twice from a join, and the criterion is about the entry rather than
+ * about which of its lines matched. Which is also why the condition stays on
+ * the entry in both reads -- the lines that come back are the entry's lines,
+ * every one of them, not the ones that matched.
+ *
+ * The subquery is built without a connection, because this condition is the
+ * same whichever database it runs against.
+ */
+function touches(account: AccountCode): SQL {
+  return exists(
+    new QueryBuilder()
+      .select({ entryId: schema.entryLines.entryId })
+      .from(schema.entryLines)
+      .where(
+        and(
+          eq(schema.entryLines.entryId, schema.entries.id),
+          eq(schema.entryLines.account, account),
+        ),
+      ),
   );
 }
 
