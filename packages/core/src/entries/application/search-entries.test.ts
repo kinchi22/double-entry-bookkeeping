@@ -102,32 +102,32 @@ describe('createSearchEntries', () => {
   it('searches with the criteria it was given, so a day range narrows the answer', async () => {
     expect(isOk(made)).toBe(true);
     if (!isOk(made)) return;
-    const june = made.value;
-    const july: Entry = { ...june, entryDate: '2026-07-04' };
-    const searchEntries = createSearchEntries({ entries: holdingInRange([july, june]) });
+    const september = made.value;
+    const october: Entry = { ...september, entryDate: '2026-10-04' };
+    const searchEntries = createSearchEntries({ entries: holdingInRange([october, september]) });
 
-    const found = await searchEntries({ userId: ADA }, { from: '2026-09-01' });
+    const found = await searchEntries({ userId: ADA }, { from: '2026-10-01' });
 
-    expect(isOk(found) && found.value).toEqual([june]);
+    expect(isOk(found) && found.value).toEqual([october]);
   });
 
   it('searches with each end of a range on its own, and with neither', async () => {
     expect(isOk(made)).toBe(true);
     if (!isOk(made)) return;
-    const june = made.value;
-    const july: Entry = { ...june, entryDate: '2026-07-04' };
-    const searchEntries = createSearchEntries({ entries: holdingInRange([july, june]) });
+    const september = made.value;
+    const october: Entry = { ...september, entryDate: '2026-10-04' };
+    const searchEntries = createSearchEntries({ entries: holdingInRange([october, september]) });
 
-    const upTo = await searchEntries({ userId: ADA }, { to: '2026-08-01' });
+    const upTo = await searchEntries({ userId: ADA }, { to: '2026-09-30' });
     const between = await searchEntries(
       { userId: ADA },
-      { from: '2026-07-01', to: '2026-07-31' },
+      { from: '2026-10-01', to: '2026-10-31' },
     );
     const everything = await searchEntries({ userId: ADA }, NO_CRITERIA);
 
-    expect(isOk(upTo) && upTo.value).toEqual([july]);
-    expect(isOk(between) && between.value).toEqual([july]);
-    expect(isOk(everything) && everything.value).toEqual([july, june]);
+    expect(isOk(upTo) && upTo.value).toEqual([september]);
+    expect(isOk(between) && between.value).toEqual([october]);
+    expect(isOk(everything) && everything.value).toEqual([october, september]);
   });
 
   it('refuses a range that ends before it starts, and searches nothing', async () => {

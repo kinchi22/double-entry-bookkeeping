@@ -1,12 +1,12 @@
-import { parseSearchQuery, type PostedEntry, type SearchCriteriaInput } from '@repo/contracts';
+import { type SearchQuery } from '@repo/contracts';
 import Link from 'next/link';
 import { type ReactNode } from 'react';
 import { EntrySearchForm } from '../../../../components/entry-search-form';
 import { EntrySearchResults } from '../../../../components/entry-search-results';
 import { en } from '../../../../messages/en';
 import { createContext } from '../../../../server/context';
-import { fromTrpcError } from '../../../../server/domain-error';
-import { pathWithQuery, type QueryParameters } from '../../../../server/return-path';
+import { answerEntrySearch } from '../../../../server/entry-search';
+import { ENTRY_SEARCH_PATH, pathWithQuery } from '../../../../server/return-path';
 import { createCaller } from '../../../../server/root-router';
 import { orSignIn } from '../../../../server/sign-in-redirect';
 
@@ -17,37 +17,34 @@ export const metadata = {
   title: en.entrySearch.title,
 };
 
-const SEARCH_PATH = '/entries/search';
-
 type EntrySearchPageProps = {
-  readonly searchParams: Promise<QueryParameters>;
+  readonly searchParams: Promise<SearchQuery>;
 };
 
 /**
- * The Entry search: the criteria come from the URL's query and the results are
- * what one procedure answered with.
+ * Composition only. The criteria come from the URL's query and the results are
+ * what one procedure answered with; `answerEntrySearch` decides which of the
+ * two things this page can render it is, and whether a refusal is one of them.
  *
- * A search is a read, so the criteria travel in the query and the page renders
+ * A search is a read, so the criteria travel in the query and this page renders
  * them on the read path -- no Server Action, which is the write path. That is
  * also what makes a search reloadable, bookmarkable, shareable, and walkable
  * with the back button.
  *
- * A refusal is an answer this page renders rather than an error it fails on,
- * for the reason the entry form gives. There are two ways criteria can be
- * refused and one code between them: a day that is not a calendar day is
- * refused by the contract before anything is asked, and a range that ends
- * before it starts is refused by the domain, which the procedure raises. Either
- * way the page explains and shows no results at all, because results would be
- * the answer to a question other than the one the URL states.
+ * With no Session the procedure refuses and the visitor is sent to sign in, and
+ * back to this search once they have -- which is what the query in the return
+ * path carries.
  */
 export default async function EntrySearchPage({
   searchParams,
 }: EntrySearchPageProps): Promise<ReactNode> {
   const query = await searchParams;
-  const criteria = parseSearchQuery(query);
-  const found = criteria.ok
-    ? await search(criteria.value, pathWithQuery(SEARCH_PATH, query))
-    : undefined;
+  const caller = createCaller(await createContext());
+  const answer = await answerEntrySearch(
+    (criteria) =>
+      orSignIn(caller.entries.search(criteria), pathWithQuery(ENTRY_SEARCH_PATH, query)),
+    query,
+  );
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 p-8">
@@ -59,39 +56,14 @@ export default async function EntrySearchPage({
           {en.entrySearch.backToEntries}
         </Link>
       </header>
-      <EntrySearchForm criteria={criteria.ok ? criteria.value : EMPTY_CRITERIA} />
-      {found === undefined ? (
+      <EntrySearchForm criteria={answer.criteria} />
+      {answer.outcome === 'refused' ? (
         <p role="alert" className="text-sm text-red-700">
           {en.entrySearch.refused}
         </p>
       ) : (
-        <EntrySearchResults entries={found} />
+        <EntrySearchResults entries={answer.entries} />
       )}
     </main>
   );
-}
-
-/** Nothing to fill back in, because nothing the URL held was a criterion. */
-const EMPTY_CRITERIA: SearchCriteriaInput = {};
-
-/**
- * The entries the criteria match, or nothing at all when the criteria break a
- * rule. With no Session the visitor is sent to sign in and back to this search
- * once they have, which is what `from` carries. Anything that is not a refusal
- * of these criteria is rethrown by `fromTrpcError`, so a defect still reaches
- * the error boundary.
- */
-async function search(
-  criteria: SearchCriteriaInput,
-  from: string,
-): Promise<readonly PostedEntry[] | undefined> {
-  const caller = createCaller(await createContext());
-  try {
-    return await orSignIn(caller.entries.search(criteria), from);
-  } catch (thrown) {
-    if (fromTrpcError(thrown).code === 'INVALID_INPUT') {
-      return undefined;
-    }
-    throw thrown;
-  }
 }

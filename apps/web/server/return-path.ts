@@ -1,3 +1,5 @@
+import { type SearchQuery } from '@repo/contracts';
+
 /**
  * Where a User lands once they sign in. ADR-0021.
  *
@@ -9,6 +11,12 @@
  * Like `env.ts`, this file does not import `server-only`, so it stays testable.
  */
 export const SIGNED_IN_HOME = '/entries';
+
+/**
+ * Where the Entry search lives. Said once: the search form submits here, and
+ * the page sends a visitor with no Session back here once they have signed in.
+ */
+export const ENTRY_SEARCH_PATH = '/entries/search';
 
 /** An origin no request can have, to resolve a path against and compare. */
 const PROBE = 'http://return-path.invalid';
@@ -34,10 +42,7 @@ export function signInPath(from: string): string {
   return `/sign-in?${new URLSearchParams({ returnTo: from }).toString()}`;
 }
 
-/** A query as a server component is handed one. */
-export type QueryParameters = Readonly<Record<string, string | readonly string[] | undefined>>;
-
-const values = (value: string | readonly string[] | undefined): readonly string[] => {
+const values = (value: SearchQuery[string]): readonly string[] => {
   if (value === undefined) {
     return [];
   }
@@ -51,8 +56,14 @@ const values = (value: string | readonly string[] | undefined): readonly string[
  *
  * It rebuilds the query from the parameters rather than copying a string, so
  * what comes back is escaped, and a parameter given twice stays given twice.
+ * Every parameter is carried, not only the ones that are criteria: what the
+ * visitor asked for is the page they are sent back to. `returnPath` is what
+ * keeps that safe, by accepting only a path on this origin.
+ *
+ * `SearchQuery` is the shape a server component is handed a query in, stated
+ * once in `@repo/contracts` and read here rather than restated.
  */
-export function pathWithQuery(path: string, query: QueryParameters): string {
+export function pathWithQuery(path: string, query: SearchQuery): string {
   const parameters = new URLSearchParams();
   for (const [name, value] of Object.entries(query)) {
     for (const one of values(value)) {

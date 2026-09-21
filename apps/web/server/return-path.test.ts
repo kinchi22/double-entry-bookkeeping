@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pathWithQuery, returnPath, signInPath } from './return-path';
+import { ENTRY_SEARCH_PATH, pathWithQuery, returnPath, signInPath } from './return-path';
 
 describe('returnPath', () => {
   it.each([
@@ -70,7 +70,7 @@ describe('pathWithQuery', () => {
   });
 
   it('is read back by returnPath as the path and query it was given', () => {
-    expect(returnPath(pathWithQuery('/entries/search', { from: '2026-06-01' }))).toBe(
+    expect(returnPath(pathWithQuery(ENTRY_SEARCH_PATH, { from: '2026-06-01' }))).toBe(
       '/entries/search?from=2026-06-01',
     );
   });
