@@ -16,13 +16,12 @@ Status is one of:
 
 An ADR whose decision still stands but whose record has gone out of date is
 amended in place: correct the passages, and add `**Amended:** YYYY-MM-DD, PR #N`
-directly under `**Date:**`, one line per amendment, oldest first. The status and
-the index row in `docs/ARCHITECTURE.md` do not change -- this is not a
-supersession, and there is no status for "superseded in part". Use it when what
-was decided is unchanged and only the description of it is wrong, as ADR-0006
-was about where `E2E build` runs. A decision that no longer stands is
-`Superseded by ADR-NNNN` instead. No gate checks this line; the form above is
-the whole rule.
+directly under `**Date:**`. The status and the index row in
+`docs/ARCHITECTURE.md` do not change -- this is not a supersession, and there is
+no status for "superseded in part". Use it when what was decided is unchanged
+and only the description of it is wrong, as ADR-0006 was about where `E2E build`
+runs. A decision that no longer stands is `Superseded by ADR-NNNN` instead. No
+gate checks this line; the form above is the whole rule.
 
 ## Problem
 
