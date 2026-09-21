@@ -90,12 +90,13 @@ describe('answerEntrySearch', () => {
     });
   });
 
+  // How long a term may be is the domain's rule, so the term here is an
+  // ordinary one: what this layer decides is that a refusal from the procedure
+  // becomes `refused`, carrying back whatever was asked for.
   it('refuses a memo term the procedure refuses, and carries the term back with it', async () => {
-    const term = 'a'.repeat(1000);
+    const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { memo: 'supplies' });
 
-    const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { memo: term });
-
-    expect(answer).toEqual({ outcome: 'refused', criteria: { memo: term } });
+    expect(answer).toEqual({ outcome: 'refused', criteria: { memo: 'supplies' } });
   });
 
   it('refuses a malformed day, and fills no criterion back into the form', async () => {

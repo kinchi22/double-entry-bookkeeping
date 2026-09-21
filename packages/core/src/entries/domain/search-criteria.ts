@@ -1,5 +1,5 @@
 import { domainError, err, ok, type DomainError, type Result } from '@repo/contracts';
-import { isAccountCode, MEMO_MAX_LENGTH, type AccountCode } from './entry';
+import { isAccountCode, memoLength, MEMO_MAX_LENGTH, type AccountCode } from './entry';
 
 /**
  * What an Entry search is narrowed by.
@@ -92,11 +92,9 @@ export function makeSearchCriteria(draft: SearchCriteriaDraft): Result<SearchCri
     );
   }
 
-  // A memo is limited in code points, which is what spreading a string yields,
-  // so a term is measured the same way -- `makeEntry` says why the rule counts
-  // them rather than graphemes.
-  // eslint-disable-next-line @typescript-eslint/no-misused-spread
-  if ([...memo].length > MEMO_MAX_LENGTH) {
+  // Measured by `entry.ts`, so a term is counted exactly as the memo it could
+  // match is -- that file states what a character is here, and why.
+  if (memoLength(memo) > MEMO_MAX_LENGTH) {
     return err(
       domainError(
         'INVALID_INPUT',
@@ -105,18 +103,14 @@ export function makeSearchCriteria(draft: SearchCriteriaDraft): Result<SearchCri
     );
   }
 
-  const criteria: { from?: string; to?: string; account?: AccountCode; memo?: string } = {};
-  if (from !== undefined) {
-    criteria.from = from;
-  }
-  if (to !== undefined) {
-    criteria.to = to;
-  }
-  if (account !== undefined) {
-    criteria.account = account;
-  }
-  if (memo !== '') {
-    criteria.memo = memo;
-  }
-  return ok(criteria);
+  // One line per criterion, each either the criterion or nothing at all: a
+  // criterion that was not asked for is absent rather than present and empty,
+  // which is what `NO_CRITERIA` is and what the repository reads as "match
+  // every entry". The shape is `SearchCriteria`'s rather than restated here.
+  return ok({
+    ...(from === undefined ? {} : { from }),
+    ...(to === undefined ? {} : { to }),
+    ...(account === undefined ? {} : { account }),
+    ...(memo === '' ? {} : { memo }),
+  });
 }

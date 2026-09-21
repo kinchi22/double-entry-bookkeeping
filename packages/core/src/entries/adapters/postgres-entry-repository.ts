@@ -179,26 +179,37 @@ function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
   );
 }
 
-/**
- * The escape character `like` and `ilike` take unless one is named, which is
- * why every one of them in a term is doubled below.
- */
+/** The escape character `like` and `ilike` take unless one is named. */
 const LIKE_ESCAPE = '\\';
+
+/**
+ * Every character `like` gives a meaning to, including the escape character,
+ * which has to escape itself. `containing` escapes exactly what is in here, so
+ * the set and the character that neutralises it cannot drift apart -- which
+ * they could when one was a constant and the other a pattern written out again.
+ */
+const LIKE_SPECIAL = new Set([LIKE_ESCAPE, '%', '_']);
 
 /**
  * A memo term as the pattern that finds it anywhere in a memo.
  *
  * `ilike` rather than `lower(memo) like lower(...)`: one operator, and the same
  * answer without lower-casing a column on every row. It is a pattern language,
- * so what the User typed is escaped into it -- `%`, `_` and the escape
- * character itself. The wildcards in a term are the User's to type and not to
- * mean: a term of `%` finds the memo with a percent sign in it, rather than
- * every memo there is.
+ * so what the User typed is escaped into it. The wildcards in a term are the
+ * User's to type and not to mean: a term of `%` finds the memo with a percent
+ * sign in it, rather than every memo there is.
+ *
+ * Walked by code point, which is what `for...of` over a string yields, and each
+ * character is either escaped or itself -- so a term is never scanned twice and
+ * an escape this adds can never be escaped again.
  *
  * The pattern travels as a bound parameter, so nothing here is about quoting.
  */
 function containing(term: string): string {
-  const literal = term.replaceAll(/[\\%_]/gu, (character) => `${LIKE_ESCAPE}${character}`);
+  let literal = '';
+  for (const character of term) {
+    literal += LIKE_SPECIAL.has(character) ? `${LIKE_ESCAPE}${character}` : character;
+  }
   return `%${literal}%`;
 }
 
