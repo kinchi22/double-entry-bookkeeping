@@ -35,6 +35,13 @@ test-results/
 .next-server-only-probe/
 apps/web/app/(app)/server-only-probe/
 
+# Agent scratch space. `/implement-issue` builds a Task in a `git worktree` of
+# its own when the primary tree is busy, and puts it here. It holds a full
+# checkout and its own node_modules, it is deleted once the Task's pull request
+# merges, and nothing in it is ever the source of a change: the branch is on the
+# remote before the worktree goes.
+.claude/worktrees/
+
 # Secrets and per-machine configuration
 .env
 .env.*
