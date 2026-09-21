@@ -58,7 +58,12 @@ it serial.
    --required`). Green, and with no owned path in the diff, merge it:
    `gh pr merge <pr> --squash --delete-branch`. An owned path, or a pull
    request into `main`, waits for the owner: that is a stop.
-7. **Next.** On a Feature, go back to 1.
+7. **Read the milestone's `E2E build`.** A push to the milestone starts one.
+   The criterion's own specs are red until their Task lands, so a failure in the
+   spec file this Feature is building is expected. A failure anywhere else is a
+   regression the milestone is carrying: open a Bug, and do not let it reach the
+   integration pull request.
+8. **Next.** On a Feature, go back to 1.
 
 ## Stops
 

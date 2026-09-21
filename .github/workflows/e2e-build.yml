@@ -3,11 +3,25 @@ name: E2E build
 # Section 6, gate 7, as a merge gate. ADR-0006. The suite against a production
 # build of this commit, served by `next start`, so it depends on no deployment.
 #
-# Only into main, and on main itself. A feature pull request onto a milestone is
-# red by design until the behaviour lands, and must not be blocked by the specs
-# it is there to satisfy (ADR-0002); the milestone meeting main is where they
-# must all be green. Required by the `main` ruleset alone, with GitHub Actions
-# as its only accepted source: a repository setting, so nothing here enforces it.
+# The run has two roles, and the trigger list is where they meet.
+#
+# Into main, and on main itself, it is a required merge gate: the whole suite
+# must be green, because a criterion is only shipped when every spec that states
+# it passes. Required by the `main` ruleset alone, with GitHub Actions as its
+# only accepted source: a repository setting, so nothing here enforces it.
+#
+# On a push to a milestone branch it is advisory, and part of it is red by
+# design: the criterion's specs land first and fail until each Task builds the
+# behaviour they describe (ADR-0002, ADR-0006). It is in no ruleset there and
+# blocks nothing. It runs after each Task lands so the milestone is judged by
+# the specs as it grows, and the driver reads it: a failure outside the
+# criterion's own spec file is a regression the milestone is carrying, not a
+# specification waiting for its behaviour. No gate can tell those two apart,
+# which is why this one reports and a person judges.
+#
+# A pull request *onto* a milestone still runs nothing. It would be red by
+# design too, and ADR-0002 says the specs must not block the branch that exists
+# to satisfy them.
 #
 # Its own workflow rather than a job in ci.yml behind `if:`, because the two fail
 # differently. A job skipped by `if:` reports success to a required check. A pull
@@ -21,7 +35,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, 'milestone/**']
 
 concurrency:
   group: e2e-build-${{ github.ref }}
