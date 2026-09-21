@@ -67,11 +67,12 @@ export const en = {
     to: 'To',
     account: 'Account',
     anyAccount: 'Any account',
+    memo: 'Memo',
     submit: 'Search',
     results: 'Results',
     nothingMatched: 'Nothing matched what you asked for.',
     refused:
-      'That search was not run. Check the day range -- each day is a calendar day, and From cannot be later than To -- and that the account is one of those listed.',
+      'That search was not run. Check the day range -- each day is a calendar day, and From cannot be later than To -- that the account is one of those listed, and that the memo is no longer than a memo can be.',
     backToEntries: 'Back to entries',
   },
   /**

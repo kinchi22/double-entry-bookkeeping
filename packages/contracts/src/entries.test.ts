@@ -269,6 +269,22 @@ describe('searchCriteriaSchema', () => {
   it('refuses an Account that is not one code', () => {
     expect(searchCriteriaSchema.safeParse({ account: ['cash', 'sales'] }).success).toBe(false);
   });
+
+  it('accepts a memo term beside the other criteria, and without them', () => {
+    expect(
+      searchCriteriaSchema.parse({ from: '2026-06-01', account: 'cash', memo: 'rent' }),
+    ).toEqual({ from: '2026-06-01', account: 'cash', memo: 'rent' });
+    expect(searchCriteriaSchema.safeParse({ memo: 'rent' }).success).toBe(true);
+  });
+
+  it('leaves what a term may hold to the domain: whitespace and a wildcard parse', () => {
+    expect(searchCriteriaSchema.safeParse({ memo: '   ' }).success).toBe(true);
+    expect(searchCriteriaSchema.safeParse({ memo: '100%' }).success).toBe(true);
+  });
+
+  it('refuses a memo term that is not one string', () => {
+    expect(searchCriteriaSchema.safeParse({ memo: ['rent', 'fuel'] }).success).toBe(false);
+  });
 });
 
 describe('parseSearchQuery', () => {
@@ -341,6 +357,43 @@ describe('parseSearchQuery', () => {
 
   it('refuses a criterion given twice, which arrives as a list', () => {
     const criteria = parseSearchQuery({ from: ['2026-06-01', '2026-07-01'] });
+
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('reads the memo term out of the query, beside the other criteria', () => {
+    const criteria = parseSearchQuery({ from: '2026-06-01', account: 'cash', memo: 'rent' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({
+      from: '2026-06-01',
+      account: 'cash',
+      memo: 'rent',
+    });
+  });
+
+  it('reads an empty memo box as an absent criterion, not as a term of nothing', () => {
+    const criteria = parseSearchQuery({ memo: '', to: '2026-06-30' });
+
+    expect(isOk(criteria)).toBe(true);
+    if (!isOk(criteria)) return;
+    expect(criteria.value.memo).toBeUndefined();
+    expect(criteria.value.to).toBe('2026-06-30');
+  });
+
+  it('carries a term of only whitespace through, for the domain to read as absent', () => {
+    const criteria = parseSearchQuery({ memo: '  ' });
+
+    expect(isOk(criteria) && criteria.value.memo).toBe('  ');
+  });
+
+  it('carries a wildcard in a term through unchanged, since it is a character to match', () => {
+    const criteria = parseSearchQuery({ memo: '100%_off' });
+
+    expect(isOk(criteria) && criteria.value.memo).toBe('100%_off');
+  });
+
+  it('refuses a memo term given twice, which arrives as a list', () => {
+    const criteria = parseSearchQuery({ memo: ['rent', 'fuel'] });
 
     expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
   });

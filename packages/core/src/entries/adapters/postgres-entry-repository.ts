@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, exists, gte, lte, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, gte, ilike, lte, type SQL } from 'drizzle-orm';
 import { QueryBuilder } from 'drizzle-orm/pg-core';
 import {
   domainError,
@@ -175,7 +175,31 @@ function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
     ...(criteria.from === undefined ? [] : [gte(schema.entries.entryDate, criteria.from)]),
     ...(criteria.to === undefined ? [] : [lte(schema.entries.entryDate, criteria.to)]),
     ...(criteria.account === undefined ? [] : [touches(criteria.account)]),
+    ...(criteria.memo === undefined ? [] : [ilike(schema.entries.memo, containing(criteria.memo))]),
   );
+}
+
+/**
+ * The escape character `like` and `ilike` take unless one is named, which is
+ * why every one of them in a term is doubled below.
+ */
+const LIKE_ESCAPE = '\\';
+
+/**
+ * A memo term as the pattern that finds it anywhere in a memo.
+ *
+ * `ilike` rather than `lower(memo) like lower(...)`: one operator, and the same
+ * answer without lower-casing a column on every row. It is a pattern language,
+ * so what the User typed is escaped into it -- `%`, `_` and the escape
+ * character itself. The wildcards in a term are the User's to type and not to
+ * mean: a term of `%` finds the memo with a percent sign in it, rather than
+ * every memo there is.
+ *
+ * The pattern travels as a bound parameter, so nothing here is about quoting.
+ */
+function containing(term: string): string {
+  const literal = term.replaceAll(/[\\%_]/gu, (character) => `${LIKE_ESCAPE}${character}`);
+  return `%${literal}%`;
 }
 
 /**

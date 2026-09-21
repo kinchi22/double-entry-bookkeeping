@@ -89,6 +89,24 @@ export function EntrySearchForm({ criteria }: EntrySearchFormProps): ReactNode {
         </select>
       </div>
 
+      <div className={`${FIELD} grow`}>
+        <label htmlFor={`${id}-memo`}>{en.entrySearch.memo}</label>
+        {/*
+          A plain box: what is typed is looked for literally, so there is no
+          pattern to learn and nothing to escape. It is not `required` and it is
+          not capped here -- an empty box and one holding only spaces are both
+          the criterion dropped, and how long a term may be is the domain's rule
+          rather than a second one stated in the markup.
+        */}
+        <input
+          id={`${id}-memo`}
+          name={SEARCH_CRITERIA_FIELDS.memo}
+          type="text"
+          defaultValue={criteria.memo ?? ''}
+          className={CONTROL}
+        />
+      </div>
+
       <button
         type="submit"
         className="rounded border border-neutral-300 px-3 py-1 text-sm"

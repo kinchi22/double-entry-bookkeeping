@@ -28,7 +28,9 @@ export type EntryRepository = {
    *
    * The criteria have passed `makeSearchCriteria`, so an implementation applies
    * them rather than judging them, and matches in its query rather than in
-   * memory.
+   * memory. A memo term arrives trimmed and is matched as a substring, case
+   * insensitively, and literally: what is in it is a character to find rather
+   * than a pattern to run.
    */
   readonly search: (
     userId: UserId,

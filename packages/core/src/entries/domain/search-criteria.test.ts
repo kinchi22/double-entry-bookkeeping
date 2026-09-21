@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isErr, isOk } from '@repo/contracts';
+import { MEMO_MAX_LENGTH } from './entry';
 import { makeSearchCriteria, NO_CRITERIA } from './search-criteria';
 
 /**
@@ -106,5 +107,107 @@ describe('makeSearchCriteria', () => {
 
     expect(isErr(criteria) && criteria.error.message).toContain('2026-06-30');
     expect(isErr(criteria) && criteria.error.message).toContain('2026-06-01');
+  });
+
+  it('keeps a memo term to look for', () => {
+    const criteria = makeSearchCriteria({ memo: 'coffee' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo: 'coffee' });
+  });
+
+  it('keeps the memo term beside the range and the Account, so all three narrow together', () => {
+    const criteria = makeSearchCriteria({
+      from: '2026-06-01',
+      to: '2026-06-30',
+      account: 'cash',
+      memo: 'rent',
+    });
+
+    expect(isOk(criteria) && criteria.value).toEqual({
+      from: '2026-06-01',
+      to: '2026-06-30',
+      account: 'cash',
+      memo: 'rent',
+    });
+  });
+
+  it('trims a term, so the space either side of a typed word is not searched for', () => {
+    const criteria = makeSearchCriteria({ memo: '  coffee  ' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo: 'coffee' });
+  });
+
+  it('keeps the space inside a term, which is part of what was typed', () => {
+    const criteria = makeSearchCriteria({ memo: ' coffee beans ' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo: 'coffee beans' });
+  });
+
+  it('reads an absent memo term as no criterion rather than as a criterion of nothing', () => {
+    const criteria = makeSearchCriteria({ memo: undefined });
+
+    expect(isOk(criteria) && Object.keys(criteria.value)).toEqual([]);
+  });
+
+  it.each([
+    ['nothing at all', ''],
+    ['a single space', ' '],
+    ['several spaces', '     '],
+    ['a tab and a newline', '\t\n'],
+  ])('reads a term of only whitespace as no criterion: %s', (_case, memo) => {
+    const criteria = makeSearchCriteria({ memo });
+
+    expect(isOk(criteria)).toBe(true);
+    expect(isOk(criteria) && Object.keys(criteria.value)).toEqual([]);
+  });
+
+  it('drops a whitespace-only term without dropping the criteria beside it', () => {
+    const criteria = makeSearchCriteria({ from: '2026-06-01', account: 'cash', memo: '  ' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ from: '2026-06-01', account: 'cash' });
+  });
+
+  it('keeps a term as long as a memo can be, which is a term that can still match', () => {
+    const memo = 'a'.repeat(MEMO_MAX_LENGTH);
+
+    const criteria = makeSearchCriteria({ memo });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo });
+  });
+
+  it('refuses a term longer than a memo can be, since nothing that long can match', () => {
+    const criteria = makeSearchCriteria({ memo: 'a'.repeat(MEMO_MAX_LENGTH + 1) });
+
+    expect(isErr(criteria)).toBe(true);
+    expect(isErr(criteria) && criteria.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('says how long a term may be when it refuses one', () => {
+    const criteria = makeSearchCriteria({ memo: 'a'.repeat(MEMO_MAX_LENGTH + 1) });
+
+    expect(isErr(criteria) && criteria.error.message).toContain(String(MEMO_MAX_LENGTH));
+  });
+
+  it('measures a term the way a memo is measured, in code points', () => {
+    // Two UTF-16 units each, so a term of `MEMO_MAX_LENGTH` of them is twice
+    // that by `length` and still exactly as long as a memo it could match.
+    const grinning = String.fromCodePoint(0x1f600);
+
+    const criteria = makeSearchCriteria({ memo: grinning.repeat(MEMO_MAX_LENGTH) });
+
+    expect(isOk(criteria)).toBe(true);
+    expect(isErr(makeSearchCriteria({ memo: grinning.repeat(MEMO_MAX_LENGTH + 1) }))).toBe(true);
+  });
+
+  it('measures the term it kept, so trailing space cannot push one over the cap', () => {
+    const criteria = makeSearchCriteria({ memo: `${'a'.repeat(MEMO_MAX_LENGTH)}   ` });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo: 'a'.repeat(MEMO_MAX_LENGTH) });
+  });
+
+  it('keeps a wildcard in a term, which is a character to look for like any other', () => {
+    const criteria = makeSearchCriteria({ memo: '100% off_hours' });
+
+    expect(isOk(criteria) && criteria.value).toEqual({ memo: '100% off_hours' });
   });
 });

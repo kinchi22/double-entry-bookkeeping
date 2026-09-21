@@ -80,6 +80,24 @@ describe('answerEntrySearch', () => {
     expect(answer).toEqual({ outcome: 'refused', criteria: { account: 'petty-cash' } });
   });
 
+  it('reads the memo term out of the query, and fills it back into the form as typed', async () => {
+    const answer = await answerEntrySearch(holding([ENTRY]), { memo: '  Supplies  ' });
+
+    expect(answer).toEqual({
+      outcome: 'answered',
+      criteria: { memo: '  Supplies  ' },
+      entries: [ENTRY],
+    });
+  });
+
+  it('refuses a memo term the procedure refuses, and carries the term back with it', async () => {
+    const term = 'a'.repeat(1000);
+
+    const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { memo: term });
+
+    expect(answer).toEqual({ outcome: 'refused', criteria: { memo: term } });
+  });
+
   it('refuses a malformed day, and fills no criterion back into the form', async () => {
     const answer = await answerEntrySearch(holding([ENTRY]), { from: 'june' });
 

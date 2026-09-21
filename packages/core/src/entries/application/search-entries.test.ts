@@ -10,7 +10,7 @@ import {
   type UserId,
 } from '@repo/contracts';
 import { SIGNED_OUT } from '../../auth/domain/auth-context';
-import { makeEntry, type Entry } from '../domain/entry';
+import { makeEntry, MEMO_MAX_LENGTH, type Entry } from '../domain/entry';
 import { NO_CRITERIA } from '../domain/search-criteria';
 import { type EntryRepository } from '../ports/entry-repository';
 import { createSearchEntries } from './search-entries';
@@ -54,7 +54,9 @@ const holdingMatching = (held: readonly Entry[]): EntryRepository =>
             (criteria.from === undefined || entry.entryDate >= criteria.from) &&
             (criteria.to === undefined || entry.entryDate <= criteria.to) &&
             (criteria.account === undefined ||
-              entry.lines.some((line) => line.account === criteria.account)),
+              entry.lines.some((line) => line.account === criteria.account)) &&
+            (criteria.memo === undefined ||
+              entry.memo.toLowerCase().includes(criteria.memo.toLowerCase())),
         ),
       ),
     ),
@@ -191,6 +193,63 @@ describe('createSearchEntries', () => {
       { userId: ADA },
       { from: '2026-09-30', to: '2026-09-01' },
     );
+
+    expect(isErr(found)).toBe(true);
+    expect(isErr(found) && found.error.code).toBe('INVALID_INPUT');
+  });
+
+  it('searches with the memo term it was given, so it narrows the answer too', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const supplies = made.value;
+    const rent: Entry = { ...supplies, memo: 'Office rent' };
+    const searchEntries = createSearchEntries({ entries: holdingMatching([rent, supplies]) });
+
+    const found = await searchEntries({ userId: ADA }, { memo: 'supplies' });
+
+    expect(isOk(found) && found.value).toEqual([supplies]);
+  });
+
+  it('searches with the term trimmed, and with a whitespace term not at all', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const supplies = made.value;
+    const rent: Entry = { ...supplies, memo: 'Office rent' };
+    const searchEntries = createSearchEntries({ entries: holdingMatching([rent, supplies]) });
+
+    const trimmed = await searchEntries({ userId: ADA }, { memo: '  supplies  ' });
+    const blank = await searchEntries({ userId: ADA }, { memo: '   ' });
+
+    expect(isOk(trimmed) && trimmed.value).toEqual([supplies]);
+    expect(isOk(blank) && blank.value).toEqual([rent, supplies]);
+  });
+
+  it('narrows by the memo, the Account and the range together, with `and`', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const september = made.value;
+    const october: Entry = { ...september, entryDate: '2026-10-04', memo: 'Office rent' };
+    const searchEntries = createSearchEntries({ entries: holdingMatching([october, september]) });
+
+    const all = await searchEntries(
+      { userId: ADA },
+      { from: '2026-10-01', account: 'cash', memo: 'rent' },
+    );
+    const wrongMemo = await searchEntries(
+      { userId: ADA },
+      { from: '2026-10-01', account: 'cash', memo: 'supplies' },
+    );
+
+    expect(isOk(all) && all.value).toEqual([october]);
+    expect(isOk(wrongMemo) && wrongMemo.value).toEqual([]);
+  });
+
+  it('refuses a memo term longer than a memo can be, and searches nothing', async () => {
+    expect(isOk(made)).toBe(true);
+    if (!isOk(made)) return;
+    const searchEntries = createSearchEntries({ entries: holdingMatching([made.value]) });
+
+    const found = await searchEntries({ userId: ADA }, { memo: 'a'.repeat(MEMO_MAX_LENGTH + 1) });
 
     expect(isErr(found)).toBe(true);
     expect(isErr(found) && found.error.code).toBe('INVALID_INPUT');
