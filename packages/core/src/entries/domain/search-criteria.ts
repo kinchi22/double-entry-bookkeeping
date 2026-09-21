@@ -1,5 +1,5 @@
 import { domainError, err, ok, type DomainError, type Result } from '@repo/contracts';
-import { isAccountCode, type AccountCode } from './entry';
+import { isAccountCode, memoLength, MEMO_MAX_LENGTH, type AccountCode } from './entry';
 
 /**
  * What an Entry search is narrowed by.
@@ -9,18 +9,18 @@ import { isAccountCode, type AccountCode } from './entry';
  * with `and`. Listing every entry is an Entry search with no criterion at all,
  * which is what `NO_CRITERIA` states and what `/entries` asks for.
  *
- * Two criteria exist so far: the range of calendar days an entry was posted in,
- * both of whose ends are inclusive, and the Account one of its lines names. The
- * memo joins them here.
+ * There are three: the range of calendar days an entry was posted in, both of
+ * whose ends are inclusive, the Account one of its lines names, and part of the
+ * memo.
  *
  * What is decided where follows `makeEntry`. A criterion's *shape* -- that a
  * day is `YYYY-MM-DD` -- is parsed in `@repo/contracts`, which is why a day is
  * a `string` here. Everything a criterion has to satisfy that needs to know the
- * model -- that an Account is one the chart of accounts holds, and that a range
- * does not end before it starts -- is decided in this file, the one place a
- * criterion's rules are decided. The chart itself is `entry.ts`'s, which this
- * file consults through `isAccountCode` rather than restating. The database
- * enforces none of it.
+ * model -- that an Account is one the chart of accounts holds, that a range does
+ * not end before it starts, and that a memo term is no longer than a memo --
+ * is decided in this file, the one place a criterion's rules are decided. The
+ * chart itself and `MEMO_MAX_LENGTH` are `entry.ts`'s, which this file consults
+ * rather than restating. The database enforces none of it.
  */
 
 /** Criteria as they were asked for, before any rule has been applied to them. */
@@ -31,6 +31,8 @@ export type SearchCriteriaDraft = {
   readonly to?: string | undefined;
   /** The Account an entry has to touch, or absent for any Account. */
   readonly account?: string | undefined;
+  /** Part of the memo to look for, or absent for any memo. */
+  readonly memo?: string | undefined;
 };
 
 /** A draft that passed every rule: what a repository is searched with. */
@@ -38,6 +40,8 @@ export type SearchCriteria = {
   readonly from?: string;
   readonly to?: string;
   readonly account?: AccountCode;
+  /** Trimmed, and never empty: a term with nothing in it is no criterion. */
+  readonly memo?: string;
 };
 
 /** An Entry search narrowed by nothing: every entry the User owns. */
@@ -47,13 +51,22 @@ export const NO_CRITERIA: SearchCriteria = {};
  * Applies every rule the criteria have, and returns them or the first rule they
  * break.
  *
- * There are two. An Account searched for has to be one the chart of accounts
+ * There are three. An Account searched for has to be one the chart of accounts
  * holds, so an Account that cannot exist is refused rather than answered with
  * nothing: the two are different answers, and a stale link deserves the first.
- * And a range must not end before it starts. A range whose ends are the same
- * day is a single day and is allowed. Days are compared as text, which orders
+ * A range must not end before it starts. A range whose ends are the same day is
+ * a single day and is allowed. Days are compared as text, which orders
  * `YYYY-MM-DD` exactly as the calendar does, so nothing here parses a date or
- * reaches for a zone.
+ * reaches for a zone. And a memo term must be no longer than a memo may be:
+ * nothing that long can match, so it is a typo or an attempt to make the
+ * database read every memo for an answer that is known in advance.
+ *
+ * A memo term is trimmed first, as a memo itself is, and a term with nothing
+ * left in it is no criterion at all -- an accidental space empties no results.
+ * Trimming before measuring is what makes those two rules agree: a term of
+ * `MEMO_MAX_LENGTH` characters and a trailing space is the term that can match.
+ * What is left is matched literally by whoever searches with it, so a `%` or a
+ * `_` in it stays exactly the character the User typed.
  *
  * A criterion that was not given is left out rather than carried as an absent
  * value, so what comes back holds the criteria and nothing else.
@@ -67,6 +80,7 @@ export const NO_CRITERIA: SearchCriteria = {};
  */
 export function makeSearchCriteria(draft: SearchCriteriaDraft): Result<SearchCriteria, DomainError> {
   const { from, to, account } = draft;
+  const memo = draft.memo === undefined ? '' : draft.memo.trim();
   if (account !== undefined && !isAccountCode(account)) {
     return err(
       domainError('INVALID_INPUT', `No account named ${account} is in the chart of accounts.`),
@@ -78,15 +92,25 @@ export function makeSearchCriteria(draft: SearchCriteriaDraft): Result<SearchCri
     );
   }
 
-  const criteria: { from?: string; to?: string; account?: AccountCode } = {};
-  if (from !== undefined) {
-    criteria.from = from;
+  // Measured by `entry.ts`, so a term is counted exactly as the memo it could
+  // match is -- that file states what a character is here, and why.
+  if (memoLength(memo) > MEMO_MAX_LENGTH) {
+    return err(
+      domainError(
+        'INVALID_INPUT',
+        `A memo term can be at most ${String(MEMO_MAX_LENGTH)} characters, the length of a memo.`,
+      ),
+    );
   }
-  if (to !== undefined) {
-    criteria.to = to;
-  }
-  if (account !== undefined) {
-    criteria.account = account;
-  }
-  return ok(criteria);
+
+  // One line per criterion, each either the criterion or nothing at all: a
+  // criterion that was not asked for is absent rather than present and empty,
+  // which is what `NO_CRITERIA` is and what the repository reads as "match
+  // every entry". The shape is `SearchCriteria`'s rather than restated here.
+  return ok({
+    ...(from === undefined ? {} : { from }),
+    ...(to === undefined ? {} : { to }),
+    ...(account === undefined ? {} : { account }),
+    ...(memo === '' ? {} : { memo }),
+  });
 }

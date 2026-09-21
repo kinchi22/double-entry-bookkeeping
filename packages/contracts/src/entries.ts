@@ -107,6 +107,7 @@ export const SEARCH_CRITERIA_FIELDS = {
   from: 'from',
   to: 'to',
   account: 'account',
+  memo: 'memo',
 } as const;
 
 /**
@@ -120,6 +121,12 @@ export const SEARCH_CRITERIA_FIELDS = {
  * that decides. So an Account outside the Chart is refused there, with the same
  * `INVALID_INPUT` a malformed day is refused with here.
  *
+ * A memo term is any text, for a third version of the same reason: how long a
+ * memo may be, and that a term of only whitespace is no criterion, are rules
+ * about the model rather than shapes, so `makeSearchCriteria` decides them. What
+ * is typed travels through here untouched -- a wildcard included, since the
+ * User typed a character to look for and not a pattern to run.
+ *
  * The rule *between* two criteria -- that a range does not end before it
  * starts -- is decided in the domain too.
  */
@@ -127,6 +134,7 @@ export const searchCriteriaSchema = z.object({
   from: entryDateSchema.optional(),
   to: entryDateSchema.optional(),
   account: z.string().optional(),
+  memo: z.string().optional(),
 });
 
 export type SearchCriteriaInput = z.infer<typeof searchCriteriaSchema>;
@@ -158,6 +166,7 @@ export function parseSearchQuery(query: SearchQuery): Result<SearchCriteriaInput
     from: asked(query[SEARCH_CRITERIA_FIELDS.from]),
     to: asked(query[SEARCH_CRITERIA_FIELDS.to]),
     account: asked(query[SEARCH_CRITERIA_FIELDS.account]),
+    memo: asked(query[SEARCH_CRITERIA_FIELDS.memo]),
   });
 
   return parsed.success

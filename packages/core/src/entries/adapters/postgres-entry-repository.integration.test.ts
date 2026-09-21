@@ -433,6 +433,100 @@ describe('createPostgresEntryRepository', () => {
     expect(await memosFound(range, GRACE)).toEqual(['Grace']);
   });
 
+  it('narrows to the entries whose memo contains the term, whatever the case of either', async () => {
+    await repository.save(ADA, entry({ memo: 'Coffee beans' }));
+    await repository.save(ADA, entry({ memo: 'COFFEE machine' }));
+    await repository.save(ADA, entry({ memo: 'Rail fare' }));
+
+    expect((await memosFound({ memo: 'coffee' })).toSorted()).toEqual([
+      'COFFEE machine',
+      'Coffee beans',
+    ]);
+    expect((await memosFound({ memo: 'COFFEE' })).toSorted()).toEqual([
+      'COFFEE machine',
+      'Coffee beans',
+    ]);
+  });
+
+  it('matches a term anywhere in the memo, not only where it starts', async () => {
+    await repository.save(ADA, entry({ memo: 'Quarterly rent, June' }));
+
+    expect(await memosFound({ memo: 'rent' })).toEqual(['Quarterly rent, June']);
+  });
+
+  it('matches a percent sign in a term literally, rather than as everything', async () => {
+    await repository.save(ADA, entry({ memo: '10% deposit' }));
+    await repository.save(ADA, entry({ memo: 'Rail fare' }));
+
+    expect(await memosFound({ memo: '10%' })).toEqual(['10% deposit']);
+    expect(await memosFound({ memo: '%' })).toEqual(['10% deposit']);
+  });
+
+  it('matches an underscore in a term literally, rather than as any character', async () => {
+    await repository.save(ADA, entry({ memo: 'Invoice no_42' }));
+    await repository.save(ADA, entry({ memo: 'Invoice no 43' }));
+
+    expect(await memosFound({ memo: 'no_4' })).toEqual(['Invoice no_42']);
+  });
+
+  it('matches the escape character in a term literally, rather than escaping with it', async () => {
+    await repository.save(ADA, entry({ memo: String.raw`Path C:\temp` }));
+    await repository.save(ADA, entry({ memo: 'Path C:temp' }));
+
+    expect(await memosFound({ memo: String.raw`C:\temp` })).toEqual([String.raw`Path C:\temp`]);
+    expect(await memosFound({ memo: '\\' })).toEqual([String.raw`Path C:\temp`]);
+  });
+
+  it('answers with nothing for a term no memo of the User contains', async () => {
+    await repository.save(ADA, entry({ memo: 'Rail fare' }));
+
+    expect(await memosFound({ memo: 'coffee' })).toEqual([]);
+  });
+
+  it('narrows by the memo, the Account and the day range together, with `and`', async () => {
+    const onCash = [
+      { account: 'expense', side: 'debit', amount: 300 as Money },
+      { account: 'cash', side: 'credit', amount: 300 as Money },
+    ] as const;
+    const onAccount = [
+      { account: 'expense', side: 'debit', amount: 300 as Money },
+      { account: 'payable', side: 'credit', amount: 300 as Money },
+    ] as const;
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'Rent June', lines: onCash }));
+    await repository.save(ADA, entry({ entryDate: '2026-07-15', memo: 'Rent July', lines: onCash }));
+    await repository.save(
+      ADA,
+      entry({ entryDate: '2026-06-15', memo: 'Rent June on account', lines: onAccount }),
+    );
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'Fuel June', lines: onCash }));
+
+    expect(
+      await memosFound({ from: '2026-06-01', to: '2026-06-30', account: 'cash', memo: 'rent' }),
+    ).toEqual(['Rent June']);
+  });
+
+  it("keeps a memo search inside one User's books (ADR-0021)", async () => {
+    await repository.save(ADA, entry({ memo: 'Coffee, Ada' }));
+    await repository.save(GRACE, entry({ memo: 'Coffee, Grace' }));
+
+    expect(await memosFound({ memo: 'coffee' }, ADA)).toEqual(['Coffee, Ada']);
+    expect(await memosFound({ memo: 'coffee' }, GRACE)).toEqual(['Coffee, Grace']);
+  });
+
+  it('brings back the lines of the entries the memo matched, and of no others', async () => {
+    const matching = entry({
+      memo: 'Coffee beans',
+      lines: [
+        { account: 'expense', side: 'debit', amount: 300 as Money },
+        { account: 'cash', side: 'credit', amount: 300 as Money },
+      ],
+    });
+    await repository.save(ADA, matching);
+    await repository.save(ADA, entry({ memo: 'Rail fare' }));
+
+    expect(await found(ADA, { memo: 'coffee' })).toEqual([matching]);
+  });
+
   it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {
     const refused = database.execute(
       sql`insert into entries (id, entry_date, memo, created_at) values ('01920000-0000-7000-8000-0000000000ff', '2026-09-15', 'Ownerless', now())`,

@@ -37,9 +37,10 @@ export type EntrySearchAnswer =
  *
  * Criteria can be refused in two places and come back as one code. A day that
  * is not a calendar day is refused by the contract, before anything is asked;
- * a range that ends before it starts, and an Account the chart of accounts does
- * not hold, are refused by the domain and raised by the procedure. Every one of
- * them is `INVALID_INPUT`, and every one lands here as `refused`.
+ * a range that ends before it starts, an Account the chart of accounts does not
+ * hold, and a memo term longer than a memo can be are refused by the domain and
+ * raised by the procedure. Every one of them is `INVALID_INPUT`, and every one
+ * lands here as `refused`.
  *
  * The search is run whatever the query held, and its answer is discarded when
  * the criteria were refused. It is run for the Session: `/entries/search` is a

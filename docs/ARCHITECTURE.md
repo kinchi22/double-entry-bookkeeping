@@ -169,7 +169,7 @@ there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs
 states the measured surface as patterns rather than a list, so a new file in a
 measured directory is measured by existing. A file nobody tests scores 0, and the
 break threshold of 90 is over the whole surface, so what fails is a named file
-rather than a percentage. Measured today: 29 files, 696 mutants, score 98.56.
+rather than a percentage. Measured today: 29 files, 715 mutants, score 98.60.
 
 The exclusions in that config name files no unit test can import, not files whose
 tests are missing: each reaches the composition root, and that imports
