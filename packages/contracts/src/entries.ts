@@ -97,6 +97,66 @@ export function toPostedEntry(entry: {
 }
 
 /**
+ * The names the Entry search gives its criteria.
+ *
+ * One set of names, used twice: the search form renders them as its field
+ * names, and, because that form is a `GET`, the browser writes those same names
+ * into the URL's query, which is where `parseSearchQuery` reads them back.
+ */
+export const SEARCH_CRITERIA_FIELDS = {
+  from: 'from',
+  to: 'to',
+} as const;
+
+/**
+ * Search criteria as they cross a wire: each one optional, and each one already
+ * the shape it has to be.
+ *
+ * The shape of a criterion is decided here; the rule *between* two of them --
+ * that a range does not end before it starts -- is decided in
+ * `packages/core/src/entries/domain`, for the reason this file's header gives.
+ */
+export const searchCriteriaSchema = z.object({
+  from: entryDateSchema.optional(),
+  to: entryDateSchema.optional(),
+});
+
+export type SearchCriteriaInput = z.infer<typeof searchCriteriaSchema>;
+
+/** A URL's query, as a server component is handed it. */
+export type SearchQuery = {
+  readonly [name: string]: string | readonly string[] | undefined;
+};
+
+/**
+ * A parameter that is not there, and one that is there with nothing in it, are
+ * both an absent criterion: a `GET` form submits every field it has, so an
+ * empty box arrives as `from=` and means the User asked for no first day.
+ * Anything else is a criterion, and a malformed one is refused below rather
+ * than dropped.
+ */
+const asked = (value: SearchQuery[string]): SearchQuery[string] =>
+  value === '' ? undefined : value;
+
+/**
+ * Reads a URL's query into the criteria an Entry search takes.
+ *
+ * A criterion that does not parse -- a day that is not a calendar day, or a
+ * parameter repeated so that it arrives as a list -- refuses the whole search
+ * with `INVALID_INPUT`, so a typo narrows nothing silently.
+ */
+export function parseSearchQuery(query: SearchQuery): Result<SearchCriteriaInput, DomainError> {
+  const parsed = searchCriteriaSchema.safeParse({
+    from: asked(query[SEARCH_CRITERIA_FIELDS.from]),
+    to: asked(query[SEARCH_CRITERIA_FIELDS.to]),
+  });
+
+  return parsed.success
+    ? ok(parsed.data)
+    : err(domainError('INVALID_INPUT', 'The search criteria are malformed.'));
+}
+
+/**
  * The names the entry form gives its fields.
  *
  * The form renders them and `parseEntryForm` reads them, so they are written

@@ -4,7 +4,7 @@ import { isErr, isOk, type EntryId, type Money, type UserId } from '@repo/contra
 import { createDatabase } from '@repo/db';
 import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
-import { NO_CRITERIA } from '../domain/search-criteria';
+import { NO_CRITERIA, type SearchCriteria } from '../domain/search-criteria';
 import { createPostgresEntryRepository } from './postgres-entry-repository';
 
 /**
@@ -85,10 +85,18 @@ function entry(overrides: Partial<EntryDraft> & { readonly createdAt?: Date } = 
   return isOk(made) ? made.value : ({} as Entry);
 }
 
-async function found(userId: UserId = ADA): Promise<readonly Entry[]> {
-  const result = await repository.search(userId, NO_CRITERIA);
+async function found(
+  userId: UserId = ADA,
+  criteria: SearchCriteria = NO_CRITERIA,
+): Promise<readonly Entry[]> {
+  const result = await repository.search(userId, criteria);
   expect(isOk(result)).toBe(true);
   return isOk(result) ? result.value : [];
+}
+
+/** The memos of what a search answered, which is what each range case is about. */
+async function memosFound(criteria: SearchCriteria, userId: UserId = ADA): Promise<string[]> {
+  return (await found(userId, criteria)).map((entry) => entry.memo);
 }
 
 async function countEntries(): Promise<number> {
@@ -268,6 +276,67 @@ describe('createPostgresEntryRepository', () => {
     await repository.save(GRACE, entry());
 
     expect(await found(ADA)).toEqual([]);
+  });
+
+  it('narrows to a day range, and includes an entry posted on either end', async () => {
+    await repository.save(ADA, entry({ entryDate: '2026-05-31', memo: 'The day before' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-01', memo: 'The first day' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'In between' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-30', memo: 'The last day' }));
+    await repository.save(ADA, entry({ entryDate: '2026-07-01', memo: 'The day after' }));
+
+    expect(await memosFound({ from: '2026-06-01', to: '2026-06-30' })).toEqual([
+      'The last day',
+      'In between',
+      'The first day',
+    ]);
+  });
+
+  it('narrows by the first day alone, and by the last day alone', async () => {
+    await repository.save(ADA, entry({ entryDate: '2026-05-31', memo: 'May' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-01', memo: 'June' }));
+
+    expect(await memosFound({ from: '2026-06-01' })).toEqual(['June']);
+    expect(await memosFound({ to: '2026-05-31' })).toEqual(['May']);
+  });
+
+  it('answers with the one entry a range of a single day holds', async () => {
+    await repository.save(ADA, entry({ entryDate: '2026-06-14', memo: 'The eve' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'The day' }));
+    await repository.save(ADA, entry({ entryDate: '2026-06-16', memo: 'The morrow' }));
+
+    expect(await memosFound({ from: '2026-06-15', to: '2026-06-15' })).toEqual(['The day']);
+  });
+
+  it('answers with nothing, rather than everything, for a range nothing falls in', async () => {
+    await repository.save(ADA, entry({ entryDate: '2026-06-15' }));
+
+    expect(await memosFound({ from: '2026-01-01', to: '2026-01-31' })).toEqual([]);
+  });
+
+  it('brings back the lines of the entries in the range, and of no others', async () => {
+    const inside = entry({
+      entryDate: '2026-06-15',
+      memo: 'Inside',
+      lines: [
+        { account: 'expense', side: 'debit', amount: 300 as Money },
+        { account: 'cash', side: 'credit', amount: 300 as Money },
+      ],
+    });
+    await repository.save(ADA, inside);
+    await repository.save(ADA, entry({ entryDate: '2026-07-15', memo: 'Outside' }));
+
+    expect(await found(ADA, { from: '2026-06-01', to: '2026-06-30' })).toEqual([inside]);
+  });
+
+  it('keeps a range inside one User\'s books (ADR-0021)', async () => {
+    await repository.save(ADA, entry({ entryDate: '2026-06-15', memo: 'Ada' }));
+    await repository.save(GRACE, entry({ entryDate: '2026-06-15', memo: 'Grace' }));
+
+    const range = { from: '2026-06-01', to: '2026-06-30' };
+
+    expect(await memosFound(range, ADA)).toEqual(['Ada']);
+    expect(await memosFound(range, GRACE)).toEqual(['Grace']);
   });
 
   it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {

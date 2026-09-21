@@ -12,8 +12,8 @@ export {
 } from './domain/entry';
 export type { AccountCode, Entry, EntryDraft, EntryLine, EntryStamp } from './domain/entry';
 
-export { NO_CRITERIA } from './domain/search-criteria';
-export type { SearchCriteria } from './domain/search-criteria';
+export { NO_CRITERIA, makeSearchCriteria } from './domain/search-criteria';
+export type { SearchCriteria, SearchCriteriaDraft } from './domain/search-criteria';
 
 export { createPostEntry } from './application/post-entry';
 export type { PostEntry, PostEntryDependencies } from './application/post-entry';

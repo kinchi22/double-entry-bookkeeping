@@ -49,6 +49,24 @@ export const en = {
   },
   entriesPage: {
     title: 'Entries',
+    search: 'Search',
+  },
+  /**
+   * The Entry search, `/entries/search`. `refused` covers every way criteria
+   * can be refused, because they are refused with one code: a day that is not
+   * a calendar day and a range the wrong way round are both `INVALID_INPUT`,
+   * and a message that named only one of them would be wrong for the other.
+   */
+  entrySearch: {
+    title: 'Search entries',
+    from: 'From',
+    to: 'To',
+    submit: 'Search',
+    results: 'Results',
+    nothingMatched: 'Nothing matched what you asked for.',
+    refused:
+      'That search was not run. Check the day range: each day is a calendar day, and From cannot be later than To.',
+    backToEntries: 'Back to entries',
   },
   /**
    * `line` is a prefix rendered before the line's number, as `checkedAt` is
