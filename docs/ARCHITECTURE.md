@@ -277,9 +277,9 @@ branched from `main`, named `milestone/<name>`.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
-| specs -> `milestone/x`      | the owner, as code owner | not on the pull request (the specs would fail by design); advisory on the merge | e2e only |
-| feature -> `milestone/x`    | nobody      | not on the pull request (the specs would fail until the behaviour lands); advisory on the merge | no specs |
-| `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | advisory, on the push | exempt |
+| specs -> `milestone/x`      | the owner, as code owner | not on the pull request (the specs would fail by design); `E2E build (advisory)` on the merge | e2e only |
+| feature -> `milestone/x`    | nobody      | not on the pull request (the specs would fail until the behaviour lands); `E2E build (advisory)` on the merge | no specs |
+| `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | `E2E build (advisory)`, on the push | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
 
 A feature branch merges with no approval at all: what it may do was settled when
@@ -319,7 +319,12 @@ it: that one would be red by design, and ADR-0002 does not let the specs block
 it. The push run lands as each Task merges, and it is advisory -- in no ruleset,
 blocking no merge -- because no gate can tell a spec that is red by design from
 one that regressed: the run reports, and the driver reading it judges, which is
-a step in `/implement-issue`'s loop. The job brings a `postgres:18-alpine`
+a step in `/implement-issue`'s loop. That run reports under a name of its own,
+`E2E build (advisory)`, set by an expression on the job, because `E2E build` is
+what the `main` ruleset requires and a required check's name must resolve to one
+run: a milestone's last commit is both the tip of the branch and the head of the
+integration pull request, so a shared name would put a red advisory run and the
+green gate on one commit. The job brings a `postgres:18-alpine`
 service of its own and migrates it first, so a spec that writes is judged
 against the schema its own commit carries; the deployed smoke run in
 `E2E deployed` is not a required check and runs the `@smoke`-tagged reads alone.
