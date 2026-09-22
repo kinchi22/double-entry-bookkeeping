@@ -14,7 +14,7 @@ owned by the use case and that repositories never begin a transaction. Taken
 literally, the use case needs a way to express a boundary, and there is none:
 the only ports today are a health probe and, after this milestone, an entry
 repository. Adding a unit-of-work port so that one use case can wrap one
-repository call is an interface with a single implementation, which `CLAUDE.md`
+repository call is an interface with a single implementation, which `AGENTS.md`
 forbids, and the thing it would abstract is `db.transaction`, which nothing else
 would ever implement differently.
 
@@ -61,7 +61,7 @@ what keeps this decision from decaying into a comment.
 ## Rejected alternatives
 
 **A unit-of-work port now.** One implementation, wrapping one library call,
-introduced so that a rule reads the same in both halves. `CLAUDE.md` names this
+introduced so that a rule reads the same in both halves. `AGENTS.md` names this
 exact shape as the abstraction not to build.
 
 **Lines as a `jsonb` column on the entry.** One insert, no transaction, and the

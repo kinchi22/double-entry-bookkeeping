@@ -35,7 +35,7 @@ force before then.
   the locale as above, server components call `getTranslations`, client
   components `useTranslations`. When this was decided, `next-intl` 4.14.3 listed
   `next ^16` among its peer dependencies and the repo ran Next 16.3.1. Adoption
-  re-checks the version and proposes the dependency first, as `CLAUDE.md`
+  re-checks the version and proposes the dependency first, as `AGENTS.md`
   requires of any new one.
 - **Catalogues.** `apps/web/messages/{locale}.ts`, one per locale, with the keys
   of `en.ts`. The adopting change adds each non-English catalogue by its exact

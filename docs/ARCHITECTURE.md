@@ -352,6 +352,6 @@ runs on every pull request, runs the specs against an empty page and fails
 unless each one fails on a line of its own. A spec that asserts nothing is
 caught on the pull request that lands it on the milestone.
 
-This is what "one PR per acceptance criterion" in `CLAUDE.md` now means: one
+This is what "one PR per acceptance criterion" in `AGENTS.md` now means: one
 milestone per criterion, and as many feature pull requests underneath it as the
 work takes.

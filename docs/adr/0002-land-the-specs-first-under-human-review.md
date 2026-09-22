@@ -23,7 +23,7 @@ exemption is to permit `import()`, and `container.ts` contains none -- so a rule
 was switched off for a file that never needed it, on the strength of a review
 promise no gate could check.
 
-Underneath both is a rule with no mechanism. `CLAUDE.md` says one pull request
+Underneath both is a rule with no mechanism. The working agreement says one pull request
 per acceptance criterion. The acceptance criteria are the Playwright specs, and
 an agent that changes a spec and the code the spec judges in one pull request can
 make a failing requirement pass by rewriting the requirement. The reviewer of
@@ -148,7 +148,7 @@ stop rather than by hoping the pull request is noticed.
 
 Renaming a `data-testid` is a spec change: its own pull request, reviewed.
 
-`CLAUDE.md`'s "trunk-based" stops being literally true. A milestone branch is an
+The working agreement's "trunk-based" stops being literally true. A milestone branch is an
 integration branch, and `main` receives a criterion at once rather than
 continuously. Feature flags remain the answer for anything incomplete that
 reaches `main`; inside a milestone, incomplete is the normal state and needs no

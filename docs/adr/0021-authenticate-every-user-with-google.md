@@ -177,7 +177,7 @@ deletion is a use case and not a migration when it comes.
 
 Three dependencies arrive: `openid-client`, and through it `jose` and
 `oauth4webapi`, all by one maintainer. They are proposed with the change that
-introduces them, as `CLAUDE.md` requires.
+introduces them, as `AGENTS.md` requires.
 
 ## Rejected alternatives
 

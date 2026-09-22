@@ -152,7 +152,7 @@ entry point would be one more thing to keep wired into the workflow.
 **Leaving the mapping in the router and unit testing the router.** It cannot be
 imported outside a React server runtime, and the way around that is to mock
 `server-only` -- at which point the test asserts the mock, which the mutation
-threshold rejects and `CLAUDE.md` forbids.
+threshold rejects and `AGENTS.md` forbids.
 
 **A `toWire` function in `packages/core/src/health/domain`.** Legal, since core
 may import contracts. But it puts the definition of the wire form one package

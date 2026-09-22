@@ -3,6 +3,12 @@
 One canonical name per concept. No synonyms. If a new concept needs a name, add
 it here in the same commit that introduces it.
 
+This table is the domain's: what the product is built from. The words for how it
+is worked on -- Harness, Working agreement, Skill, Driver, Implementer, Subagent
+and Agent worktree -- are in `docs/agents/harnesses.md` instead, in a table of
+their own. Between them they are still one index, because no term is defined in
+both. ADR-0022.
+
 | Term             | Meaning                                                                     |
 | ---------------- | --------------------------------------------------------------------------- |
 | ADR              | A numbered file under `docs/adr/` holding one decision: the problem, the decision, its consequences and the rejected alternatives. Indexed from `docs/ARCHITECTURE.md`. |

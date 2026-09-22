@@ -45,7 +45,7 @@ force before then.
   per-row authorization; a second owner is a different decision, and a bigger one
   (a book that rows belong to).
 - The mechanism needs a hash and a signed cookie. The adopting change proposes
-  the dependency with a reason, as `CLAUDE.md` requires, and re-checks its
+  the dependency with a reason, as `AGENTS.md` requires, and re-checks its
   versions then.
 
 ## Consequences
