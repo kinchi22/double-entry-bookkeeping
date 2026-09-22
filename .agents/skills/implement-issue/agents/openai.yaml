@@ -1,0 +1,5 @@
+interface:
+  display_name: Implement issue
+  short_description: Take a Task, or a whole Feature, from its GitHub issue to a merged pull request, one Implementer Subagent per Task.
+policy:
+  allow_implicit_invocation: false
