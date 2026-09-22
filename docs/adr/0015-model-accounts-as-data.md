@@ -25,7 +25,7 @@ through the layers.
 When the trigger holds, accounts become their own feature. None of this is in
 force before then.
 
-- `packages/core/src/accounts/`, with the layers `CLAUDE.md` names, and
+- `packages/core/src/accounts/`, with the layers `AGENTS.md` names, and
   `packages/contracts/src/accounts.ts`.
 - An `accounts` table: `id` (`AccountId`, uuid v7), `code`, `name`, `type`
   (asset, liability, equity, revenue, expense), and an archived flag. `code` and

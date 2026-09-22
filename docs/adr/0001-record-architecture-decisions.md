@@ -34,7 +34,7 @@ decision that is **not** in force, carrying a `**Trigger:**` line saying what ha
 to be true before it is; adopting it edits that same file rather than writing a
 new one, so the record of a rule and the record of why it waited stay together.
 
-`CLAUDE.md` is amended to treat an Accepted ADR as binding alongside
+The working agreement is amended to treat an Accepted ADR as binding alongside
 `docs/ARCHITECTURE.md`, because an agent that only reads one of them will
 reinvent whatever is in the other.
 
@@ -65,11 +65,11 @@ row, not records. Rewriting them would mean restating what those commits already
 say, in a format that adds nothing to a decision nobody is revisiting.
 
 A `Deferred` ADR is a standing invitation to build the thing early. The status
-line and `CLAUDE.md` both say to stop and ask instead, and neither is a gate.
+line and `AGENTS.md` both say to stop and ask instead, and neither is a gate.
 
 ## Rejected alternatives
 
-**`docs/ROADMAP.md`.** `CLAUDE.md` names `docs/ARCHITECTURE.md` as the file that
+**`docs/ROADMAP.md`.** `AGENTS.md` names `docs/ARCHITECTURE.md` as the file that
 settles whether a decision exists. A roadmap it does not reference is a file
 agents have no reason to open, which reproduces the failure this record exists
 to fix.

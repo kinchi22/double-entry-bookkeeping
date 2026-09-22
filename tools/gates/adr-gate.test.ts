@@ -45,7 +45,7 @@ describe('docs/adr', () => {
     expect(findAdrProblems(readAdrs(), readIndex())).toEqual([]);
   });
 
-  it('is indexed from ARCHITECTURE.md, which is where CLAUDE.md sends a reader', () => {
+  it('is indexed from ARCHITECTURE.md, which is where AGENTS.md sends a reader', () => {
     expect(readIndex().length).toBeGreaterThan(0);
   });
 

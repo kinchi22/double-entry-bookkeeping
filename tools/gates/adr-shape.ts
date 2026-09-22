@@ -114,7 +114,7 @@ const statusProblems = (
  *
  * The index check runs in both directions and covers the status column, not
  * just the link: an ADR missing from the index is invisible to a reader who
- * starts where `CLAUDE.md` points them, a row pointing at nothing is a decision
+ * starts where `AGENTS.md` points them, a row pointing at nothing is a decision
  * that looks recorded and is not, and a row whose status disagrees with the
  * record is the index saying a rule is not in force when it is.
  */

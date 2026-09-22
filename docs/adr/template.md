@@ -5,7 +5,7 @@
 
 Status is one of:
 
-- `Accepted` -- in force now. `CLAUDE.md` treats it as binding.
+- `Accepted` -- in force now. `AGENTS.md` treats it as binding.
 - `Deferred` -- decided, deliberately not built. Requires a `**Trigger:**` line
   saying what has to be true before it is. Adopting it means editing this file:
   change the status to `Accepted`, add `**Adopted:** YYYY-MM-DD, PR #N`, and
