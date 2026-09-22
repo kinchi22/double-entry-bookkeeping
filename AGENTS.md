@@ -11,6 +11,10 @@ Agent worktree, `docs/agents/harnesses.md` defines the word and maps it to the
 mechanism your harness gives you. That file is the only one allowed to name a
 harness's own directory.
 
+The Skills this workflow depends on come from outside this repository and are
+not vendored into it. `README.md`, under `## Agent harnesses`, names them and
+the install route for each harness.
+
 Read `docs/ARCHITECTURE.md` before changing anything structural.
 
 ## Non-negotiable
