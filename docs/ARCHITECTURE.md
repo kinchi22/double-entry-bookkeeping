@@ -57,6 +57,7 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0019: Ask for a migration approval only when one is pending](adr/0019-ask-for-a-migration-approval-only-when-one-is-pending.md) | Accepted |
 | [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
 | [ADR-0021: Authenticate every user with Google](adr/0021-authenticate-every-user-with-google.md) | Accepted |
+| [ADR-0022: Make every harness read one working agreement](adr/0022-make-every-harness-read-one-working-agreement.md) | Accepted |
 
 ## Package layout
 
