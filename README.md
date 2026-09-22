@@ -199,10 +199,69 @@ Practical consequences:
 CI installs with `--frozen-lockfile`, so the code that runs there is exactly the
 code reviewed in the lockfile diff.
 
+## Agent harnesses
+
+This repository is worked from an agent harness -- Claude Code or Codex -- under
+the working agreement in `AGENTS.md`. Both read the same rules;
+`docs/agents/harnesses.md` maps every concept that agreement names to the
+mechanism each harness gives you. ADR-0022.
+
+Five skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) are
+part of the workflow:
+
+| Skill | Invoked by | For |
+| ----- | ---------- | --- |
+| `grill-with-docs` | the owner, by hand | refinement, first: interrogating a Feature until it is understood |
+| `to-spec` | the owner, by hand | refinement: publishing the Feature's spec |
+| `to-tickets` | the owner, by hand | refinement: opening the Tasks under it |
+| `tdd` | the `implement-issue` loop | building a Task test-first |
+| `code-review` | the `implement-issue` loop | reviewing what comes back |
+
+They are deliberately **not vendored** here. A committed copy of someone else's
+MIT skill set is a second source of truth that no gate can check against
+upstream, and it freezes the version silently; left where it is, a fix upstream
+arrives without any work here. The cost is that a clone is not self-contained,
+which is what the rest of this section is for.
+
+**Claude Code needs no install step.** `.claude/settings.json` is committed, and
+its `enabledPlugins` entry turns the set on for this repository, so the five are
+there the first time a session opens the clone.
+
+**Codex takes one command**, once per machine, because it has no committed
+equivalent of `enabledPlugins`:
+
+```bash
+npx skills@latest add mattpocock/skills --global --agent codex \
+  --skill grill-with-docs to-spec to-tickets tdd code-review
+```
+
+Then check where they landed: `ls ~/.agents/skills` should name the five.
+`~/.agents/skills` is the user-level directory Codex scans, beside
+`.agents/skills` in the repository and `/etc/codex/skills`. It is **not**
+`~/.codex/skills`, which holds Codex's configuration and no skills -- and the
+installer's own documentation lists `~/.codex/skills` as where `--global`
+writes for Codex, which is why the check is worth running rather than trusting
+either document.
+
+Leave `--global` off and the installer writes into *this repository's*
+`.agents/skills/`, next to the committed `implement-issue` stub. Codex would
+read them there, but they would be vendored by accident, and `git status` would
+be how you found out.
+
+Nothing else about the clone changes, so there is no setup step to run
+afterwards. The one thing upstream's setup asks for is already decided here:
+the issue tracker is GitHub Issues and the project board, and a Task's
+readiness is the board's `Status` field rather than a triage label -- see
+`docs/agents/issue-tracker.md`, which says the Status replaces the
+`ready-for-agent` label.
+
 ## Documentation
 
 - `docs/ARCHITECTURE.md` -- dependency matrix, layer rules, fixed decisions
 - `docs/GLOSSARY.md` -- one canonical name per concept
 - `fixtures/README.md` -- which fixture proves which gate
 - `docs/DEPLOYMENT.md` -- Neon, Vercel and GitHub setup, migrations, environment variables
-- `CLAUDE.md` -- working agreement for AI agents
+- `AGENTS.md` -- the working agreement: the rules for working here, read by every harness
+- `CLAUDE.md` -- one line importing `AGENTS.md`, which is how Claude Code reads it
+- `docs/agents/README.md` -- index of everything else an agent needs: the harness
+  mapping, the issue tracker, and the Skill bodies
