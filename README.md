@@ -235,12 +235,25 @@ npx skills@latest add mattpocock/skills --global --agent codex \
   --skill grill-with-docs to-spec to-tickets tdd code-review
 ```
 
-`--global` installs into `~/.codex/skills/`. Leave it off and the installer
-writes into this repository's `.agents/skills/`, which is where this
-repository's own skill stub lives and is committed -- that is vendoring by
-accident. Nothing else about the clone changes, so there is no setup step to run
-afterwards: the tracker conventions this workflow uses are already written down,
-in `docs/agents/issue-tracker.md`.
+Then check where they landed: `ls ~/.agents/skills` should name the five.
+`~/.agents/skills` is the user-level directory Codex scans, beside
+`.agents/skills` in the repository and `/etc/codex/skills`. It is **not**
+`~/.codex/skills`, which holds Codex's configuration and no skills -- and the
+installer's own documentation lists `~/.codex/skills` as where `--global`
+writes for Codex, which is why the check is worth running rather than trusting
+either document.
+
+Leave `--global` off and the installer writes into *this repository's*
+`.agents/skills/`, next to the committed `implement-issue` stub. Codex would
+read them there, but they would be vendored by accident, and `git status` would
+be how you found out.
+
+Nothing else about the clone changes, so there is no setup step to run
+afterwards. The one thing upstream's setup asks for is already decided here:
+the issue tracker is GitHub Issues and the project board, and a Task's
+readiness is the board's `Status` field rather than a triage label -- see
+`docs/agents/issue-tracker.md`, which says the Status replaces the
+`ready-for-agent` label.
 
 ## Documentation
 

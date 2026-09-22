@@ -8,12 +8,14 @@ in one harness and false in another. ADR-0022 records why.
 This file is self-contained prose, and it names no harness's tools or
 directories. Where a rule below says Skill, Driver, Implementer, Subagent or
 Agent worktree, `docs/agents/harnesses.md` defines the word and maps it to the
-mechanism your harness gives you. That file is the only one allowed to name a
-harness's own directory.
+mechanism your harness gives you. Among the rules, that file is the only one
+allowed to name a harness's own directory.
 
 The Skills this workflow depends on come from outside this repository and are
 not vendored into it. `README.md`, under `## Agent harnesses`, names them and
-the install route for each harness.
+the install route for each harness -- which is why it names harness directories
+too, being written for a person setting a clone up rather than for an agent
+following a rule.
 
 Read `docs/ARCHITECTURE.md` before changing anything structural.
 

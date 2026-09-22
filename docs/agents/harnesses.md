@@ -10,6 +10,10 @@ the agreement, the tracker, a Skill body -- a rule says what a thing *is*, so an
 instruction a harness cannot literally execute is never mistaken for one it may
 skip. ADR-0022 records that decision and the facts about each harness behind it.
 
+The rule governs the rules. `README.md` is written for a person setting a clone
+up rather than for an agent following it, and ADR-0022 puts the install route
+for each harness there, so it names harness directories where it has to.
+
 Two harnesses are supported: Claude Code and Codex. Nothing here is built for a
 third, and nothing obstructs one either: it would cost a stub directory and a
 column below.
