@@ -47,17 +47,42 @@ const FRONTMATTER = /^---\n(.*?)\n---\n/s;
 const NAME_FIELD = /^name:(.+)$/m;
 const DESCRIPTION_FIELD = /^description:(.+)$/m;
 
-/** A backticked path to a Markdown file, which is how a stub points at its body. */
-const POINTER = /`([^`]+\.md)`/g;
+/**
+ * A backticked path into `docs/agents/skills/`, which is where a Skill body
+ * lives and so the only thing a stub's pointer line can be pointing at.
+ *
+ * Deliberately not every backticked `.md`: a stub that also said "see also
+ * `docs/agents/harnesses.md`" would then be reported as pointing at something
+ * that is not a body, which is a false positive rather than a breakage caught.
+ * Narrowing costs nothing, because a pointer aimed outside this directory
+ * leaves the stub with no pointer at all, which is still reported.
+ */
+const POINTER = /`(docs\/agents\/skills\/[^`]+\.md)`/g;
 
 /** A row of the index in `docs/agents/README.md`: a backticked file, then its kind. */
 const INDEX_ROW = /^\|\s*`([^`]+)`\s*\|\s*([^|]+?)\s*\|/gm;
 
-/** A harness's own directory, wherever it is named. `~/.codex/` counts. */
-const VENDOR_PATH = /\.(?:claude|codex)\//g;
+/**
+ * A harness's own directory, wherever it is named. `~/.codex/` counts, and so
+ * does a bare `.claude` with no trailing slash: prose that names the directory
+ * without a path separator has still named it.
+ *
+ * The lookahead is what keeps a longer name out. `.claudeignore` is a different
+ * file, not this directory, and a gate that reported it would be teaching the
+ * next reader to work around the check rather than to obey the rule.
+ */
+const VENDOR_PATH = /\.(?:claude|codex)(?![\w-])/g;
 
-/** A row of a two-column glossary table. A three-column mapping row is not one. */
-const TERM_ROW = /^\|\s*([^|]+?)\s*\|[^|]*\|\s*$/gm;
+/**
+ * The first cell of a table row, and nothing about the rest of the row.
+ *
+ * Requiring exactly two columns would drop a row whose meaning cell contains a
+ * `|` -- inside backticks, say -- and a term that fails to match here leaves the
+ * comparison silently, free to be defined in both tables with nothing reported.
+ * The mapping table in `harnesses.md` is kept out by reading the vocabulary
+ * section alone, not by counting columns.
+ */
+const TERM_ROW = /^\|\s*([^|]+?)\s*\|/gm;
 const SEPARATOR_CELL = /^[-: ]+$/;
 const TABLE_HEADINGS = ['Term', 'Concept'];
 
@@ -98,6 +123,13 @@ export function findImportProblems(content: string): readonly string[] {
 /** A field of a stub, paired with the path to report when it disagrees. */
 type Field = readonly [path: string, value: string];
 
+/**
+ * Every stub against the first one, which is right while one Skill has one stub
+ * per harness and wrong the moment a second Skill arrives: two Skills' stubs in
+ * one list would be compared with each other and reported as disagreeing.
+ * Grouping by Skill is the fix, and it is speculative until that Skill exists --
+ * so this is the assumption to find, rather than the bug.
+ */
 const disagreements = (field: string, values: readonly Field[]): readonly string[] => {
   const [first, ...rest] = values;
   if (first === undefined) return [];

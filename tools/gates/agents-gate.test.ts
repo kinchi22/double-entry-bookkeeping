@@ -197,6 +197,25 @@ describe('the Skill stub check', () => {
     ]);
   });
 
+  /**
+   * A pointer is a path into `docs/agents/skills/`, so a stub that also cites
+   * reference prose is pointing at its body all the same. The check is aimed at
+   * a body that moved, not at every backticked file name a stub may carry.
+   */
+  it('passes a stub that cites reference prose beside its pointer', () => {
+    const citing = [
+      '---',
+      `name: ${NAME}`,
+      `description: ${DESCRIPTION}`,
+      '---',
+      '',
+      `Follow \`${BODY}\`, the Driver's brief.`,
+      'See also `docs/agents/harnesses.md`.',
+      '',
+    ].join('\n');
+    expect(findStubProblems(pair(stubContent(NAME, DESCRIPTION), citing), [BODY])).toEqual([]);
+  });
+
   it('rejects a stub with no frontmatter for its harness to read', () => {
     const stubs = pair(stubContent(NAME, DESCRIPTION), `Follow \`${BODY}\`.\n`);
     expect(findStubProblems(stubs, [BODY])).toEqual([
@@ -297,13 +316,14 @@ describe('the vendor path check', () => {
     ).toEqual([]);
   });
 
+  const named = (file: string, directory: string): string =>
+    `${file}: names '${directory}', and only ` +
+    `${HARNESS_PATHS_ALLOWED_IN} may name a harness's own directory`;
+
   it('rejects a harness directory that leaked into the agreement', () => {
     expect(
       findVendorPathProblems([prose('AGENTS.md', 'The Skill lives in `.claude/skills/`.\n')]),
-    ).toEqual([
-      "AGENTS.md: names '.claude/', and only " +
-        `${HARNESS_PATHS_ALLOWED_IN} may name a harness's own directory`,
-    ]);
+    ).toEqual([named('AGENTS.md', '.claude')]);
   });
 
   it('rejects one that leaked into a Skill body', () => {
@@ -311,16 +331,32 @@ describe('the vendor path check', () => {
       findVendorPathProblems([
         prose('docs/agents/skills/implement-issue.md', 'Write `.codex/config.toml` first.\n'),
       ]),
-    ).toEqual([
-      "docs/agents/skills/implement-issue.md: names '.codex/', and only " +
-        `${HARNESS_PATHS_ALLOWED_IN} may name a harness's own directory`,
-    ]);
+    ).toEqual([named('docs/agents/skills/implement-issue.md', '.codex')]);
+  });
+
+  /**
+   * The slash is not what makes it a harness directory. A rule that said
+   * "settings live in `.claude`" would name one just as squarely, and a check
+   * that only matched a path separator would be an escape hatch in writing.
+   */
+  it('rejects one named without a trailing slash', () => {
+    expect(
+      findVendorPathProblems([
+        prose('docs/agents/issue-tracker.md', 'The settings live in `.claude` today.\n'),
+      ]),
+    ).toEqual([named('docs/agents/issue-tracker.md', '.claude')]);
+  });
+
+  it('allows a longer name that merely starts the same way', () => {
+    expect(
+      findVendorPathProblems([prose('AGENTS.md', 'Add it to `.claudeignore` instead.\n')]),
+    ).toEqual([]);
   });
 
   it('allows the one file whose job is to name them', () => {
     expect(
       findVendorPathProblems([
-        prose(HARNESS_PATHS_ALLOWED_IN, '`.claude/skills/` and `.codex/`, mapped here.\n'),
+        prose(HARNESS_PATHS_ALLOWED_IN, '`.claude/skills/`, `.claude` and `.codex`, mapped.\n'),
       ]),
     ).toEqual([]);
   });
@@ -379,6 +415,28 @@ describe('the two-glossary check', () => {
 
   it('reads the vocabulary table alone, not the mapping table beside it', () => {
     expect(findSharedTermProblems(glossaryOf('Skill body'), harnessesOf('Harness'))).toEqual([]);
+  });
+
+  /**
+   * A meaning cell is prose, and prose in this repository quotes code: one day a
+   * row will want a `|` in it. A term whose row stops matching leaves the
+   * comparison silently, which is a clash defined in both tables and reported
+   * by nobody, so the row is matched by its first cell rather than its shape.
+   */
+  it('still compares a term whose meaning cell contains a pipe', () => {
+    const glossary = [
+      '# Glossary',
+      '',
+      '| Term | Meaning |',
+      '| ---- | ------- |',
+      '| Result | `Ok<T>` | `Err<E>`. The return type of a fallible operation. |',
+      '',
+    ].join('\n');
+
+    expect(findSharedTermProblems(glossary, harnessesOf('Result'))).toEqual([
+      "'Result' is defined in both docs/GLOSSARY.md and docs/agents/harnesses.md, and one " +
+        'canonical name per concept means one table per term',
+    ]);
   });
 
   it('reports a vocabulary heading that moved rather than agreeing with nothing', () => {
