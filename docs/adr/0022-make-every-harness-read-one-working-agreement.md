@@ -55,6 +55,15 @@ It is the only file permitted to name `.claude/` or `.codex/`. Shared prose says
 a tool name, so an instruction an agent cannot literally execute is not mistaken
 for one it may skip.
 
+**The Harness vocabulary is defined in `docs/agents/harnesses.md`, not in
+`docs/GLOSSARY.md`.** Harness, Working agreement, Skill, Driver, Implementer,
+Subagent and Agent worktree are the terms this decision needs, and none of them
+is a bookkeeping term: `docs/GLOSSARY.md` names what the product is built from,
+and these name how it is worked on. Mixing them would make the domain glossary
+mean less than it says. So that "one canonical name per concept" still has one
+index, `docs/GLOSSARY.md` gains a preamble pointer to that second table, and no
+term is defined in both.
+
 **A Skill's prose lives once, under `docs/agents/skills/`, and each harness gets
 a stub that points at it.** The stub is one pointer line and carries only the
 keys its own harness reads. Neither harness reads the other's skill directory,
@@ -83,6 +92,16 @@ The Feature that lands this layout gates both, along with the one-line
 `CLAUDE.md`, the `docs/agents/` index and the ban on vendor directories in
 shared prose.
 
+This record uses the Harness vocabulary -- Harness, Skill, Subagent, Skill body,
+Skill stub -- before the table defining it exists, because it lands ahead of the
+layout for the same reason it lands at all. `docs/GLOSSARY.md` asks that a new
+concept be named in the commit that introduces it; the seven terms are named in
+`docs/agents/harnesses.md` instead, and that file arrives with the mapping it
+holds, in a later Task of the Feature carrying this decision. Until it does, the
+capitalised terms here are read from this ADR's own prose. The price is a
+window, this pull request to that one, where the vocabulary is used and not
+indexed, and a second table to keep a term out of once it exists.
+
 Not vendoring the external skills means upstream fixes arrive without work here,
 and that a clone is not self-contained: a newcomer runs an install step before
 refinement works, and Codex has no committed configuration to do it for them.
@@ -97,13 +116,14 @@ harnesses forbid it anyway for a user-invoked Skill. Because a human is the only
 caller, its `description` is written as a summary for someone reading a picker
 rather than as a list of trigger phrases.
 
-Two fields would reverse that, one per harness, and flipping them is a decision
-of its own rather than a detail of some later change:
+Two fields carry that policy, one per harness, and reversing it means flipping
+them -- a decision of its own rather than a detail of some later change. This
+record is what fixes their values for the Task that writes the stubs:
 
-- `disable-model-invocation` in the frontmatter of the Claude Code stub, which
-  is `true` today.
+- `disable-model-invocation` in the frontmatter of the Claude Code stub, set to
+  `true`.
 - `policy.allow_implicit_invocation` in the sibling `agents/openai.yaml` for the
-  Codex stub, which is `false` today.
+  Codex stub, set to `false`.
 
 Personal instructions have a home outside the repository -- `~/.codex/AGENTS.md`
 for Codex, `CLAUDE.local.md` for Claude Code -- because the in-repository
@@ -136,6 +156,14 @@ override *replaces* the `AGENTS.md` in the same directory rather than extending
 it, so at the repository root it would discard every rule in the agreement while
 reading as "my extra notes". The name is dangerous enough that `.gitignore`
 excludes it rather than leaving it merely unused.
+
+**Define the Harness terms in `docs/GLOSSARY.md`.** It is already the one index
+of canonical names, and the glossary's own rule is that a new concept is named
+there in the commit that introduces it. But that table is the domain's: an agent
+harness is not something the product is built from, and seven rows about
+Subagents and worktrees sitting between Entry line and Money would make
+`docs/GLOSSARY.md` stop meaning what its preamble says it means. A pointer from
+the preamble to the second table keeps the single index without the dilution.
 
 **Duplicate the agreement as `AGENTS.md` and `CLAUDE.md`, kept in step by a
 gate.** A gate can compare two files, but it cannot tell which one is right when
