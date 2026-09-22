@@ -320,7 +320,7 @@ it: that one would be red by design, and ADR-0002 does not let the specs block
 it. The push run lands as each Task merges, and it is advisory -- in no ruleset,
 blocking no merge -- because no gate can tell a spec that is red by design from
 one that regressed: the run reports, and the driver reading it judges, which is
-a step in `/implement-issue`'s loop. That run reports under a name of its own,
+a step in the `implement-issue` Skill's loop. That run reports under a name of its own,
 `E2E build (advisory)`, set by an expression on the job, because `E2E build` is
 what the `main` ruleset requires and a required check's name must resolve to one
 run: a milestone's last commit is both the tip of the branch and the head of the
