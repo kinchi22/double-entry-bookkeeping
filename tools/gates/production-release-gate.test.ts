@@ -205,7 +205,13 @@ describe('Production release workflow invariants', () => {
   });
 
   it('smokes Current Production after migration and requires it for readiness', () => {
-    expect(release).toMatch(/compatibility:[\s\S]*?needs: result/);
+    const compatibility = release.slice(release.indexOf('\n  compatibility:'));
+
+    expect(compatibility).toMatch(/compatibility:\n\s+name: Smoke Current Production after migration\n\s+if: >-\n\s+always\(\) &&/);
+    expect(compatibility).toContain("needs.result.outputs.migration_state == 'none'");
+    expect(compatibility).toContain("needs.result.outputs.migration_outcome == 'success'");
+    expect(compatibility).toContain("needs.result.outputs.migration_outcome == 'skipped-no-migration'");
+    expect(compatibility).toContain('needs: result');
     expect(release).toContain('E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}');
     expect(release).toContain('pnpm test:e2e --grep @smoke');
     expect(ci).toContain('COMPATIBILITY_RESULT: ${{ needs.release.outputs.compatibility_result }}');
