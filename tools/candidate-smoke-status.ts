@@ -3,7 +3,7 @@ import { appendFileSync } from 'node:fs';
 
 const CONTEXT = 'Candidate Production smoke';
 
-type Payload = { git?: { sha?: unknown }; url?: unknown };
+type Payload = { environment?: unknown; git?: { sha?: unknown }; url?: unknown };
 
 function payload(): Payload {
   const raw = process.env['EVENT_PAYLOAD'];
@@ -39,6 +39,13 @@ function main(): void {
   const sha = event.git?.sha;
   if (typeof sha !== 'string' || !/^[0-9a-f]{40}$/i.test(sha)) {
     throw new Error('The Vercel ready event must include a valid git.sha; no status can be attributed without it.');
+  }
+  if (event.environment === undefined || event.environment === null || event.environment === '') {
+    publish(sha, 'failure', 'The Vercel ready event has no deployment environment.');
+    throw new Error('The Vercel ready event must include a production environment.');
+  }
+  if (event.environment !== 'production') {
+    throw new Error('The Vercel ready event must belong to the production environment.');
   }
   const url = event.url;
   if (typeof url !== 'string' || !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(url)) {

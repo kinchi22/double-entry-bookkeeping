@@ -12,6 +12,10 @@ permissions:
 jobs:
   smoke:
     name: Test candidate deployment
+    # Missing environment must reach the reporter so it can fail the event SHA.
+    if: >-
+      github.event.client_payload.environment == 'production' ||
+      github.event.client_payload.environment == ''
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:

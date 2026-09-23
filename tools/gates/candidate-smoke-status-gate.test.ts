@@ -36,7 +36,11 @@ function runStatus(commands: string | readonly string[], payload: unknown) {
 }
 
 describe('candidate smoke status CLI', () => {
-  const payload = { git: { sha: SHA }, url: 'https://candidate.vercel.app' };
+  const payload = {
+    environment: 'production',
+    git: { sha: SHA },
+    url: 'https://candidate.vercel.app',
+  };
 
   it.each(['pending', 'success', 'failure'])('publishes %s on the event SHA', (state) => {
     const { result, calls } = runStatus(state, payload);
@@ -54,15 +58,36 @@ describe('candidate smoke status CLI', () => {
   });
 
   it('publishes failure when the deployment URL is missing', () => {
-    const { result, calls } = runStatus('pending', { git: { sha: SHA } });
+    const { result, calls } = runStatus('pending', { environment: 'production', git: { sha: SHA } });
     expect(result.status).not.toBe(0);
     expect(calls).toContain(`repos/owner/repo/statuses/${SHA}`);
     expect(calls).toContain('state=failure');
   });
 
   it('rejects a missing SHA without attributing status to the workflow commit', () => {
-    const { result } = runStatus('pending', { url: payload.url });
+    const { result } = runStatus('pending', { environment: 'production', url: payload.url });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('git.sha');
+  });
+
+  it.each([
+    ['preview', 'pending'],
+    ['preview', 'success'],
+  ] as const)(
+    'refuses a %s ready event at the %s transition without publishing a candidate status',
+    (environment, state) => {
+      const { result, calls } = runStatus(state, { ...payload, environment });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain('production environment');
+      expect(calls).toBe('');
+    },
+  );
+
+  it('publishes failure on the event SHA when environment is missing', () => {
+    const { result, calls } = runStatus('pending', { git: { sha: SHA }, url: payload.url });
+    expect(result.status).not.toBe(0);
+    expect(calls).toContain(`repos/owner/repo/statuses/${SHA}`);
+    expect(calls).toContain('state=failure');
+    expect(calls).not.toContain('state=pending');
   });
 });

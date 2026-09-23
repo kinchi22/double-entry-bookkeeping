@@ -217,6 +217,8 @@ describe('Production release workflow invariants', () => {
       path.join(REPO_ROOT, '.github/workflows/candidate-production-smoke.yml'), 'utf8',
     );
     expect(candidate).toContain('vercel.deployment.ready');
+    expect(candidate).toContain("github.event.client_payload.environment == 'production'");
+    expect(candidate).toContain("github.event.client_payload.environment == ''");
     expect(candidate).toContain('permissions:');
     expect(candidate).toContain('actions: read');
     expect(candidate).toContain('statuses: write');
