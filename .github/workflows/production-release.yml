@@ -70,6 +70,7 @@ jobs:
       deployments: read
     outputs:
       pending: ${{ steps.find.outputs.pending }}
+      current: ${{ steps.current.outputs.current }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -83,10 +84,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node tools/find-pending-migrations.ts
+      - name: Recheck main before Production approval
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          main_head=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq .object.sha || true)
+          export MAIN_HEAD="$main_head"
+          input=$(node -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,mainHead:process.env.MAIN_HEAD}))')
+          node tools/production-release.ts current "$input"
 
   migrate:
     name: Apply migrations
-    if: needs.pending.result == 'success' && needs.pending.outputs.pending != 'false'
+    if: >-
+      needs.pending.result == 'success' &&
+      needs.pending.outputs.current == 'true' &&
+      needs.pending.outputs.pending != 'false'
     needs: pending
     environment: production-database
     runs-on: ubuntu-latest
@@ -122,12 +135,13 @@ jobs:
         id: outcome
         env:
           CURRENT: ${{ needs.select.outputs.current }}
+          CURRENT_AFTER_PENDING: ${{ needs.pending.outputs.current }}
           PREVIEW_RESULT: ${{ needs.preview.result }}
           PENDING_RESULT: ${{ needs.pending.result }}
           PENDING: ${{ needs.pending.outputs.pending }}
           MIGRATE_RESULT: ${{ needs.migrate.result }}
         run: |
-          if [ "$CURRENT" = true ] && [ "$PREVIEW_RESULT" = success ] && [ "$PENDING_RESULT" = success ]; then
+          if [ "$CURRENT" = true ] && [ "$CURRENT_AFTER_PENDING" = true ] && [ "$PREVIEW_RESULT" = success ] && [ "$PENDING_RESULT" = success ]; then
             if [ "$PENDING" = false ]; then
               echo 'migration_state=none' >> "$GITHUB_OUTPUT"
               echo 'migration_outcome=skipped-no-migration' >> "$GITHUB_OUTPUT"

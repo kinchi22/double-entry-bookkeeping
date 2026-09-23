@@ -192,6 +192,17 @@ describe('Production release workflow invariants', () => {
     expect(ci).toMatch(/production-ready:\n\s+name: Production ready\n\s+if: always\(\)/);
     expect(ci).toContain('needs: [gates, integration, release]');
   });
+
+  it('rechecks the main commit after pending detection before requesting approval', () => {
+    const pending = release.slice(release.indexOf('\n  pending:'), release.indexOf('\n  migrate:'));
+    const migrate = release.slice(release.indexOf('\n  migrate:'), release.indexOf('\n  result:'));
+
+    expect(pending.indexOf('node tools/find-pending-migrations.ts')).toBeLessThan(
+      pending.lastIndexOf('node tools/production-release.ts current'),
+    );
+    expect(migrate).toContain("needs.pending.outputs.current == 'true'");
+    expect(release).toContain('CURRENT_AFTER_PENDING: ${{ needs.pending.outputs.current }}');
+  });
 });
 
 describe('production-release.ts, run as CI runs it', () => {
