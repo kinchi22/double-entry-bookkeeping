@@ -248,7 +248,9 @@ jobs:
           INTEGRATION_RESULT: ${{ needs.integration.result }}
           MIGRATION_STATE: ${{ needs.release.outputs.migration_state }}
           MIGRATION_OUTCOME: ${{ needs.release.outputs.migration_outcome }}
+          COMPATIBILITY_RESULT: ${{ needs.release.outputs.compatibility_result }}
         run: |
           input=$(node -e 'console.log(JSON.stringify({prerequisites:[{name:"Gates",outcome:process.env.GATES_RESULT},{name:"Integration",outcome:process.env.INTEGRATION_RESULT}],migration:{state:process.env.MIGRATION_STATE || "pending",outcome:process.env.MIGRATION_OUTCOME || "failure"}}))')
           decision=$(node tools/production-release.ts decide "$input" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s).decision))')
           test "$decision" = production-ready
+          test "$COMPATIBILITY_RESULT" = success

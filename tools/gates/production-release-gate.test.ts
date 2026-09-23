@@ -203,6 +203,29 @@ describe('Production release workflow invariants', () => {
     expect(migrate).toContain("needs.pending.outputs.current == 'true'");
     expect(release).toContain('CURRENT_AFTER_PENDING: ${{ needs.pending.outputs.current }}');
   });
+
+  it('smokes Current Production after migration and requires it for readiness', () => {
+    expect(release).toMatch(/compatibility:[\s\S]*?needs: result/);
+    expect(release).toContain('E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}');
+    expect(release).toContain('pnpm test:e2e --grep @smoke');
+    expect(ci).toContain('COMPATIBILITY_RESULT: ${{ needs.release.outputs.compatibility_result }}');
+    expect(ci).toContain('test "$COMPATIBILITY_RESULT" = success');
+  });
+
+  it('checks the exact ready-event SHA and publishes candidate status', () => {
+    const candidate = readFileSync(
+      path.join(REPO_ROOT, '.github/workflows/candidate-production-smoke.yml'), 'utf8',
+    );
+    expect(candidate).toContain('vercel.deployment.ready');
+    expect(candidate).toContain("github.event.client_payload.environment == 'production'");
+    expect(candidate).toContain("github.event.client_payload.environment == ''");
+    expect(candidate).toContain('permissions:');
+    expect(candidate).toContain('actions: read');
+    expect(candidate).toContain('statuses: write');
+    expect(candidate).toContain('ref: ${{ steps.pending.outputs.sha }}');
+    expect(candidate).toContain('E2E_BASE_URL: ${{ steps.pending.outputs.url }}');
+    expect(candidate).toContain('pnpm test:e2e --grep @smoke');
+  });
 });
 
 describe('production-release.ts, run as CI runs it', () => {
