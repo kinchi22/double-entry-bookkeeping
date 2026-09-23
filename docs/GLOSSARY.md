@@ -7,11 +7,11 @@ This table is the domain's: what the product is built from. The words for how it
 is worked on -- Harness, Working agreement, Skill, Driver, Implementer, Subagent
 and Agent worktree -- are in `docs/agents/harnesses.md` instead, in a table of
 their own. Between them they are still one index, because no term is defined in
-both. ADR-0022.
+both.
 
 | Term             | Meaning                                                                     |
 | ---------------- | --------------------------------------------------------------------------- |
-| ADR              | A numbered file under `docs/adr/` holding one decision: the problem, the decision, its consequences and the rejected alternatives. Indexed from `docs/ARCHITECTURE.md`. |
+| ADR              | A numbered file under `docs/adr/` holding an architectural decision that is hard to reverse, surprising without context and the result of a real trade-off. Indexed from `docs/ARCHITECTURE.md`. |
 | Account          | What an Entry line is posted against, named by a code from the Chart of accounts. |
 | Adapter          | A concrete implementation of a Port. The only place infrastructure appears.  |
 | Aggregate        | The entity a repository loads and saves as one thing, together with the entities it owns. An Entry owns its Entry lines. A write of one aggregate is atomic; ADR-0011. |
@@ -48,7 +48,7 @@ both. ADR-0022.
 | Session          | A User's signed-in state: a random token in an `HttpOnly` cookie, stored in `sessions` only as its SHA-256 hash, with an expiry that slides, except the Smoke User's. Signing out deletes it. ADR-0021. |
 | Side             | The direction of an Entry line, `debit` or `credit`. The amount never carries it. |
 | Smoke run        | The `E2E` job: the specs against a Production deployment after it is live. Not a merge gate; that is `E2E build`. ADR-0006, ADR-0009. |
-| Smoke tag        | `{ tag: '@smoke' }` on a spec, the allowlist the Smoke run filters by. Only a read may carry it: an untagged spec never runs against Production. ADR-0014. |
+| Smoke tag        | `{ tag: '@smoke' }` on a spec, the allowlist the Smoke run filters by. Only a read may carry it: an untagged spec never runs against Production. |
 | Smoke User       | The User the Smoke run reads Production as. It has no Identity, owns a fixed set of Entries, and its one Session is the `SMOKE_SESSION_TOKEN` secret. ADR-0021. |
 | Spec isolation   | The rule that one pull request changes `e2e/` or the rest of the repository, never both. Decided by `tools/check-pr-isolation.ts`. |
 | Test collection  | The set of test files a vitest project actually runs. Compared against the working tree by `tools/gates/test-collection-gate.test.ts`, so a test nothing runs fails CI. |

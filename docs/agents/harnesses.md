@@ -8,11 +8,10 @@ words themselves.
 It is the only file allowed to name `.claude/` or `.codex/`. Everywhere else --
 the agreement, the tracker, a Skill body -- a rule says what a thing *is*, so an
 instruction a harness cannot literally execute is never mistaken for one it may
-skip. ADR-0022 records that decision and the facts about each harness behind it.
+skip.
 
-The rule governs the rules. `README.md` is written for a person setting a clone
-up rather than for an agent following it, and ADR-0022 puts the install route
-for each harness there, so it names harness directories where it has to.
+`README.md` is written for a person setting a clone up rather than for an agent
+following it, so it names harness directories where it has to.
 
 Two harnesses are supported: Claude Code and Codex. Nothing here is built for a
 third, and nothing obstructs one either: it would cost a stub directory and a
@@ -37,7 +36,7 @@ column below.
 One canonical name per concept, the rule `docs/GLOSSARY.md` states for the
 domain. None of these is a bookkeeping term -- they name how the product is
 worked on rather than what it is built from -- so they are defined here instead,
-and no term is defined in both tables. ADR-0022.
+and no term is defined in both tables.
 
 | Term | Meaning |
 | ---- | ------- |

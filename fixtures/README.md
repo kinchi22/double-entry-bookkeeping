@@ -106,7 +106,7 @@ catch:
   that look like a milestone and are not. That test also runs the file as a
   command, because CI depends on its exit status rather than on what it returns.
 - `tools/find-pending-migrations.ts` -- whether `Apply migrations` has anything
-  to apply (ADR-0019), broken in `pending-migrations-gate.test.ts` by cancelled,
+  to apply, broken in `pending-migrations-gate.test.ts` by cancelled,
   rejected and waiting runs, a path that only starts like the migrations folder,
   no applied commit, and one git cannot compare. That test also runs the file as
   a command against a stub `gh`, because CI depends on the output file it writes.

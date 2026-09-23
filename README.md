@@ -204,7 +204,7 @@ code reviewed in the lockfile diff.
 This repository is worked from an agent harness -- Claude Code or Codex -- under
 the working agreement in `AGENTS.md`. Both read the same rules;
 `docs/agents/harnesses.md` maps every concept that agreement names to the
-mechanism each harness gives you. ADR-0022.
+mechanism each harness gives you.
 
 Five skills from [`mattpocock/skills`](https://github.com/mattpocock/skills) are
 part of the workflow:

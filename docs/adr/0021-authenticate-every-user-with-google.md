@@ -120,9 +120,8 @@ The token is the GitHub secret `SMOKE_SESSION_TOKEN`; the database holds its
 hash. The owner creates the User, its Entries and its Session once, with a
 script, and rotates the token by running it again. `tools/seed-smoke-user.ts`
 prints the SQL to run and the token, and holds no database credential; the SQL
-carries only the token's hash. `@smoke` specs stay reads
-(ADR-0014): the sign-in page, `health.get`, and the entries list of the smoke
-User.
+carries only the token's hash. `@smoke` specs stay reads: the sign-in page,
+`health.get`, and the entries list of the smoke User.
 
 **How it ships.** Expand, then contract, because ADR-0013 lands a migration on
 `main` before the milestone that needs it:
@@ -231,5 +230,5 @@ sign-in in product code. It keeps the back door out of the app, and leaves Previ
 with no way in at all.
 
 **Seed the smoke User in a migration.** The token's hash would be in the
-repository. **Seed it from CI on every run.** The smoke job would hold a
-production database credential, which ADR-0014 declined to give it.
+repository. **Seed it from CI on every run.** The smoke job would have to hold a
+production database credential that it deliberately does not receive.

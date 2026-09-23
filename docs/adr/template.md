@@ -1,5 +1,9 @@
 # ADR-NNNN: Title in the imperative
 
+Use this template only when the decision is hard to reverse, surprising without
+its context, and the result of a real trade-off. Current configuration and
+operating instructions belong beside the thing they configure instead.
+
 **Status:** Accepted
 **Date:** YYYY-MM-DD
 

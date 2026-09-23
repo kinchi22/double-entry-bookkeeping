@@ -3,7 +3,7 @@
 The rules for working in this repository, and the only file they live in. Every
 harness reads this one -- directly, or through a file of its own whose whole
 content points here. So a rule changes here or nowhere, and it can never be true
-in one harness and false in another. ADR-0022 records why.
+in one harness and false in another.
 
 This file is self-contained prose, and it names no harness's tools or
 directories. Where a rule below says Skill, Driver, Implementer, Subagent or

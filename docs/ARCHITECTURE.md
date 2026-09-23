@@ -20,23 +20,27 @@ in `fixtures/README.md`.
 
 ## ADRs
 
-`docs/adr/` holds one ADR per decision: the problem, what was chosen, what it
-costs, what was rejected. This file states the rule as it stands today; the ADR
-states why it stands, and whether it is in force.
+`docs/adr/` holds only decisions that are hard to reverse, surprising without
+their context, and the result of a real trade-off. An ADR records the problem,
+what was chosen, what it costs and what was rejected. This file states the rule
+as it stands today; the ADR states why it stands, and whether it is in force.
+
+Current configuration and operating instructions do not become ADRs. They live
+beside the thing they configure and Git carries their history. Removing a record
+does not renumber the records after it or make its number available again, so
+the index may have gaps.
 
 `Deferred` marks a decision taken and deliberately not built. It is not a rule,
 so nothing enforces it, and it is not an open question either, so it is not for
 deciding again. Adopting one edits that ADR in place.
 
-`tools/gates/adr-gate.test.ts` checks the shape: numbering, the status
+`tools/gates/adr-gate.test.ts` checks the shape: unique numbers, the status
 vocabulary, the required sections, a trigger on every deferred ADR, an adoption
 line on every ADR that waited, and the status in the table below against the
-status in the ADR itself. Decisions taken before ADR-0001 stay in this file and
-in the commit that made them; ADR-0001 says why they were not backfilled.
+status in the ADR itself.
 
 | ADR | Status |
 | --- | ------ |
-| [ADR-0001: Record architecture decisions](adr/0001-record-architecture-decisions.md) | Accepted |
 | [ADR-0002: Land the specs first, under human review](adr/0002-land-the-specs-first-under-human-review.md) | Accepted |
 | [ADR-0003: Collect every test file, wherever it lives](adr/0003-collect-every-test-file.md) | Accepted |
 | [ADR-0004: Make the mutation score the coverage floor](adr/0004-make-the-mutation-score-the-coverage-floor.md) | Accepted |
@@ -49,15 +53,12 @@ in the commit that made them; ADR-0001 says why they were not backfilled.
 | [ADR-0011: Make an aggregate write atomic](adr/0011-make-an-aggregate-write-atomic.md) | Accepted |
 | [ADR-0012: Run the specs against a real database](adr/0012-run-the-specs-against-a-real-database.md) | Accepted |
 | [ADR-0013: Land a migration before the milestone that needs it](adr/0013-land-a-migration-before-the-milestone-that-needs-it.md) | Accepted |
-| [ADR-0014: Keep Production out of the write specs](adr/0014-keep-production-out-of-the-write-specs.md) | Accepted |
 | [ADR-0015: Model accounts as data](adr/0015-model-accounts-as-data.md) | Deferred |
 | [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
 | [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Superseded by ADR-0021 |
 | [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
-| [ADR-0019: Ask for a migration approval only when one is pending](adr/0019-ask-for-a-migration-approval-only-when-one-is-pending.md) | Accepted |
 | [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
 | [ADR-0021: Authenticate every user with Google](adr/0021-authenticate-every-user-with-google.md) | Accepted |
-| [ADR-0022: Make every harness read one working agreement](adr/0022-make-every-harness-read-one-working-agreement.md) | Accepted |
 
 ## Package layout
 
@@ -143,7 +144,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context, which `sessionProcedure` resolves from the `session` cookie; a use case given none answers `UNAUTHENTICATED`, 401. Every repository method over user data takes the `userId`, and another User's row is `NOT_FOUND`. ADR-0021. |
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at (ADR-0019). A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
+| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at. A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
@@ -329,7 +330,7 @@ advisory run and the green gate on one commit. The job brings a
 `postgres:18-alpine` service of its own and migrates it first, so a spec that
 writes is judged against the schema its own commit carries; the deployed smoke
 run in `E2E deployed` is not a required check and runs the `@smoke`-tagged reads
-alone. ADR-0012, ADR-0014.
+alone. ADR-0012.
 
 Required checks belong to a ruleset, and there are two: `main`, which requires
 one approval, a code owner's where one applies, and six checks -- `Gates`,
