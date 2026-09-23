@@ -1,0 +1,83 @@
+name: Candidate Production smoke
+
+on:
+  repository_dispatch:
+    types: [vercel.deployment.ready]
+
+permissions:
+  contents: read
+  actions: read
+  statuses: write
+
+jobs:
+  smoke:
+    name: Test candidate deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      # The reporter comes from main before checking out the event's SHA. An
+      # older candidate may not contain it, but still needs a final status.
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Save status reporter
+        run: cp tools/candidate-smoke-status.ts "$RUNNER_TEMP/candidate-smoke-status.ts"
+      - name: Publish pending status
+        id: pending
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: node "$RUNNER_TEMP/candidate-smoke-status.ts" pending
+      - name: Wait for Production ready on the event SHA
+        id: readiness
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CANDIDATE_SHA: ${{ steps.pending.outputs.sha }}
+        run: |
+          for attempt in $(seq 1 400); do
+            run_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?event=push&head_sha=${CANDIDATE_SHA}&per_page=100" \
+              --jq '.workflow_runs | map(select(.head_branch == "main")) | first | .id // empty')
+            if [ -n "$run_id" ]; then
+              outcome=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?per_page=100" \
+                --jq '.jobs[] | select(.name == "Production ready") | .conclusion // empty')
+              if [ "$outcome" = success ]; then exit 0; fi
+              if [ -n "$outcome" ]; then
+                echo "Production ready concluded: $outcome" >&2
+                exit 1
+              fi
+            fi
+            sleep 30
+          done
+          echo 'Timed out waiting for Production ready.' >&2
+          exit 1
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.pending.outputs.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Smoke the candidate deployment
+        id: candidate
+        env:
+          E2E_BASE_URL: ${{ steps.pending.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}
+        run: pnpm test:e2e --grep @smoke
+      - name: Publish final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          CANDIDATE_RESULT: ${{ steps.candidate.outcome }}
+        run: |
+          if [ "$CANDIDATE_RESULT" = success ]; then
+            node "$RUNNER_TEMP/candidate-smoke-status.ts" success
+          else
+            node "$RUNNER_TEMP/candidate-smoke-status.ts" failure
+          fi

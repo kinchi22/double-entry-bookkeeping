@@ -7,6 +7,8 @@ on:
         value: ${{ jobs.result.outputs.migration_state }}
       migration_outcome:
         value: ${{ jobs.result.outputs.migration_outcome }}
+      compatibility_result:
+        value: ${{ jobs.compatibility.result }}
 
 jobs:
   select:
@@ -157,3 +159,30 @@ jobs:
           fi
           echo 'migration_state=pending' >> "$GITHUB_OUTPUT"
           echo 'migration_outcome=failure' >> "$GITHUB_OUTPUT"
+
+  compatibility:
+    name: Smoke Current Production after migration
+    if: >-
+      needs.result.outputs.migration_state == 'none' &&
+      (needs.result.outputs.migration_outcome == 'success' ||
+       needs.result.outputs.migration_outcome == 'skipped-no-migration')
+    needs: result
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Smoke Current Production
+        env:
+          E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}
+        run: |
+          test -n "$E2E_BASE_URL"
+          pnpm test:e2e --grep @smoke
