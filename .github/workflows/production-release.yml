@@ -1,0 +1,159 @@
+name: Production release sequence
+
+on:
+  workflow_call:
+    outputs:
+      migration_state:
+        value: ${{ jobs.result.outputs.migration_state }}
+      migration_outcome:
+        value: ${{ jobs.result.outputs.migration_outcome }}
+
+jobs:
+  select:
+    name: Select current main commit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      current: ${{ steps.current.outputs.current }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Compare this release with main
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          main_head=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq .object.sha || true)
+          export MAIN_HEAD="$main_head"
+          input=$(node -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,mainHead:process.env.MAIN_HEAD}))')
+          node tools/production-release.ts current "$input"
+
+  preview:
+    name: Migrate preview
+    if: needs.select.outputs.current == 'true'
+    needs: select
+    environment:
+      name: preview-database
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo 'PREVIEW_DATABASE_URL is not set.' >&2
+            exit 1
+          fi
+          pnpm --filter @repo/db db:migrate
+
+  pending:
+    name: Recalculate pending migrations
+    if: needs.preview.result == 'success'
+    needs: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: read
+    outputs:
+      pending: ${{ steps.find.outputs.pending }}
+      current: ${{ steps.current.outputs.current }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Find pending migrations
+        id: find
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/find-pending-migrations.ts
+      - name: Recheck main before Production approval
+        id: current
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          main_head=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq .object.sha || true)
+          export MAIN_HEAD="$main_head"
+          input=$(node -e 'console.log(JSON.stringify({commit:process.env.GITHUB_SHA,mainHead:process.env.MAIN_HEAD}))')
+          node tools/production-release.ts current "$input"
+
+  migrate:
+    name: Apply migrations
+    if: >-
+      needs.pending.result == 'success' &&
+      needs.pending.outputs.current == 'true' &&
+      needs.pending.outputs.pending != 'false'
+    needs: pending
+    environment: production-database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo 'PRODUCTION_DATABASE_URL is not set.' >&2
+            exit 1
+          fi
+          pnpm --filter @repo/db db:migrate
+
+  result:
+    name: Report migration result
+    if: always()
+    needs: [select, preview, pending, migrate]
+    runs-on: ubuntu-latest
+    outputs:
+      migration_state: ${{ steps.outcome.outputs.migration_state }}
+      migration_outcome: ${{ steps.outcome.outputs.migration_outcome }}
+    steps:
+      - name: Report the completed path
+        id: outcome
+        env:
+          CURRENT: ${{ needs.select.outputs.current }}
+          CURRENT_AFTER_PENDING: ${{ needs.pending.outputs.current }}
+          PREVIEW_RESULT: ${{ needs.preview.result }}
+          PENDING_RESULT: ${{ needs.pending.result }}
+          PENDING: ${{ needs.pending.outputs.pending }}
+          MIGRATE_RESULT: ${{ needs.migrate.result }}
+        run: |
+          if [ "$CURRENT" = true ] && [ "$CURRENT_AFTER_PENDING" = true ] && [ "$PREVIEW_RESULT" = success ] && [ "$PENDING_RESULT" = success ]; then
+            if [ "$PENDING" = false ]; then
+              echo 'migration_state=none' >> "$GITHUB_OUTPUT"
+              echo 'migration_outcome=skipped-no-migration' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$MIGRATE_RESULT" = success ]; then
+              # The protected environment deployment is successful now, before
+              # this result can permit downstream Promotion checks.
+              echo 'migration_state=none' >> "$GITHUB_OUTPUT"
+              echo 'migration_outcome=success' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo 'migration_state=pending' >> "$GITHUB_OUTPUT"
+          echo 'migration_outcome=failure' >> "$GITHUB_OUTPUT"

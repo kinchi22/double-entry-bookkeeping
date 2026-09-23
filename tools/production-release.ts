@@ -67,6 +67,10 @@ export type ReleaseQueueDecision = {
   readonly waitingDecision: 'recalculate-now' | 'recalculate-after-running' | null;
 };
 
+export function selectReleaseCommit(commit: string, mainHead: string | undefined): { current: boolean } {
+  return { current: mainHead !== undefined && commit === mainHead };
+}
+
 export function coalesceProductionReleases(input: ReleaseQueueInput): ReleaseQueueDecision {
   const waitingCommit = input.waitingCommits.at(-1) ?? null;
   return {
@@ -203,7 +207,12 @@ function isQueueInput(value: unknown): value is ReleaseQueueInput {
   );
 }
 
-function publish(result: ReleaseDecision | ReleaseQueueDecision): void {
+function isCurrentInput(value: unknown): value is { commit: string; mainHead?: string } {
+  return isRecord(value) && typeof value['commit'] === 'string' &&
+    (value['mainHead'] === undefined || typeof value['mainHead'] === 'string');
+}
+
+function publish(result: ReleaseDecision | ReleaseQueueDecision | { current: boolean }): void {
   console.log(JSON.stringify(result));
   const output = process.env['GITHUB_OUTPUT'];
   if (output !== undefined && output !== '') {
@@ -224,7 +233,9 @@ if (entryPoint !== undefined && pathToFileURL(path.resolve(entryPoint)).href ===
     publish(decideProductionRelease(input));
   } else if (command === 'queue' && isQueueInput(input)) {
     publish(coalesceProductionReleases(input));
+  } else if (command === 'current' && isCurrentInput(input)) {
+    publish(selectReleaseCommit(input.commit, input.mainHead));
   } else {
-    throw new Error('Expected `decide` or `queue` and an input matching that command.');
+    throw new Error('Expected `decide`, `queue` or `current` and an input matching that command.');
   }
 }
