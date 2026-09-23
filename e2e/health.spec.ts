@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 /**
  * Every spec here is tagged `@smoke`: each one is a read, so each one may run
  * against Production, which the `E2E` job filters for with `--grep @smoke`.
- * A spec that writes stays untagged and runs in `E2E build` alone. ADR-0014.
+ * A spec that writes stays untagged and runs in `E2E build` alone.
  */
 
 /**
@@ -66,7 +66,7 @@ test('re-checks health through the server action', { tag: '@smoke' }, async ({ p
  * them answered. ADR-0020.
  *
  * It says nothing about migrations: the probe issues `select 1`. That the
- * schema arrived is the entries page spec's claim (ADR-0014).
+ * schema arrived is the entries page spec's claim.
  */
 test('serves the health procedure over the tRPC endpoint', { tag: '@smoke' }, async ({ request }) => {
   const response = await request.get('/api/trpc/health.get');

@@ -23,7 +23,7 @@ import { signIn, signInForSmoke } from './session';
  * builds the page, as #52 says.
  *
  * Every spec but the last writes the Entries it then searches for, so it
- * carries no `@smoke` tag and never runs against Production (ADR-0014). They
+ * carries no `@smoke` tag and never runs against Production. They
  * run in `E2E build`, beside each other and against one database, and a retry
  * writes again -- so each Entry is found by a memo no other run can have
  * written, never by counting or by position. Spec 11 is the exception that
@@ -482,7 +482,7 @@ test('orders the results latest day first, and within a day the latest written',
  * A read, so it is smoke-run against Production, where it is the only thing
  * that shows the route and its query survived the release. It asserts nothing
  * about which Entries come back: the Smoke User's books are not a fixture, and
- * a spec that writes can never carry this tag (ADR-0014).
+ * a spec that writes can never carry this tag.
  *
  * Against Production it reads as the Smoke User; anywhere else, as a new User.
  */

@@ -12,7 +12,7 @@ import { SESSION_COOKIE, freshIdentifier, signIn, submitTestSignIn } from './ses
  * The reads a signed-out visitor makes are `@smoke`: against Production they
  * are what shows the app is closed. A spec that signs in needs the test
  * sign-in, which Production does not have, and the procedure spec posts, so
- * neither is (ADR-0014).
+ * neither is tagged.
  */
 
 const SIGN_IN = /\/sign-in(\?.*)?$/;
