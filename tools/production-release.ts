@@ -84,11 +84,18 @@ export function coalesceProductionReleases(input: ReleaseQueueInput): ReleaseQue
 
 export function decideProductionRelease(input: ReleaseInput): ReleaseDecision {
   for (const name of REQUIRED_PREREQUISITES) {
-    const prerequisite = input.prerequisites.find((candidate) => candidate.name === name);
+    const prerequisites = input.prerequisites.filter((candidate) => candidate.name === name);
+    const prerequisite = prerequisites[0];
     if (prerequisite === undefined) {
       return {
         decision: 'fail',
         reason: `${name} result is missing; Production is not ready.`,
+      };
+    }
+    if (prerequisites.length !== 1) {
+      return {
+        decision: 'fail',
+        reason: `${name} result is duplicated; Production is not ready.`,
       };
     }
     if (prerequisite.outcome !== 'success') {

@@ -27,6 +27,22 @@ describe('decideProductionRelease', () => {
     });
   });
 
+  it('fails closed when a required prerequisite result is duplicated', () => {
+    expect(
+      decideProductionRelease({
+        prerequisites: [
+          { name: 'Gates', outcome: 'success' },
+          { name: 'Gates', outcome: 'failure' },
+          { name: 'Integration', outcome: 'success' },
+        ],
+        migration: { state: 'none', outcome: 'skipped-no-migration' },
+      }),
+    ).toEqual({
+      decision: 'fail',
+      reason: 'Gates result is duplicated; Production is not ready.',
+    });
+  });
+
   it.each(['missing-applied-commit', 'uncomparable-applied-commit'] as const)(
     'requests approval when migration state is unknown because it is %s',
     (reason) => {
