@@ -11,7 +11,7 @@ import { signIn, signInForSmoke } from './session';
  * contract for `/entries`. Renaming one is a spec change (ADR-0002).
  *
  * The first two specs write, so they carry no `@smoke` tag and never run against
- * Production (ADR-0014). They run in `E2E build`, beside each other and against
+ * Production. They run in `E2E build`, beside each other and against
  * one database, and a retry writes again. So each entry is found by a memo no
  * other run can have written, never by counting or by position in the list.
  *
@@ -121,7 +121,7 @@ test('refuses an entry whose debits and credits differ', async ({ page }) => {
  *
  * A read, so it is smoke-run against Production. Rendering the list queries
  * `entries`, so there it also shows that the production database carries the
- * migration (ADR-0014). The list may be empty, so the section has to be visible
+ * migration. The list may be empty, so the section has to be visible
  * without any entry in it.
  *
  * Against Production it reads as the Smoke User; anywhere else, as a new User.
