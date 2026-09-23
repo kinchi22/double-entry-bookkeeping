@@ -5,10 +5,6 @@ on:
   push:
     branches: [main]
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   NEXT_TELEMETRY_DISABLED: '1'
   TURBO_TELEMETRY_DISABLED: '1'
@@ -217,134 +213,42 @@ jobs:
             --jq '.[] | .filename, (.previous_filename // empty)' \
             | node tools/check-pr-isolation.ts "$HEAD_REF" "$BASE_REF"
 
-  # ADR-0013. Nothing migrated the preview database, which cost nothing while the
-  # schema was empty. The first table makes every preview of a pull request whose
-  # code reads it a broken deployment until someone remembers.
-  #
-  # Push to `main` only, so the preview database carries what `main` carries and
-  # nothing else. A pull request whose own migration has not merged still has a
-  # broken preview: that is the migration-first rule in docs/DEPLOYMENT.md, not a
-  # gap here.
-  #
-  # No approval on this environment, unlike `production-database`, so preview is
-  # migrated ahead of Production and a migration that is going to fail has
-  # usually failed before the owner is asked to apply it. The two databases are
-  # one migration apart by design.
-  #
-  # `preview-database` accepts only `main`, so no pull request job can read
-  # PREVIEW_DATABASE_URL. What could still reach it is a change to this file or
-  # to a package script this job runs; what it would leak is a disposable
-  # database.
-  #
-  # `deployment: false`: the job still reads the environment's secret and is
-  # still held to its branch policy, but GitHub records no deployment for it.
-  # Each status of a recorded deployment fires `deployment_status`, so every
-  # push to `main` used to start four skipped `E2E deployed` runs beside the one
-  # for Vercel. Nothing reads these deployments. `Apply migrations` keeps its
-  # own: ADR-0019 reads them.
-  migrate-preview:
-    name: Migrate preview
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  release:
+    name: Production release sequence
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.gates.result == 'success' && needs.integration.result == 'success'
     needs: [gates, integration]
-    environment:
-      name: preview-database
-      deployment: false
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Apply migrations
-        env:
-          DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo 'PREVIEW_DATABASE_URL is not set. Skipping; see docs/DEPLOYMENT.md.'
-            exit 0
-          fi
-          pnpm --filter @repo/db db:migrate
-
-  # ADR-0019. Whether `Apply migrations` has anything to apply: a file under
-  # packages/db/drizzle/ changed since the last commit Production was migrated
-  # at, read from the `production-database` deployments. No secret and no
-  # environment, so it never waits and cannot read the database URL. Every doubt
-  # it meets resolves to "pending", which asks the owner, as every push did
-  # before.
-  #
-  # Full history, because the last migrated commit can be any number of pushes
-  # back: a run waiting for approval is cancelled by the next push, and the
-  # migration it carried is still pending. No install step: the script has no
-  # dependencies, and Node 24 runs the TypeScript file directly.
-  pending-migrations:
-    name: Pending migrations
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # A called workflow holds this job's lease through Production approval and
+    # DDL. Queue every run: a late validation result must not replace the newest
+    # commit's waiting run. Each run checks main's head before touching a database.
+    concurrency:
+      group: production-release
+      queue: max
     permissions:
       contents: read
       deployments: read
-    outputs:
-      pending: ${{ steps.find.outputs.pending }}
+    uses: ./.github/workflows/production-release.yml
+    secrets: inherit
+
+  production-ready:
+    name: Production ready
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [gates, integration, release]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      # package-manager-cache off for the reason the isolation job gives: pnpm
-      # is not installed here.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           package-manager-cache: false
-      - name: Find pending migrations
-        id: find
+      - name: Decide readiness
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node tools/find-pending-migrations.ts
-
-  # Migrations are applied from CI, not from the Vercel build: a build runs for
-  # every preview and must never touch the production database, and Vercel gives
-  # no hook that runs once per production deploy.
-  #
-  # The environment holds PRODUCTION_DATABASE_URL as an environment secret and
-  # requires the owner's approval, so the job waits before it can read the URL,
-  # and no other job can read it at all. Without the secret the step reports
-  # that it is unset and succeeds. See docs/DEPLOYMENT.md.
-  #
-  # Skipped when `Pending migrations` finds nothing to apply, so a push with no
-  # migration asks nobody for anything (ADR-0019). The condition names every
-  # result rather than relying on the implicit success(): if that job fails or
-  # is skipped its output is empty, which is not 'false', so this still runs and
-  # asks. A broken check fails towards the approval, never past it.
-  migrate:
-    name: Apply migrations
-    if: >-
-      !cancelled() &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.gates.result == 'success' && needs.integration.result == 'success' &&
-      needs.pending-migrations.outputs.pending != 'false'
-    needs: [gates, integration, pending-migrations]
-    environment: production-database
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Apply migrations
-        env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          GATES_RESULT: ${{ needs.gates.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          MIGRATION_STATE: ${{ needs.release.outputs.migration_state }}
+          MIGRATION_OUTCOME: ${{ needs.release.outputs.migration_outcome }}
         run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo 'PRODUCTION_DATABASE_URL is not set. Skipping; see docs/DEPLOYMENT.md.'
-            exit 0
-          fi
-          pnpm --filter @repo/db db:migrate
+          input=$(node -e 'console.log(JSON.stringify({prerequisites:[{name:"Gates",outcome:process.env.GATES_RESULT},{name:"Integration",outcome:process.env.INTEGRATION_RESULT}],migration:{state:process.env.MIGRATION_STATE || "pending",outcome:process.env.MIGRATION_OUTCOME || "failure"}}))')
+          decision=$(node tools/production-release.ts decide "$input" | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s).decision))')
+          test "$decision" = production-ready

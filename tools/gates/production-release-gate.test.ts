@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { coalesceProductionReleases, decideProductionRelease } from '../production-release';
+import { coalesceProductionReleases, decideProductionRelease, selectReleaseCommit } from '../production-release';
 import { REPO_ROOT } from './run-gate';
 
 const SUCCESSFUL_PREREQUISITES = [
@@ -160,6 +160,40 @@ describe('coalesceProductionReleases', () => {
   });
 });
 
+describe('selectReleaseCommit', () => {
+  it('releases only the newest main commit after a queued run starts', () => {
+    expect(selectReleaseCommit('older', 'newest')).toEqual({ current: false });
+    expect(selectReleaseCommit('newest', 'newest')).toEqual({ current: true });
+  });
+
+  it('fails closed when the main ref cannot be read', () => {
+    expect(selectReleaseCommit('newest', undefined)).toEqual({ current: false });
+  });
+});
+
+describe('Production release workflow invariants', () => {
+  const ci = readFileSync(path.join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8');
+  const release = readFileSync(
+    path.join(REPO_ROOT, '.github/workflows/production-release.yml'),
+    'utf8',
+  );
+
+  it('keeps a running migration and the newest waiting run without canceling validation', () => {
+    expect(ci).not.toMatch(/^concurrency:/m);
+    expect(ci).toMatch(/group: production-release\n\s+queue: max/);
+    expect(ci).toMatch(/release:\n[\s\S]*?needs: \[gates, integration\]/);
+    expect(release).toContain("needs.select.outputs.current == 'true'");
+  });
+
+  it('orders the database work and publishes readiness for every main push', () => {
+    expect(release).toMatch(/preview:[\s\S]*?pending:[\s\S]*?needs: preview/);
+    expect(release).toMatch(/migrate:[\s\S]*?needs: pending/);
+    expect(release).toContain('exit 1');
+    expect(ci).toMatch(/production-ready:\n\s+name: Production ready\n\s+if: always\(\)/);
+    expect(ci).toContain('needs: [gates, integration, release]');
+  });
+});
+
 describe('production-release.ts, run as CI runs it', () => {
   const runCommand = (command: string, input: unknown) =>
     spawnSync(
@@ -194,6 +228,13 @@ describe('production-release.ts, run as CI runs it', () => {
       waitingCommit: 'new',
       waitingDecision: 'recalculate-after-running',
     });
+  });
+
+  it('exposes the current-main decision for a queued release', () => {
+    const result = runCommand('current', { commit: 'older', mainHead: 'newest' });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({ current: false });
   });
 
   it('writes scalar release outputs for a workflow step', () => {
