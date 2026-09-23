@@ -17,8 +17,8 @@ import { REPO_ROOT } from './run-gate';
 /**
  * Section 9, applied to the harness layout.
  *
- * ADR-0022 puts the working agreement in one file that every harness reads, the
- * Skill bodies outside both harness directories, and the Harness vocabulary in a
+ * The working agreement lives in one file that every harness reads, the Skill
+ * bodies sit outside both harness directories, and the Harness vocabulary has a
  * table of its own. None of that fails to compile when it stops holding: a rule
  * can creep back into `CLAUDE.md`, a renamed body can leave one harness with a
  * dead pointer, a new file under `docs/agents/` can go unindexed, a vendor path

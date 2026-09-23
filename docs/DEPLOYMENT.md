@@ -65,7 +65,7 @@ spec that writes stays untagged and runs in `E2E build` only: Production becomes
 the owner's real books, and this job holds a deployment bypass secret rather
 than a database credential, so it could not clean up after itself. The tag is a
 claim a person makes and no gate checks it, so review of `e2e/` is where a
-wrongly tagged write is caught. ADR-0014.
+wrongly tagged write is caught.
 
 Vercel emits a `deployment_status` event for every deployment; the job runs when
 one whose environment is named `Production` succeeds, against its
@@ -82,7 +82,7 @@ runs in an environment, and fires the event for each status it passes through
 (`waiting`, `queued`, `in_progress`, `success`). Each one starts an
 `E2E deployed` run that skips its job and costs no runner time. `Apply
 migrations` adds about five of them to a push with a pending migration, and
-must: ADR-0019 reads those deployments. `Migrate preview` sets
+must: `Pending migrations` reads those deployments. `Migrate preview` sets
 `deployment: false`, so it adds none, and a push with no migration starts one
 run.
 
@@ -101,7 +101,7 @@ it, and `healthy` means all of them answered. ADR-0020.
 
 So a `DATABASE_URL` change needs no manual check: redeploy and read the smoke
 run. The probe issues `select 1`, so it says nothing about migrations, and the
-entries page spec is what covers the schema (ADR-0014).
+entries page spec is what covers the schema.
 
 When something fails against the database, the deployment's runtime logs say
 what. Each failure is one JSON line on stderr with an `event` --
@@ -124,10 +124,10 @@ The job runs in the GitHub environment `production-database`, which accepts only
 pending: the `Pending migrations` job before it compares `packages/db/drizzle/`
 at this commit with the last commit Production was migrated at, which it reads
 from the environment's successful deployments, and skips `Apply migrations`
-when nothing there changed. A push with no migration asks for nothing (ADR-0019). `PRODUCTION_DATABASE_URL`, the production
-project's direct URL, is a secret of that environment rather than of the
-repository, so no other job can read it. Without it the step reports that it is
-unset and succeeds.
+when nothing there changed. A push with no migration asks for nothing.
+`PRODUCTION_DATABASE_URL`, the production project's direct URL, is a secret of
+that environment rather than of the repository, so no other job can read it.
+Without it the step reports that it is unset and succeeds.
 
 A newer push to `main` cancels the run before it, including a migrate job still
 waiting for approval. Nothing is lost: the cancelled run left no successful

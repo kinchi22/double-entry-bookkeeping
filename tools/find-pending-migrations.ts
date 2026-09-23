@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 
 /**
  * Whether `Apply migrations` has anything to apply: pure functions, plus a CLI
- * entry point. ADR-0019.
+ * entry point.
  *
  * Every push to `main` used to wait for the owner's approval, migration or not.
  * Now the job runs only when a file under `packages/db/drizzle/` changed since

@@ -12,8 +12,7 @@ import {
 import { REPO_ROOT } from './run-gate';
 
 /**
- * Section 9, applied to ADR-0019: `Apply migrations` asks for approval only when
- * a migration is pending.
+ * `Apply migrations` asks for approval only when a migration is pending.
  *
  * The decision is two functions over values, so the cases that matter -- a
  * cancelled run, a rejected one, a failed API call -- are inputs here. The last

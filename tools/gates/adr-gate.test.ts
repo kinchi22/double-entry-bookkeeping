@@ -7,8 +7,8 @@ import { REPO_ROOT } from './run-gate';
 /**
  * Section 9, applied to the decision record.
  *
- * ADR-0001 says a deferred decision is revisited by editing its own file, and
- * that `docs/ARCHITECTURE.md` indexes what exists. Neither property fails to
+ * A deferred decision is revisited by editing its own file, and
+ * `docs/ARCHITECTURE.md` indexes what exists. Neither property fails to
  * compile when it stops holding, so both are asserted here, in both directions:
  * the ADRs against the index, and the index against the ADRs.
  *
@@ -100,9 +100,9 @@ describe('the ADR gate', () => {
   });
 
   it('rejects a heading whose number disagrees with the file name', () => {
-    const file: AdrFile = { name: '0001-a-decision.md', content: accepted('0002').content };
+    const file: AdrFile = { name: '0041-a-decision.md', content: accepted('0042').content };
     expect(check(file)).toEqual([
-      '0001-a-decision.md: heading says ADR-0002, file name says ADR-0001',
+      '0041-a-decision.md: heading says ADR-0042, file name says ADR-0041',
     ]);
   });
 
@@ -139,19 +139,17 @@ describe('the ADR gate', () => {
   });
 
   it('rejects a duplicate number', () => {
-    const first = accepted('0001');
-    const twin: AdrFile = { name: '0001-another-decision.md', content: first.content };
+    const first = accepted('0041');
+    const twin: AdrFile = { name: '0041-another-decision.md', content: first.content };
     expect(findAdrProblems([first, twin], listing(first, twin))).toEqual([
-      '0001-another-decision.md: ADR-0001 is used twice',
+      '0041-another-decision.md: ADR-0041 is used twice',
     ]);
   });
 
-  it('rejects a hole in the numbering', () => {
+  it('accepts a hole left by a deleted record without reusing its number', () => {
     const first = accepted('0001');
     const third = accepted('0003');
-    expect(findAdrProblems([first, third], listing(first, third))).toEqual([
-      'ADR numbering has a hole: expected ADR-0002, found ADR-0003',
-    ]);
+    expect(findAdrProblems([first, third], listing(first, third))).toEqual([]);
   });
 
   it('rejects a supersede pointing at an ADR that does not exist', () => {

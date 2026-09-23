@@ -6,7 +6,7 @@
 ## Problem
 
 `E2E deployed` smoke-runs the `@smoke` specs against each successful Production
-deployment (ADR-0009, ADR-0014). Nothing in that run asserts that the production
+deployment (ADR-0009). Nothing in that run asserts that the production
 database answers. Both health specs accept either answer on purpose:
 `reachable|unreachable` on the panel, `healthy|degraded` over the tRPC endpoint.
 
@@ -22,7 +22,7 @@ Phase 0 artifact and will be removed; an instruction that reads it stops working
 then, and a check nobody runs proves nothing in the meantime.
 
 The entries page covers some of this already -- rendering the list queries
-`entries`, which ADR-0014 records -- but only as a side effect. Its spec asserts
+`entries` -- but only as a side effect. Its spec asserts
 that the form and the section render, so an error fallback that kept the form on
 screen would leave it green with the database down, and ADR-0017 would put the
 page behind a login.
@@ -93,5 +93,5 @@ body instead, which carries more than a status code can. A poller outside the
 app can read the body too.
 
 **Probe the database from the workflow instead.** The job would need a
-production connection string, which ADR-0014 keeps out of CI on purpose: it
-holds a deployment bypass secret and nothing else.
+production connection string. CI deliberately keeps that credential out of the
+smoke job, which holds a deployment bypass secret and nothing else.

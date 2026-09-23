@@ -1,9 +1,9 @@
 /**
  * The shape rules for the harness layout, as pure functions.
  *
- * ADR-0022 states the layout: one working agreement every harness reads, Skill
- * bodies outside both harness directories with a stub pointing at each, an index
- * of `docs/agents/`, vendor names confined to one file, and one table per term.
+ * The layout has one working agreement every harness reads, Skill bodies outside
+ * both harness directories with a stub pointing at each, an index of
+ * `docs/agents/`, vendor names confined to one file, and one table per term.
  * Each of those is a property of file contents, so each is a function from
  * contents to human-readable problems.
  *
@@ -40,7 +40,7 @@ export const WORKING_AGREEMENT_IMPORT = '@AGENTS.md';
 /** The kinds `docs/agents/README.md` defines, so a reader knows how to read a file. */
 export const AGENT_FILE_KINDS = ['Index', 'Reference', 'Skill body'] as const;
 
-/** The one file ADR-0022 permits to name a harness's own directory. */
+/** The one shared-prose file permitted to name a harness's own directory. */
 export const HARNESS_PATHS_ALLOWED_IN = 'docs/agents/harnesses.md';
 
 const FRONTMATTER = /^---\n(.*?)\n---\n/s;
@@ -94,7 +94,7 @@ const VOCABULARY_HEADING = '\n## Vocabulary\n';
  * Claude Code reads `AGENTS.md` natively only when no `CLAUDE.md` exists anywhere
  * up the tree, so the import is what makes the agreement arrive. A rule written
  * beside it would be a rule one harness reads and the other does not, which is
- * the whole failure ADR-0022 removes.
+ * the failure this gate prevents.
  */
 export function findImportProblems(content: string): readonly string[] {
   const lines = content

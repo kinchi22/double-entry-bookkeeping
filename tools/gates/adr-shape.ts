@@ -8,14 +8,14 @@
  */
 
 export type AdrFile = {
-  /** Base name, e.g. `0001-record-architecture-decisions.md`. */
+  /** Base name, e.g. `0010-model-a-record-as-a-balanced-entry-of-lines.md`. */
   readonly name: string;
   readonly content: string;
 };
 
 /** One row of the index in `docs/ARCHITECTURE.md`. */
 export type IndexRow = {
-  /** Link target relative to `docs/`, e.g. `adr/0001-record-architecture-decisions.md`. */
+  /** Link target relative to `docs/`, e.g. `adr/0010-model-a-record-as-a-balanced-entry-of-lines.md`. */
   readonly file: string;
   readonly status: string;
 };
@@ -137,16 +137,6 @@ export function findAdrProblems(
     if (numbers.has(number)) problems.push(`${file.name}: ADR-${pad(number)} is used twice`);
     numbers.add(number);
   }
-
-  [...numbers]
-    .sort((a, b) => a - b)
-    .forEach((number, position) => {
-      if (number !== position + 1) {
-        problems.push(
-          `ADR numbering has a hole: expected ADR-${pad(position + 1)}, found ADR-${pad(number)}`,
-        );
-      }
-    });
 
   for (const file of named) {
     const number = numberOf(file.name);

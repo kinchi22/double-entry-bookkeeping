@@ -56,8 +56,8 @@ exposure is real and it is accepted for that window only.
 
 Adoption changes the signature of every existing use case that will check the
 context, and the E2E specs, which then have to sign in before they can create an
-entry. The smoke specs stay read-only (ADR-0014), so they need a page that
-renders signed out, or a session of their own.
+entry. The smoke specs stay read-only, so they need a page that renders signed
+out, or a session of their own.
 
 A single-owner credential in configuration means rotating it is a Vercel change
 and a redeploy, not a page in the app.

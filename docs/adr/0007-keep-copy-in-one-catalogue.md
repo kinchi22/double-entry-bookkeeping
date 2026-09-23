@@ -11,9 +11,9 @@ eventually translates the app needs to find its copy, and copy written inline
 can only be found string by string: only a person reading a string can tell
 copy from a value.
 
-Saying where copy lives has already failed once. ADR-0001 records it:
-`docs/GLOSSARY.md` said copy lived in resource files while every string was
-inline, and no gate could see the difference. By #10 the ESLint config exempted
+Saying where copy lives has already failed once: `docs/GLOSSARY.md` said copy
+lived in resource files while every string was inline, and no gate could see
+the difference. By #10 the ESLint config exempted
 four globs on the strength of that claim, three of them folder names, and #10
 removed them because they also exempted any source folder with those names.
 
