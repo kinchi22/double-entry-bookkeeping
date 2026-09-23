@@ -163,6 +163,7 @@ jobs:
   compatibility:
     name: Smoke Current Production after migration
     if: >-
+      always() &&
       needs.result.outputs.migration_state == 'none' &&
       (needs.result.outputs.migration_outcome == 'success' ||
        needs.result.outputs.migration_outcome == 'skipped-no-migration')
