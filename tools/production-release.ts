@@ -2,22 +2,41 @@ import { appendFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+export const REQUIRED_PREREQUISITES = ['Gates', 'Integration'] as const;
+export type RequiredPrerequisite = (typeof REQUIRED_PREREQUISITES)[number];
+
+export const PREREQUISITE_OUTCOMES = ['success', 'failure', 'cancelled', 'skipped'] as const;
+export type PrerequisiteOutcome = (typeof PREREQUISITE_OUTCOMES)[number];
+
+export const MIGRATION_STATES = ['none', 'pending', 'unknown'] as const;
+export type MigrationState = (typeof MIGRATION_STATES)[number];
+
+export const MIGRATION_REASONS = [
+  'missing-applied-commit',
+  'uncomparable-applied-commit',
+] as const;
+export type MigrationReason = (typeof MIGRATION_REASONS)[number];
+
+export const MIGRATION_OUTCOMES = [
+  'not-started',
+  'running',
+  'success',
+  'failure',
+  'cancelled',
+  'skipped',
+  'skipped-no-migration',
+] as const;
+export type MigrationOutcome = (typeof MIGRATION_OUTCOMES)[number];
+
 export type Prerequisite = {
-  readonly name: string;
-  readonly outcome: 'success' | 'failure' | 'cancelled' | 'skipped';
+  readonly name: RequiredPrerequisite;
+  readonly outcome: PrerequisiteOutcome;
 };
 
 export type Migration = {
-  readonly state: 'none' | 'pending' | 'unknown';
-  readonly reason?: 'missing-applied-commit' | 'uncomparable-applied-commit';
-  readonly outcome:
-    | 'not-started'
-    | 'running'
-    | 'success'
-    | 'failure'
-    | 'cancelled'
-    | 'skipped'
-    | 'skipped-no-migration';
+  readonly state: MigrationState;
+  readonly reason?: MigrationReason;
+  readonly outcome: MigrationOutcome;
 };
 
 export type ReleaseInput = {
@@ -64,14 +83,20 @@ export function coalesceProductionReleases(input: ReleaseQueueInput): ReleaseQue
 }
 
 export function decideProductionRelease(input: ReleaseInput): ReleaseDecision {
-  const failedPrerequisite = input.prerequisites.find(
-    (prerequisite) => prerequisite.outcome !== 'success',
-  );
-  if (failedPrerequisite !== undefined) {
-    return {
-      decision: 'fail',
-      reason: `${failedPrerequisite.name} was ${failedPrerequisite.outcome}; Production is not ready.`,
-    };
+  for (const name of REQUIRED_PREREQUISITES) {
+    const prerequisite = input.prerequisites.find((candidate) => candidate.name === name);
+    if (prerequisite === undefined) {
+      return {
+        decision: 'fail',
+        reason: `${name} result is missing; Production is not ready.`,
+      };
+    }
+    if (prerequisite.outcome !== 'success') {
+      return {
+        decision: 'fail',
+        reason: `${prerequisite.name} was ${prerequisite.outcome}; Production is not ready.`,
+      };
+    }
   }
 
   if (input.migration.state === 'unknown') {
@@ -153,24 +178,12 @@ function isReleaseInput(value: unknown): value is ReleaseInput {
     prerequisites.every(
       (item) =>
         isRecord(item) &&
-        typeof item['name'] === 'string' &&
-        isOneOf(item['outcome'], ['success', 'failure', 'cancelled', 'skipped']),
+        isOneOf(item['name'], REQUIRED_PREREQUISITES) &&
+        isOneOf(item['outcome'], PREREQUISITE_OUTCOMES),
     ) &&
-    isOneOf(migration['state'], ['none', 'pending', 'unknown']) &&
-    isOneOf(migration['outcome'], [
-      'not-started',
-      'running',
-      'success',
-      'failure',
-      'cancelled',
-      'skipped',
-      'skipped-no-migration',
-    ]) &&
-    (migration['reason'] === undefined ||
-      isOneOf(migration['reason'], [
-        'missing-applied-commit',
-        'uncomparable-applied-commit',
-      ]))
+    isOneOf(migration['state'], MIGRATION_STATES) &&
+    isOneOf(migration['outcome'], MIGRATION_OUTCOMES) &&
+    (migration['reason'] === undefined || isOneOf(migration['reason'], MIGRATION_REASONS))
   );
 }
 

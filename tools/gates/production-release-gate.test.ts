@@ -6,13 +6,33 @@ import { describe, expect, it } from 'vitest';
 import { coalesceProductionReleases, decideProductionRelease } from '../production-release';
 import { REPO_ROOT } from './run-gate';
 
+const SUCCESSFUL_PREREQUISITES = [
+  { name: 'Gates', outcome: 'success' },
+  { name: 'Integration', outcome: 'success' },
+] as const;
+
 describe('decideProductionRelease', () => {
+  it.each([
+    ['Gates', [{ name: 'Integration', outcome: 'success' }]],
+    ['Integration', [{ name: 'Gates', outcome: 'success' }]],
+  ] as const)('fails closed when the %s result is missing', (name, prerequisites) => {
+    expect(
+      decideProductionRelease({
+        prerequisites,
+        migration: { state: 'none', outcome: 'skipped-no-migration' },
+      }),
+    ).toEqual({
+      decision: 'fail',
+      reason: `${name} result is missing; Production is not ready.`,
+    });
+  });
+
   it.each(['missing-applied-commit', 'uncomparable-applied-commit'] as const)(
     'requests approval when migration state is unknown because it is %s',
     (reason) => {
       expect(
         decideProductionRelease({
-          prerequisites: [{ name: 'Gates', outcome: 'success' }],
+          prerequisites: SUCCESSFUL_PREREQUISITES,
           migration: { state: 'unknown', reason, outcome: 'not-started' },
         }),
       ).toEqual({
@@ -27,7 +47,10 @@ describe('decideProductionRelease', () => {
     (outcome) => {
       expect(
         decideProductionRelease({
-          prerequisites: [{ name: 'Integration', outcome }],
+          prerequisites: [
+            { name: 'Gates', outcome: 'success' },
+            { name: 'Integration', outcome },
+          ],
           migration: { state: 'none', outcome: 'skipped-no-migration' },
         }),
       ).toEqual({
@@ -83,10 +106,7 @@ describe('decideProductionRelease', () => {
     (decision, migration, reason) => {
       expect(
         decideProductionRelease({
-          prerequisites: [
-            { name: 'Gates', outcome: 'success' },
-            { name: 'Integration', outcome: 'success' },
-          ],
+          prerequisites: SUCCESSFUL_PREREQUISITES,
           migration,
         }),
       ).toEqual({ decision, reason });
@@ -134,7 +154,7 @@ describe('production-release.ts, run as CI runs it', () => {
 
   it('exposes release decisions as JSON', () => {
     const result = runCommand('decide', {
-      prerequisites: [{ name: 'Gates', outcome: 'success' }],
+      prerequisites: SUCCESSFUL_PREREQUISITES,
       migration: { state: 'none', outcome: 'skipped-no-migration' },
     });
 
@@ -170,7 +190,7 @@ describe('production-release.ts, run as CI runs it', () => {
           path.join(REPO_ROOT, 'tools', 'production-release.ts'),
           'decide',
           JSON.stringify({
-            prerequisites: [{ name: 'Gates', outcome: 'success' }],
+            prerequisites: SUCCESSFUL_PREREQUISITES,
             migration: { state: 'pending', outcome: 'running' },
           }),
         ],
@@ -188,6 +208,19 @@ describe('production-release.ts, run as CI runs it', () => {
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
+  });
+
+  it('fails closed when a required prerequisite result is absent', () => {
+    const result = runCommand('decide', {
+      prerequisites: [{ name: 'Gates', outcome: 'success' }],
+      migration: { state: 'none', outcome: 'skipped-no-migration' },
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      decision: 'fail',
+      reason: 'Integration result is missing; Production is not ready.',
+    });
   });
 
   it('fails closed when the command or input is missing', () => {
