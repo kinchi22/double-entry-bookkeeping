@@ -47,8 +47,13 @@ parent's data and its roles' passwords.
    `vercel.deployment.promoted` to the repository. The first starts the
    candidate smoke, the second the post-Promotion smoke.
 7. Deployment Checks, for Production: require `Production ready`, `E2E build`
-   and `Candidate Production smoke`. Automatic Promotion stays on; these checks
-   are what hold it back.
+   and `Candidate Production smoke`. Automatic production-domain assignment
+   stays on; these checks are what hold it back, and no Vercel token is needed
+   to promote. The picker offers the commit status `Candidate Production smoke`
+   beside the check runs. Do not select `Test candidate deployment`, the job
+   that publishes it: a repository-dispatch run's check run lands on `main`'s
+   head at the time, not on the candidate's commit, so a newer commit's run
+   could satisfy an older deployment's check.
 
 No setting chooses pnpm. Vercel reads the major version from `packageManager`
 and installs with its own pnpm 11.x, so the pnpm 11 settings in
@@ -87,6 +92,32 @@ without blocking every Promotion on a status that does not exist yet:
 6. Verify one push with no migration end to end: its Production deployment stays
    unpromoted until the three checks pass, is promoted, and the post-Promotion
    smoke run passes against `PRODUCTION_URL`.
+
+This was done on 2026-09-24. Before step 5, 6b19ebf was promoted before its
+`Production ready` finished. The verification push was 750f002 (#109, a
+comment-only change carrying no migration), times in UTC:
+
+| Time | Event |
+| ---- | ----- |
+| 02:21:41 | Merged into `main`; the Production deployment starts building |
+| 02:22:02 | `vercel.deployment.ready`; the candidate smoke run starts |
+| 02:22:48 | `Candidate Production smoke` pending |
+| 02:23:17 | `E2E build` passes |
+| 02:23:50 | `Apply migrations` skipped: nothing pending, no approval requested |
+| 02:25:06 | `Production ready` passes |
+| 02:26:14 | `Candidate Production smoke` passes, the last required check |
+| 02:26:17 | `vercel.deployment.promoted`; the post-Promotion smoke run starts |
+| 02:27:04 | Post-Promotion smoke passes against `PRODUCTION_URL` at 750f002 |
+
+The deployment was ready about four minutes before Promotion and was promoted
+three seconds after its last check passed. Expect a release with no migration
+to take about five minutes from merge to Promotion, most of it waiting for the
+checks.
+
+Vercel matches the three checks by name, and no gate here reads its list.
+Renaming the `Production ready` or `E2E build` job, or the status context
+`Candidate Production smoke`, holds every later Promotion until the Deployment
+Checks name the new one.
 
 ### What runs against a deployment
 
@@ -257,6 +288,13 @@ through to its post-Promotion run.
 **Candidate smoke fails, or `Production ready` fails before a migration.**
 Nothing was promoted and the database is unchanged. Current Production keeps
 serving. Fix forward with a new push to `main`.
+
+**A required check never arrives.** The ready event is off, or a check was
+renamed away from the Deployment Checks' list: the Production deployment waits
+unpromoted, and Current Production keeps serving. Restore the event or the
+name ([Turning the checks on](#turning-the-checks-on)), then push to `main`
+again. Removing the Deployment Checks instead lets Promotion follow the build,
+ahead of any pending migration.
 
 **Post-Promotion smoke fails.** The new deployment is Current Production and
 something on the live domain is wrong. Nothing rolls back automatically, since
