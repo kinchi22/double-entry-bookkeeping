@@ -12,9 +12,10 @@ import { spawnSync } from 'node:child_process';
  * the newest one whose latest status is `success`.
  *
  * Measuring from the last applied commit rather than from this push is the
- * point. A run waiting for approval is cancelled by the next push to `main`,
- * and an approval can be rejected; either way the migration is still pending,
- * and the next push asks again.
+ * point. A queued release for a commit `main` has moved past stops before it
+ * gets here, and an approval can be rejected; either way the migration is
+ * still pending, and the newest release, which runs this after the one before
+ * it finished, asks for all of it at once.
  *
  * Every doubt resolves to "pending": no successful deployment, an API call
  * that failed, a commit git cannot compare. The cost of a wrong "pending" is an

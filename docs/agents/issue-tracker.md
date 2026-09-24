@@ -64,10 +64,21 @@ Every Feature gets these Tasks beside its vertical slices:
   touches nothing else (ADR-0002). The owner reviews it as code owner. It blocks
   every other Task.
 - **Migration for `<change>`**, when the schema changes. The schema and its
-  generated SQL, in a pull request to `main` (ADR-0013). It blocks the Tasks
-  that use the new schema.
+  generated SQL, in a pull request onto the milestone that touches no
+  behaviour, which the owner reviews as code owner of `packages/db/drizzle/`
+  (ADR-0024). It is blocked by the specs Task and blocks the Tasks that use the
+  new schema.
 
 Every other Task stays out of `e2e/` and `packages/db/drizzle/`.
+
+Two milestones may each carry a migration. When one of them reaches `main`,
+every other whose migration was generated from the older journal needs it
+regenerated before its integration pull request: the owner merges `main` into
+the milestone, resolving `packages/db/drizzle/` to `main`'s side, and a new
+Task of the Feature, **Regenerate the migration for `<change>`**, runs
+`db:generate` again in a pull request onto the milestone that the owner reviews
+again. Being an open Task, it holds the integration pull request back until it
+merges.
 
 ## A Feature with no specs
 
@@ -82,7 +93,7 @@ approves, and the last of them carries `Closes #<feature>` as well.
 | Task                  | Pull request into |
 | --------------------- | ----------------- |
 | Specs                 | `milestone/<name>`, which this Task creates from `main` when it does not exist |
-| Migration             | `main` |
+| Migration             | `milestone/<name>` |
 | Any other Feature Task | `milestone/<name>` |
 | A Task of a Feature with no specs | `main` |
 | Bug                   | `main` |

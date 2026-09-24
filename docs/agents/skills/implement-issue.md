@@ -73,7 +73,9 @@ Stop the loop and report where the Feature stands when:
 
 - **A pull request needs the owner**: the specs, a spec correction, a
   migration, or anything into `main`. Name it and what they are approving.
-  After a migration merges, `Apply migrations` waits for their approval too.
+  After a milestone carrying a migration reaches `main`, `Apply migrations`
+  waits for their approval too, and every other milestone carrying a migration
+  needs it regenerated (`docs/agents/issue-tracker.md`).
 - **Checks are red** and the Subagent cannot make them green without changing
   a gate, a spec, or a decision outside the Task.
 - **The frontier is empty but Tasks are open**: they are blocked, assigned or

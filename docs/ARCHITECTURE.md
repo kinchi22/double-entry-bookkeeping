@@ -48,17 +48,18 @@ status in the ADR itself.
 | [ADR-0006: Gate main on the specs, run against a build](adr/0006-gate-main-on-the-specs-run-against-a-build.md) | Accepted |
 | [ADR-0007: Keep copy in one catalogue](adr/0007-keep-copy-in-one-catalogue.md) | Accepted |
 | [ADR-0008: Localize without a locale in the URL](adr/0008-localize-without-a-locale-in-the-url.md) | Deferred |
-| [ADR-0009: Deploy to Vercel against two Neon projects](adr/0009-deploy-to-vercel-against-two-neon-projects.md) | Accepted |
+| [ADR-0009: Deploy to Vercel against two Neon projects](adr/0009-deploy-to-vercel-against-two-neon-projects.md) | Superseded by ADR-0024 |
 | [ADR-0010: Model a record as a balanced entry of lines](adr/0010-model-a-record-as-a-balanced-entry-of-lines.md) | Accepted |
 | [ADR-0011: Make an aggregate write atomic](adr/0011-make-an-aggregate-write-atomic.md) | Accepted |
 | [ADR-0012: Run the specs against a real database](adr/0012-run-the-specs-against-a-real-database.md) | Accepted |
-| [ADR-0013: Land a migration before the milestone that needs it](adr/0013-land-a-migration-before-the-milestone-that-needs-it.md) | Accepted |
+| [ADR-0013: Land a migration before the milestone that needs it](adr/0013-land-a-migration-before-the-milestone-that-needs-it.md) | Superseded by ADR-0024 |
 | [ADR-0015: Model accounts as data](adr/0015-model-accounts-as-data.md) | Deferred |
 | [ADR-0016: Correct an entry by reversal](adr/0016-correct-an-entry-by-reversal.md) | Deferred |
 | [ADR-0017: Authenticate before the MVP](adr/0017-authenticate-before-the-mvp.md) | Superseded by ADR-0021 |
 | [ADR-0018: Log infrastructure failures through a port](adr/0018-log-infrastructure-failures-through-a-port.md) | Accepted |
 | [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
 | [ADR-0021: Authenticate every user with Google](adr/0021-authenticate-every-user-with-google.md) | Accepted |
+| [ADR-0024: Promote a Production deployment only after its migration](adr/0024-promote-production-only-after-its-migration.md) | Accepted |
 
 ## Package layout
 
@@ -144,7 +145,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context, which `sessionProcedure` resolves from the `session` cookie; a use case given none answers `UNAUTHENTICATED`, 401. Every repository method over user data takes the `userId`, and another User's row is `NOT_FOUND`. ADR-0021. |
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change. Applied from CI, after the owner approves, and merged before the code that needs them. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at. A milestone never carries one: the schema reaches `main` in its own pull request first. ADR-0009, ADR-0013. |
+| Migrations           | Generated SQL committed with the schema change, on the milestone that needs it, and backwards compatible with Current Production. Applied from CI after the owner approves, and before the Production deployment carrying it can be promoted. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at. ADR-0024. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
@@ -280,6 +281,7 @@ branched from `main`, named `milestone/<name>`.
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
 | specs -> `milestone/x`      | the owner, as code owner | not on the pull request (the specs would fail by design); `E2E build (advisory)` on the merge | e2e only |
+| migration -> `milestone/x`  | the owner, as code owner of `packages/db/drizzle/` | as for a feature | no specs |
 | feature -> `milestone/x`    | nobody      | not on the pull request (the specs would fail until the behaviour lands); `E2E build (advisory)` on the merge | no specs |
 | `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | `E2E build (advisory)`, on the push | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
@@ -304,10 +306,21 @@ one bypass actor on that ruleset, syncs instead with `git merge origin/main` and
 a push, and only when the milestone needs something from `main`. Most
 milestones need no sync at all: they branch from `main` and return to it soon.
 
-A migration is the one thing a milestone does not carry. Vercel deploys a merge
-to `main` while `Apply migrations` is still waiting for the owner, so a schema
-change goes to `main` in a pull request of its own, is approved and applied
-there, and the milestone that needs it merges afterwards. ADR-0013.
+A milestone carries its own migration. The schema change and its generated SQL
+land on the milestone in a pull request of their own, after the specs and before
+the Tasks that need the schema, and the owner reviews it because
+`packages/db/drizzle/` is owned. The integration pull request then carries
+specs, schema, migration and behaviour into `main` together, and "How a release
+reaches Production" below keeps that behaviour from receiving traffic before
+its migration is applied. ADR-0024.
+
+Two milestones may each carry a migration at once. Drizzle's journal is linear,
+so when one of them reaches `main`, every other whose migration was generated
+from the older journal is behind: the owner syncs it with `main`, resolving
+`packages/db/drizzle/` to `main`'s side, and its migration is regenerated with
+`db:generate` in a pull request of its own onto the milestone, which the owner
+reviews again. Only then does its integration pull request open, so resolving
+the conflict is never hidden inside the integration.
 
 `tools/check-pr-isolation.ts` decides the isolation column from the pull
 request's file list and the two branch names, and the `Spec isolation` job fails
@@ -329,7 +342,7 @@ the head of the integration pull request, so a shared name would put a red
 advisory run and the green gate on one commit. The job brings a
 `postgres:18-alpine` service of its own and migrates it first, so a spec that
 writes is judged against the schema its own commit carries; the smoke runs
-against deployed URLs are not required checks and run the `@smoke`-tagged reads
+against deployed URLs are not merge checks and run the `@smoke`-tagged reads
 alone. ADR-0012.
 
 Required checks belong to a ruleset, and there are two: `main`, which requires
@@ -356,3 +369,82 @@ caught on the pull request that lands it on the milestone.
 This is what "one PR per acceptance criterion" in `AGENTS.md` now means: one
 milestone per criterion, and as many feature pull requests underneath it as the
 work takes.
+
+## How a release reaches Production
+
+Three words keep apart what used to be described as one event. A **Production
+deployment** is an artifact Vercel built for `main` with the Production
+environment's configuration; it exists, and need not receive traffic.
+**Promotion** assigns the production domains to one. **Current Production** is
+the deployment those domains route to. ADR-0024.
+
+Vercel builds a Production deployment for every push to `main` through its Git
+integration, and its Deployment Checks leave it unpromoted until three checks
+pass on its exact commit:
+
+| Check | Where | What it proves |
+| ----- | ----- | -------------- |
+| `Production ready` | job in `.github/workflows/ci.yml` | `Gates` and `Integration` passed, the release sequence finished for this commit, and Current Production passed smoke on the resulting schema |
+| `E2E build` | `.github/workflows/e2e-build.yml` | the whole suite, against a build of the commit on a database migrated with its own migrations |
+| `Candidate Production smoke` | commit status from `.github/workflows/candidate-production-smoke.yml` | the `@smoke` specs, against the candidate deployment's own URL |
+
+`Mutation testing`, `Gate liveness` and `Spec isolation` stay merge checks and
+are not Deployment Checks: a commit on `main` has already passed them.
+
+**Migration ordering.** The release sequence,
+`.github/workflows/production-release.yml`, runs once `Gates` and `Integration`
+pass on a push to `main`:
+
+1. *Select.* The commit must still be `main`'s head, or the sequence stops and
+   its `Production ready` fails.
+2. *Migrate preview.* The shared Preview database is migrated, as a canary. An
+   unset `PREVIEW_DATABASE_URL` fails.
+3. *Recalculate pending migrations.* `tools/find-pending-migrations.ts`
+   compares `packages/db/drizzle/` at this commit with the last commit
+   Production was migrated at, and treats every doubt as pending. The commit is
+   checked against `main`'s head again, just before approval is asked.
+4. *Apply migrations*, only when something is pending, in the
+   `production-database` environment, after the owner approves. An unset
+   `PRODUCTION_DATABASE_URL` fails.
+5. *Smoke Current Production* on the new schema, against `PRODUCTION_URL`,
+   which still routes to the previous deployment. This runs when nothing was
+   pending too.
+
+`tools/production-release.ts` decides from those results whether the commit is
+ready, and `Production ready` fails unless it is and step 5 passed. An
+intentional no-migration skip and a skipped or failed prerequisite reach it as
+different values, so a skipped `Apply migrations` is never read as success.
+
+**Status tracking.** Migration state is recorded apart from Promotion. A
+successful `production-database` deployment, which GitHub writes when `Apply
+migrations` succeeds, is the durable record of the last migrated commit, and
+step 3 of every later release reads it. It is written before the compatibility
+smoke or any Deployment Check runs, because a failure there cannot undo the
+DDL: the next release sees the migration as applied rather than pending.
+
+**Release concurrency.** The `release` job in `ci.yml` holds the concurrency
+group `production-release` and queues rather than cancels, so a migration that
+started, or is waiting for approval, is never cancelled by a newer push. The
+queued runs behind it are coalesced to the newest commit: each rechecks
+`main`'s head before touching a database, so only the newest does anything, and
+it recalculates what is pending after the running release has finished. An
+older commit's `Production ready` fails, so its Production deployment is never
+promoted.
+
+**Three smoke seams.** Each runs the same read-only `@smoke` specs, signed in
+as the Smoke User and past Deployment Protection with the bypass secret:
+
+| Seam | Target | Triggered by | On failure |
+| ---- | ------ | ------------ | ---------- |
+| Compatibility | `PRODUCTION_URL`, still the previous Current Production | step 5 of the release sequence | `Production ready` fails, nothing is promoted |
+| Candidate | the Production deployment's own URL | Vercel's `vercel.deployment.ready` event, once `Production ready` passes on the event's SHA | the `Candidate Production smoke` status fails on that SHA |
+| Post-Promotion | `PRODUCTION_URL`, the new Current Production | Vercel's `vercel.deployment.promoted` event | reported; the owner decides, nothing rolls back |
+
+The candidate and post-Promotion runs check out the SHA their event carries and
+refuse an event with no valid SHA or an environment other than `production`,
+so a newer `main` commit can never satisfy an older deployment's check.
+
+Force Promote cannot be taken away by repository code, so the rule for it lives
+in `docs/DEPLOYMENT.md` with the rest of operating a release. Preview
+deployments share one Preview database that only `main` migrates, and are best
+effort: nothing above reads them.

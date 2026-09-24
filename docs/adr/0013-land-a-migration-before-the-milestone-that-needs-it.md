@@ -1,6 +1,6 @@
 # ADR-0013: Land a migration before the milestone that needs it
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0024
 **Date:** 2026-09-16
 
 ## Problem

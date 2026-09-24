@@ -1,6 +1,6 @@
 # ADR-0009: Deploy to Vercel against two Neon projects
 
-**Status:** Accepted
+**Status:** Superseded by ADR-0024
 **Date:** 2026-09-15
 
 ## Problem
