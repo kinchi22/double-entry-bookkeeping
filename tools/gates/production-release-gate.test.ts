@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -250,19 +250,13 @@ describe('Post-Promotion smoke workflow', () => {
         encoding: 'utf8',
         env: { PATH: process.env['PATH'] ?? '', GITHUB_OUTPUT: output, ...env },
       });
-      let written = '';
-      try {
-        written = readFileSync(output, 'utf8');
-      } catch {
-        written = '';
-      }
-      return { result, written };
+      return { result, written: existsSync(output) ? readFileSync(output, 'utf8') : '' };
     } finally {
       rmSync(sandbox, { recursive: true, force: true });
     }
   };
 
-  it('replaces the build-success trigger with the promoted event', () => {
+  it('starts on the promoted event, and no workflow listens to deployment_status', () => {
     const listeners = readdirSync(workflows).filter((file) =>
       /^\s+deployment_status:/m.test(readFileSync(path.join(workflows, file), 'utf8')),
     );
@@ -272,13 +266,20 @@ describe('Post-Promotion smoke workflow', () => {
 
   it('smokes the production domain at the exact promoted SHA without writing anything', () => {
     expect(promoted).toMatch(/permissions:\n\s+contents: read\n\n/);
-    expect(promoted).toContain("github.event.client_payload.environment == 'production'");
     expect(promoted).toContain('ref: ${{ steps.promoted.outputs.sha }}');
     expect(promoted).toContain('E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}');
     expect(promoted).toContain('VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}');
     expect(promoted).toContain('SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}');
     expect(promoted).toContain('pnpm test:e2e --grep @smoke');
     expect(promoted).not.toMatch(/upload-artifact|vercel (rollback|promote)|statuses: write/);
+  });
+
+  it('runs the job for a production or environment-less event only, so a preview never starts it', () => {
+    const condition = /\n {4}if: >-\n((?: {6}.*\n)+)/.exec(promoted)?.[1]?.replace(/\s+/g, ' ').trim();
+    expect(condition).toBe(
+      "github.event.client_payload.environment == 'production' || " +
+        "github.event.client_payload.environment == ''",
+    );
   });
 
   it('passes the promoted SHA on to checkout', () => {
@@ -292,7 +293,6 @@ describe('Post-Promotion smoke workflow', () => {
     ['a missing SHA', { PROMOTED_ENVIRONMENT: 'production', PROMOTED_SHA: '' }],
     ['a short SHA', { PROMOTED_ENVIRONMENT: 'production', PROMOTED_SHA: 'abc1234' }],
     ['a missing environment', { PROMOTED_ENVIRONMENT: '', PROMOTED_SHA: 'c'.repeat(40) }],
-    ['a preview environment', { PROMOTED_ENVIRONMENT: 'preview', PROMOTED_SHA: 'c'.repeat(40) }],
   ])('fails on %s rather than smoking the default branch', (_, env) => {
     const { result, written } = checkEvent(env);
     expect(result.status).not.toBe(0);

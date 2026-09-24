@@ -78,9 +78,9 @@ jobs:
       # the secret included, and GitHub masks secrets in this log but not in an
       # artifact.
       #
-      # --grep @smoke, not the whole suite: ADR-0014. This is the owner's real
-      # books, and the job holds no database credential to clean up after a
-      # spec that writes.
+      # --grep @smoke, not the whole suite (docs/DEPLOYMENT.md, "What runs
+      # against a deployment"). This is the owner's real books, and the job
+      # holds no database credential to clean up after a spec that writes.
       - name: Smoke Current Production
         run: pnpm test:e2e --grep @smoke
         env:
