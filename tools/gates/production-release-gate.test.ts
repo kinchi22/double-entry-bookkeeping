@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -231,6 +231,72 @@ describe('Production release workflow invariants', () => {
     expect(candidate).toContain('ref: ${{ steps.pending.outputs.sha }}');
     expect(candidate).toContain('E2E_BASE_URL: ${{ steps.pending.outputs.url }}');
     expect(candidate).toContain('pnpm test:e2e --grep @smoke');
+  });
+});
+
+describe('Post-Promotion smoke workflow', () => {
+  const workflows = path.join(REPO_ROOT, '.github/workflows');
+  const promoted = readFileSync(path.join(workflows, 'promoted-production-smoke.yml'), 'utf8');
+
+  // The step's own script, run as the runner would, so the test judges what it
+  // does with a payload rather than how it is spelled.
+  const checkEvent = (env: Record<string, string>) => {
+    const script = /- name: Check the promoted event\n[\s\S]*?run: \|\n([\s\S]*?)\n\s+- uses:/.exec(promoted)?.[1];
+    if (script === undefined) throw new Error('The promoted-event check step is missing.');
+    const sandbox = mkdtempSync(path.join(tmpdir(), 'promoted-smoke-'));
+    const output = path.join(sandbox, 'output');
+    try {
+      const result = spawnSync('bash', ['-e', '-c', script.replace(/^ {10}/gm, '')], {
+        encoding: 'utf8',
+        env: { PATH: process.env['PATH'] ?? '', GITHUB_OUTPUT: output, ...env },
+      });
+      let written = '';
+      try {
+        written = readFileSync(output, 'utf8');
+      } catch {
+        written = '';
+      }
+      return { result, written };
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  };
+
+  it('replaces the build-success trigger with the promoted event', () => {
+    const listeners = readdirSync(workflows).filter((file) =>
+      /^\s+deployment_status:/m.test(readFileSync(path.join(workflows, file), 'utf8')),
+    );
+    expect(listeners).toEqual([]);
+    expect(promoted).toMatch(/repository_dispatch:\n\s+types: \[vercel\.deployment\.promoted\]/);
+  });
+
+  it('smokes the production domain at the exact promoted SHA without writing anything', () => {
+    expect(promoted).toMatch(/permissions:\n\s+contents: read\n\n/);
+    expect(promoted).toContain("github.event.client_payload.environment == 'production'");
+    expect(promoted).toContain('ref: ${{ steps.promoted.outputs.sha }}');
+    expect(promoted).toContain('E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}');
+    expect(promoted).toContain('VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}');
+    expect(promoted).toContain('SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}');
+    expect(promoted).toContain('pnpm test:e2e --grep @smoke');
+    expect(promoted).not.toMatch(/upload-artifact|vercel (rollback|promote)|statuses: write/);
+  });
+
+  it('passes the promoted SHA on to checkout', () => {
+    const sha = 'b'.repeat(40);
+    const { result, written } = checkEvent({ PROMOTED_ENVIRONMENT: 'production', PROMOTED_SHA: sha });
+    expect(result.status, result.stderr).toBe(0);
+    expect(written).toBe(`sha=${sha}\n`);
+  });
+
+  it.each([
+    ['a missing SHA', { PROMOTED_ENVIRONMENT: 'production', PROMOTED_SHA: '' }],
+    ['a short SHA', { PROMOTED_ENVIRONMENT: 'production', PROMOTED_SHA: 'abc1234' }],
+    ['a missing environment', { PROMOTED_ENVIRONMENT: '', PROMOTED_SHA: 'c'.repeat(40) }],
+    ['a preview environment', { PROMOTED_ENVIRONMENT: 'preview', PROMOTED_SHA: 'c'.repeat(40) }],
+  ])('fails on %s rather than smoking the default branch', (_, env) => {
+    const { result, written } = checkEvent(env);
+    expect(result.status).not.toBe(0);
+    expect(written).toBe('');
   });
 });
 

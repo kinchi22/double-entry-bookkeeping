@@ -59,40 +59,36 @@ migrates it before the suite, so the specs are judged against the schema the
 commit carries and a spec that writes has somewhere disposable to write.
 ADR-0012.
 
-The `E2E` job in `.github/workflows/e2e-deployed.yml` is a smoke run of the
-Production deployment, of the `@smoke`-tagged specs alone (`--grep @smoke`). A
-spec that writes stays untagged and runs in `E2E build` only: Production becomes
-the owner's real books, and this job holds a deployment bypass secret rather
-than a database credential, so it could not clean up after itself. The tag is a
-claim a person makes and no gate checks it, so review of `e2e/` is where a
-wrongly tagged write is caught.
+The read-only `@smoke`-tagged specs (`--grep @smoke`) run against a deployment
+at three seams: Current Production after migration
+(`.github/workflows/production-release.yml`), the candidate at its own URL
+before Promotion (`candidate-production-smoke.yml`), and the production domain
+after Promotion (`promoted-production-smoke.yml`). A spec that writes stays
+untagged and runs in `E2E build` only: Production becomes the owner's real
+books, and these jobs hold a deployment bypass secret rather than a database
+credential, so they could not clean up after themselves. The tag is a claim a
+person makes and no gate checks it, so review of `e2e/` is where a wrongly
+tagged write is caught.
 
-Vercel emits a `deployment_status` event for every deployment; the job runs when
-one whose environment is named `Production` succeeds, against its
-`environment_url`. Reading the event directly means no polling step and no
-third-party action holding a token in this repository. Previews are not
-smoke-run, and if Vercel ever names the environment differently the job stops
-running rather than failing.
+The post-Promotion run starts on Vercel's `vercel.deployment.promoted`
+repository-dispatch event, which Vercel sends only when a Production deployment
+becomes Current Production: previews, and Production deployments never
+promoted, send none. It checks out the SHA the event carries -- a missing or
+malformed SHA, or an environment other than `production`, fails the run rather
+than smoking the default branch -- and tests `PRODUCTION_URL`. The promoted
+event's delivery is enabled in the Vercel project settings beside the ready
+event the candidate run uses; without it the run never starts. The run
+publishes no status and changes nothing: a failure is an incident for the
+owner, who can roll back by hand to the previous deployment because migrations
+are backwards compatible.
 
-It is a workflow of its own, defining no job a ruleset requires, because the
-event also arrives for previews on the commit a pull request is judged by.
-
-The event is not Vercel's alone. GitHub records a deployment for a job that
-runs in an environment, and fires the event for each status it passes through
-(`waiting`, `queued`, `in_progress`, `success`). Each one starts an
-`E2E deployed` run that skips its job and costs no runner time. `Apply
-migrations` adds about five of them to a push with a pending migration, and
-must: `Pending migrations` reads those deployments. `Migrate preview` sets
-`deployment: false`, so it adds none, and a push with no migration starts one
-run.
-
-`environment_url` is the deployment's own URL, which Standard Protection puts
-behind a Vercel login. `playwright.config.ts` sends the bypass secret as the
-`x-vercel-protection-bypass` header whenever it is set. The job uploads no
+Every URL tested sits behind Standard Protection's Vercel login.
+`playwright.config.ts` sends the bypass secret as the
+`x-vercel-protection-bypass` header whenever it is set. No smoke job uploads a
 report, because a failed request's error text lists its headers: read a failure
 in the job log, where GitHub masks the secret.
 
-A green `E2E` proves the production database answered. The spec that calls
+A green smoke run proves the production database answered. The spec that calls
 `health.get` asserts the strict answer -- `healthy`, with `postgres` reachable
 -- so a deployment whose database is unreachable fails the smoke run instead of
 reporting a degraded status to nobody. That endpoint is the healthcheck and
