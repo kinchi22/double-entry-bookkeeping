@@ -1,0 +1,89 @@
+name: Post-Promotion Production smoke
+
+# The third smoke seam: the production domain, once Vercel has promoted a
+# Production deployment to Current Production. The candidate was already
+# smoked at its own URL (candidate-production-smoke.yml) and Current Production
+# after migration (production-release.yml); this run adds domain assignment and
+# the live route.
+#
+# Vercel's promoted repository-dispatch event starts it, not deployment_status:
+# that fires when a build succeeds, which since Deployment Checks is no longer
+# when a deployment receives traffic, and it fires for previews and GitHub
+# environments too. Preview deployments and Production deployments that are
+# never promoted send no promoted event.
+#
+# It reports and does nothing else. A failure is an incident for the owner:
+# no rollback, no Promotion, no status on the commit. Migrations are backwards
+# compatible, so the owner can roll back by hand to the previous deployment.
+
+on:
+  repository_dispatch:
+    types: [vercel.deployment.promoted]
+
+permissions:
+  contents: read
+
+# Keyed by the promoted SHA: a second Promotion of the same commit (a manual
+# re-promote) replaces a run still in flight rather than racing it.
+concurrency:
+  group: promoted-production-smoke-${{ github.event.client_payload.git.sha }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Smoke the production domain
+    # A missing environment reaches the check below and fails, rather than
+    # skipping a Promotion nobody then verifies.
+    if: >-
+      github.event.client_payload.environment == 'production' ||
+      github.event.client_payload.environment == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Without a SHA, checkout would fall back to the default branch, which
+      # repository_dispatch runs on, and smoke specs the promoted deployment may
+      # not carry.
+      - name: Check the promoted event
+        id: promoted
+        env:
+          PROMOTED_ENVIRONMENT: ${{ github.event.client_payload.environment }}
+          PROMOTED_SHA: ${{ github.event.client_payload.git.sha }}
+        run: |
+          if [ "$PROMOTED_ENVIRONMENT" != production ]; then
+            echo 'The Vercel promoted event must belong to the production environment.' >&2
+            exit 1
+          fi
+          if ! printf '%s' "$PROMOTED_SHA" | grep -Eqx '[0-9a-fA-F]{40}'; then
+            echo 'The Vercel promoted event must include a valid git.sha.' >&2
+            exit 1
+          fi
+          echo "sha=$PROMOTED_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.promoted.outputs.sha }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # PRODUCTION_URL is the production domain, which Standard Protection
+      # covers like any deployment URL: playwright.config.ts sends the bypass
+      # secret as a header. The Smoke User's session token (ADR-0021) signs the
+      # read-only specs in.
+      #
+      # No report is uploaded. A failed request's error text lists its headers,
+      # the secret included, and GitHub masks secrets in this log but not in an
+      # artifact.
+      #
+      # --grep @smoke, not the whole suite (docs/DEPLOYMENT.md, "What runs
+      # against a deployment"). This is the owner's real books, and the job
+      # holds no database credential to clean up after a spec that writes.
+      - name: Smoke Current Production
+        run: pnpm test:e2e --grep @smoke
+        env:
+          E2E_BASE_URL: ${{ vars.PRODUCTION_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          SMOKE_SESSION_TOKEN: ${{ secrets.SMOKE_SESSION_TOKEN }}

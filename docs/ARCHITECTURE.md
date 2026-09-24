@@ -328,8 +328,8 @@ resolve to one run: a milestone's last commit is both the tip of the branch and
 the head of the integration pull request, so a shared name would put a red
 advisory run and the green gate on one commit. The job brings a
 `postgres:18-alpine` service of its own and migrates it first, so a spec that
-writes is judged against the schema its own commit carries; the deployed smoke
-run in `E2E deployed` is not a required check and runs the `@smoke`-tagged reads
+writes is judged against the schema its own commit carries; the smoke runs
+against deployed URLs are not required checks and run the `@smoke`-tagged reads
 alone. ADR-0012.
 
 Required checks belong to a ruleset, and there are two: `main`, which requires
