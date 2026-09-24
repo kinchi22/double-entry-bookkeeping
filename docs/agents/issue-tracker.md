@@ -64,10 +64,30 @@ Every Feature gets these Tasks beside its vertical slices:
   touches nothing else (ADR-0002). The owner reviews it as code owner. It blocks
   every other Task.
 - **Migration for `<change>`**, when the schema changes. The schema and its
-  generated SQL, in a pull request to `main` (ADR-0013). It blocks the Tasks
-  that use the new schema.
+  generated SQL, in a pull request onto the milestone that touches no
+  behaviour, which the owner reviews as code owner of `packages/db/drizzle/`
+  (ADR-0024). It is blocked by the specs Task and blocks the Tasks that use the
+  new schema.
 
-Every other Task stays out of `e2e/` and `packages/db/drizzle/`.
+Every other Task stays out of `e2e/` and `packages/db/drizzle/`, except the
+regeneration Task below, which rewrites the Migration Task's SQL.
+
+**Regenerating a migration.** Two milestones may each carry a migration, and
+Drizzle's journal is linear. When one of them reaches `main`, every other whose
+migration was generated from the older journal is regenerated before its
+integration pull request:
+
+1. The owner merges `main` into the milestone, resolving `packages/db/drizzle/`
+   to `main`'s side.
+2. A new Task of the Feature, **Regenerate the migration for `<change>`**,
+   runs `pnpm --filter @repo/db db:generate` and opens a pull request onto the
+   milestone that touches `packages/db/drizzle/` alone. The owner reviews it
+   again as code owner.
+3. It is recorded as blocking every other open Task of the Feature, so it merges
+   before any other pull request onto the milestone. Between the sync and that
+   merge, `packages/db/src/schema.ts` is ahead of `packages/db/drizzle/`, and
+   `pnpm db:drift` fails `Gates` on every other pull request into the milestone.
+   Being an open Task, it also holds the integration pull request back.
 
 ## A Feature with no specs
 
@@ -82,7 +102,8 @@ approves, and the last of them carries `Closes #<feature>` as well.
 | Task                  | Pull request into |
 | --------------------- | ----------------- |
 | Specs                 | `milestone/<name>`, which this Task creates from `main` when it does not exist |
-| Migration             | `main` |
+| Migration             | `milestone/<name>` |
+| Regenerate a migration | `milestone/<name>` |
 | Any other Feature Task | `milestone/<name>` |
 | A Task of a Feature with no specs | `main` |
 | Bug                   | `main` |

@@ -43,8 +43,10 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   so you cannot merge there alone, whatever the change is. A milestone branch is
   the only place work proceeds unattended.
 - **One milestone branch per acceptance criterion.** `milestone/<name>`, branched
-  from `main`. The specs land on it first, reviewed by the owner; feature
-  branches then target the milestone and merge with no review; the milestone goes
+  from `main`. The specs land on it first, reviewed by the owner; a schema
+  change lands next, its migration in a pull request of its own, reviewed by
+  the owner as code owner (ADR-0024); feature branches then target the
+  milestone and merge with no review; the milestone goes
   to `main` once every spec is green. Feature flags are for anything incomplete
   that reaches `main`, not for work in progress on a milestone.
 - **A PR touches `e2e/` or everything else, never both.** The specs are the

@@ -23,13 +23,16 @@ both.
 | Composition root | `apps/web/server/container.ts`. The only place implementations are chosen.   |
 | Contract         | A zod schema plus its inferred type, in `packages/contracts`.                |
 | Copy             | Text a person reads in the UI, page metadata included. Lives in the message catalogue, never inline. `repo/no-inline-copy` catches it written as a literal; ADR-0007 lists what that misses. |
+| Current Production | The Production deployment the production domains route to, and so the one receiving production traffic. It changes only by Promotion or a rollback. ADR-0024. |
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
+| Deployment Check | A check Vercel requires on a Production deployment's commit before Promotion. A Vercel setting, seen by no gate here; `docs/ARCHITECTURE.md`, "How a release reaches Production", lists them. ADR-0024. |
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
 | E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Entry            | One posting: a calendar day, a memo, and two or more Entry lines that balance. The brief's word "record" means this and is not used. |
 | Entry line       | One line of an Entry: an Account, a Side, and an amount greater than zero. |
 | Entry search     | A read of one User's Entries narrowed by Search criteria, rendered at `/entries/search`. The issue's word "history" means this and is not used. The port method, the use case and the procedure are all named for it, and listing every Entry is an Entry search with no criterion. |
 | Entry total      | The sum of an Entry's debit amounts, which is the sum of its credit amounts because the Entry is Balanced. Computed in `domain/`; never summed by a client. |
+| Force Promote    | Vercel's control for promoting a Production deployment past failed Deployment Checks. Prohibited while a migration is pending or failed; allowed only as the emergency roll-forward in `docs/DEPLOYMENT.md`. ADR-0024. |
 | Human review surface | The paths a person approves: `e2e/`, `packages/db/drizzle/`, `.github/`, `stryker.config.mjs`. Declared in `.github/CODEOWNERS`, justified in ADR-0002 and ADR-0004. |
 | Identity         | One way a User signs in: a provider and that provider's subject for the person, such as Google's `sub`. A User is found by its Identity, never by its email. Never called an account: Account already means what an Entry line is posted against. ADR-0021. |
 | Logger           | The port an Adapter reports an infrastructure failure through: an event name such as `entries.search_failed`, fields, and a message. A field holds a primitive or an `ErrorDescription`, which is branded so an error reaches the logger only as `describeError` describes it. ADR-0018. |
@@ -38,8 +41,10 @@ both.
 | Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |
 | Money            | A branded integer count of minor units. Built and combined only through `@repo/core/money`. |
 | Port             | An interface stated in domain terms that the application layer depends on.   |
-| Preview          | The Vercel deployment of a pull request's commit, against the preview Neon project. Never smoke-run. ADR-0009. |
-| Production       | The Vercel deployment a merge to `main` produces, against the production Neon project. Not "staging": there is none. Its data is disposable until the MVP ships. ADR-0009. |
+| Preview          | The Vercel deployment of a pull request's commit, against the one shared preview Neon project, which only `main` migrates. Best effort: never smoke-run and read by no gate, so one that needs an unmerged migration may fail at runtime. ADR-0024. |
+| Production       | The Vercel environment `main` deploys to, against the production Neon project. Not "staging": there is none. Its data is disposable until the MVP ships. Never alone the name of a deployment: say Production deployment or Current Production. ADR-0024. |
+| Production deployment | An artifact Vercel built for a `main` commit with the Production environment's configuration. It exists; it receives traffic only once promoted. ADR-0024. |
+| Promotion        | Assigning the production domains to a Production deployment, which makes it Current Production. Automatic once its Deployment Checks pass. ADR-0024. |
 | Public surface   | The entry points a package lists in its `exports` field.                     |
 | Shared kernel    | Vocabulary several features depend on, held in `core/src/<name>/domain` with no ports or adapters. `money` is the only one. |
 | Result           | `Ok<T>` or `Err<E>`. The return type of any domain operation that can fail. |
@@ -47,7 +52,7 @@ both.
 | Server Action    | The app's write path. Parses input, invokes a use case through `createCaller`, invalidates what it made stale. |
 | Session          | A User's signed-in state: a random token in an `HttpOnly` cookie, stored in `sessions` only as its SHA-256 hash, with an expiry that slides, except the Smoke User's. Signing out deletes it. ADR-0021. |
 | Side             | The direction of an Entry line, `debit` or `credit`. The amount never carries it. |
-| Smoke run        | The `E2E` job: the specs against a Production deployment after it is live. Not a merge gate; that is `E2E build`. ADR-0006, ADR-0009. |
+| Smoke run        | The Smoke-tagged specs against a deployed URL, at one of three seams: Current Production after a migration, a candidate Production deployment before Promotion, and Current Production after it. Not a merge gate; that is `E2E build`. ADR-0006, ADR-0024. |
 | Smoke tag        | `{ tag: '@smoke' }` on a spec, the allowlist the Smoke run filters by. Only a read may carry it: an untagged spec never runs against Production. |
 | Smoke User       | The User the Smoke run reads Production as. It has no Identity, owns a fixed set of Entries, and its one Session is the `SMOKE_SESSION_TOKEN` secret. ADR-0021. |
 | Spec isolation   | The rule that one pull request changes `e2e/` or the rest of the repository, never both. Decided by `tools/check-pr-isolation.ts`. |

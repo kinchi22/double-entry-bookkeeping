@@ -1,9 +1,15 @@
 # Deployment
 
+Production deployment, Promotion and Current Production mean what
+`docs/GLOSSARY.md` says, and are never used for one another. ADR-0024 records
+why the release is built this way, and `docs/ARCHITECTURE.md`, "How a release
+reaches Production", describes the sequence and its checks; this file is how to
+set it up and operate it.
+
 ## Connecting Vercel
 
 Set up once, in the Neon, Vercel and GitHub dashboards; none of it can be
-automated from the repo. ADR-0009 records why each choice below was made.
+automated from the repo, and no gate here reads any of it.
 
 ### Databases
 
@@ -32,12 +38,17 @@ parent's data and its roles' passwords.
 4. Deployment Protection stays at Vercel's Standard Protection. Generate a
    Protection Bypass for Automation secret and store it as the GitHub
    repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`.
-5. Git integration: a pull request creates a Preview deployment, a merge to
-   `main` creates the Production deployment. This must be the only Vercel
-   project connected to the repository. A second one posts its builds to the
-   same GitHub deployment and under the same `Vercel` status, so its result
-   replaces this project's on the commit, and a Production build of it would be
-   what the smoke run tests.
+5. Git integration: a pull request creates a Preview deployment, a push to
+   `main` creates a Production deployment. This must be the only Vercel project
+   connected to the repository. A second one posts its builds to the same GitHub
+   deployment and under the same `Vercel` status, so its result replaces this
+   project's on the commit.
+6. Repository-dispatch events: enable delivery of `vercel.deployment.ready` and
+   `vercel.deployment.promoted` to the repository. The first starts the
+   candidate smoke, the second the post-Promotion smoke.
+7. Deployment Checks, for Production: require `Production ready`, `E2E build`
+   and `Candidate Production smoke`. Automatic Promotion stays on; these checks
+   are what hold it back.
 
 No setting chooses pnpm. Vercel reads the major version from `packageManager`
 and installs with its own pnpm 11.x, so the pnpm 11 settings in
@@ -49,6 +60,33 @@ range starts below 2.1.3, and prints a warning.
 
 Production's data is disposable until the MVP ships. Wipe the production
 database before its first real use.
+
+### GitHub
+
+- Environment `production-database`: deployment branches `main` only, the owner
+  as required reviewer, secret `PRODUCTION_DATABASE_URL`.
+- Environment `preview-database`: deployment branches `main` only, no reviewer,
+  secret `PREVIEW_DATABASE_URL`.
+- Repository variable `PRODUCTION_URL`: the production domain, with scheme,
+  e.g. `https://example.com`. Not a secret.
+- Repository secrets `VERCEL_AUTOMATION_BYPASS_SECRET` and
+  `SMOKE_SESSION_TOKEN`, and the variable `SMOKE_SESSION_EXPIRES_ON`
+  ([The Smoke User](#the-smoke-user)).
+
+### Turning the checks on
+
+On a project that promotes automatically today, bring the release path in
+without blocking every Promotion on a status that does not exist yet:
+
+1. Enable the ready and promoted repository-dispatch events (step 6 above).
+2. Set `PRODUCTION_URL`.
+3. Merge the repository side while automatic Promotion still runs unchecked.
+4. On one real push to `main`, confirm that `Production ready`, `E2E build` and
+   `Candidate Production smoke` all appear on the commit.
+5. Require them as Deployment Checks (step 7 above).
+6. Verify one push with no migration end to end: its Production deployment stays
+   unpromoted until the three checks pass, is promoted, and the post-Promotion
+   smoke run passes against `PRODUCTION_URL`.
 
 ### What runs against a deployment
 
@@ -70,17 +108,21 @@ credential, so they could not clean up after themselves. The tag is a claim a
 person makes and no gate checks it, so review of `e2e/` is where a wrongly
 tagged write is caught.
 
+The candidate run starts on Vercel's `vercel.deployment.ready` event for a
+Production deployment. It publishes `Candidate Production smoke` as `pending`
+on the event's SHA, waits for `Production ready` on that SHA, checks the SHA
+out and smokes the URL the event carries, then publishes `success` or
+`failure`. A Preview's ready event skips the run. An event with no environment
+or no valid URL is published as a failure; one with no valid SHA cannot be
+attributed and fails the run.
+
 The post-Promotion run starts on Vercel's `vercel.deployment.promoted`
 repository-dispatch event, which Vercel sends only when a Production deployment
 becomes Current Production: previews, and Production deployments never
 promoted, send none. It checks out the SHA the event carries -- a missing or
-malformed SHA, or an environment other than `production`, fails the run rather
-than smoking the default branch -- and tests `PRODUCTION_URL`. The promoted
-event's delivery is enabled in the Vercel project settings beside the ready
-event the candidate run uses; without it the run never starts. The run
-publishes no status and changes nothing: a failure is an incident for the
-owner, who can roll back by hand to the previous deployment because migrations
-are backwards compatible.
+malformed SHA, or a missing environment, fails the run rather than smoking
+the default branch -- and tests `PRODUCTION_URL`. It publishes no
+status and changes nothing.
 
 Every URL tested sits behind Standard Protection's Vercel login.
 `playwright.config.ts` sends the bypass secret as the
@@ -107,55 +149,146 @@ SQLSTATE such as `42P01` (table missing), or a system code such as
 `ECONNREFUSED`. A request that failed on the server adds `request.failed`, with
 its `routePath` and the `digest` a 500 page shows. ADR-0018.
 
+## Releasing
+
+Every push to `main` is a release. Vercel builds its Production deployment at
+once and promotes it when its Deployment Checks pass; `docs/ARCHITECTURE.md`,
+"How a release reaches Production", has the sequence behind them.
+
+**Nothing to migrate.** Nobody is asked anything. `Apply migrations` is skipped
+as an intentional no-migration decision, and the release promotes itself when
+its checks pass.
+
+**A migration is pending.** `Apply migrations` waits in the
+`production-database` environment. Before approving, check that the migration
+is the one reviewed on its milestone and that it is backwards compatible with
+Current Production, which keeps serving on the new schema until Promotion.
+Approve, and the rest runs on its own. A rejected approval fails `Production
+ready`; the migration stays pending, and the next push to `main` asks again.
+
+The Production deployment is visible in Vercel as soon as it is built. Until
+Promotion it is not Current Production, whatever its build status says.
+
+A push that lands while another release is running waits behind it and is never
+the reason that release stops: a migration that started, or is waiting for
+approval, finishes. Of the pushes that queued meanwhile, only the newest
+releases -- it recalculates what is pending once the running release is done,
+so one approval covers every migration they carried. The older ones fail
+`Production ready` and their Production deployments are never promoted. That
+is expected, not an incident.
+
 ## Migrations
 
-Migrations are applied to Production by the `Apply migrations` job in
-`.github/workflows/ci.yml`, on push to `main`, after the gates and integration
-jobs pass. They are deliberately not applied from the Vercel build: a build runs
+Migrations are applied to the production database by the `Apply migrations` job, on push to
+`main`, after the gates and integration jobs pass and the Preview database has
+migrated. They are deliberately not applied from the Vercel build: a build runs
 for every preview and must never touch the production database, and Vercel
-offers no hook that runs exactly once per production deploy.
+offers no hook that runs exactly once per Production deployment.
 
 The job runs in the GitHub environment `production-database`, which accepts only
 `main` and requires the owner's approval. It runs only when a migration is
-pending: the `Pending migrations` job before it compares `packages/db/drizzle/`
-at this commit with the last commit Production was migrated at, which it reads
-from the environment's successful deployments, and skips `Apply migrations`
-when nothing there changed. A push with no migration asks for nothing.
+pending: `Recalculate pending migrations` compares `packages/db/drizzle/` at
+this commit with the last commit the production database was migrated at, which it reads from
+the environment's successful deployments, and skips `Apply migrations` when
+nothing there changed. Every doubt -- no successful deployment, a failed API
+call, a commit git cannot compare -- counts as pending, so the cost of an error
+is an approval request rather than a schema behind its code.
 `PRODUCTION_DATABASE_URL`, the production project's direct URL, is a secret of
 that environment rather than of the repository, so no other job can read it.
-Without it the step reports that it is unset and succeeds.
 
-A newer push to `main` cancels the run before it, including a migrate job still
-waiting for approval. Nothing is lost: the cancelled run left no successful
-deployment, so the migration is still pending, the next push asks again, and
-the next approved run applies every migration not yet applied. A rejected
-approval works the same way.
+The successful deployment `Apply migrations` leaves in that environment is the
+record of what the production database has applied. It is written when the migration
+succeeds, before the compatibility smoke and before Promotion, so a failure
+after it does not make the migration look pending again.
 
-Vercel deploys on merge without waiting for this job, so new code reaches
-Production before its migration is approved. Two rules follow, and no gate
-enforces either:
+Two rules follow from how a release works, and no gate enforces either:
 
-1. **A migration lands first.** It merges, and is approved and applied, before
-   any code that needs it merges. Code must run on the schema as it was before
-   its own migration.
-2. **A migration is backwards compatible** with the code already deployed: add
-   columns and tables first, remove them in a later release once nothing reads
-   them.
+1. **A migration is carried by its milestone.** The Migration Task puts the
+   schema change and its generated SQL on the milestone, in a pull request of
+   its own that the owner reviews, and the milestone brings it to `main` with
+   the behaviour that needs it. `docs/agents/issue-tracker.md` has the order.
+2. **A migration is backwards compatible** with Current Production, which
+   serves on the new schema from the moment the migration is applied until the
+   candidate is promoted: add columns and tables first, remove them in a later
+   release once nothing reads them.
+
+When two milestones each carry a migration, the one that reaches `main` second
+has its migration regenerated first: `docs/agents/issue-tracker.md`,
+"Regenerating a migration".
+
+## Preview
 
 Preview deployments share the preview project that `DATABASE_URL` names in the
-Vercel Preview environment. The `Migrate preview` job in the same workflow
-applies migrations to it, on push to `main`, after the same two jobs. Its
-environment `preview-database` accepts only `main` and requires no approval, so
-preview is migrated ahead of Production and without waiting for anyone: a
-migration that is going to fail has usually failed there before the owner is
-asked to apply it to Production. Between the two, the databases are one
-migration apart by design. `PREVIEW_DATABASE_URL` is the preview project's
-direct URL, a secret of that environment, so no pull request job can read it.
+Vercel Preview environment. The release sequence migrates it on every push to
+`main`, in the environment `preview-database`, which accepts only `main` and
+requires no approval, before a Production approval is requested: a migration
+that is going to fail has usually failed there first. `PREVIEW_DATABASE_URL` is
+the preview project's direct URL, a secret of that environment, so no pull
+request job can read it.
 
-Preview carries what is on `main` and nothing else, so a pull request whose own
-migration has not merged still has a broken preview. That is rule 1 above rather
-than a gap: the migration merges first, and ADR-0013 keeps it out of the
-milestone that needs it for the same reason.
+Preview is best effort. It carries what is on `main` and nothing else, so a
+Preview of a milestone that carries a migration builds, and then fails every
+request that needs the new schema, until that milestone reaches `main`. A
+Preview build validates no environment either (ADR-0005). Nothing in the release
+reads a Preview, so a broken one blocks nothing; fix it by landing the
+milestone, not by migrating the shared database by hand.
+
+## Missing configuration
+
+A missing piece fails the release, or holds Promotion back, rather than being
+skipped as success:
+
+| Missing | What happens |
+| ------- | ------------ |
+| `PREVIEW_DATABASE_URL` | `Migrate preview` fails, so `Production ready` fails and nothing is promoted |
+| `PRODUCTION_DATABASE_URL` | `Apply migrations` fails when a migration is pending; `Production ready` fails |
+| `PRODUCTION_URL` | The compatibility smoke fails, so `Production ready` fails; the post-Promotion run fails too |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Every smoke run meets the Vercel login and fails |
+| `SMOKE_SESSION_TOKEN`, or an expired one | Every smoke run fails its signed-in specs |
+| The ready event | `Candidate Production smoke` never appears, and Promotion waits indefinitely |
+| The promoted event | The post-Promotion run never starts. Nothing fails: check for its run after a Promotion |
+| The Deployment Checks | Vercel promotes on build, ahead of any pending migration. Nothing in the repository notices |
+
+The last two are silent. After changing Vercel's settings, watch one release
+through to its post-Promotion run.
+
+## Rollback and incidents
+
+**Candidate smoke fails, or `Production ready` fails before a migration.**
+Nothing was promoted and the database is unchanged. Current Production keeps
+serving. Fix forward with a new push to `main`.
+
+**Post-Promotion smoke fails.** The new deployment is Current Production and
+something on the live domain is wrong. Nothing rolls back automatically, since
+a transient failure or an expired Smoke User session looks the same. Read the
+job log; if the deployment is at fault, roll back in Vercel to the previous
+Current Production (Instant Rollback). That is safe because every migration is
+backwards compatible, so the previous deployment runs on the current schema.
+Then fix forward.
+
+**Compatibility smoke fails after a migration.** The migration is applied and
+Current Production is failing on it, which the backwards-compatibility rule
+should have prevented. Rolling back does not help: every earlier deployment is
+older than the schema too. If the candidate has passed `Candidate Production
+smoke`, promote it as below. Otherwise fix forward.
+
+With nothing migrated, a compatibility failure means Current Production is
+failing on a schema that did not change: an incident in the deployment already
+serving, or in the smoke run's own configuration. The candidate is held back
+until it is resolved and the release re-run.
+
+**Force Promote.** Vercel lets anyone with the dashboard promote a deployment
+past failed checks, and nothing here can remove that. It is prohibited while a
+migration is pending or has failed: the candidate would receive traffic against
+a schema it needs and does not have. Its one permitted use is an emergency
+roll-forward, when all three are true:
+
+1. `Apply migrations` succeeded for the candidate's commit.
+2. Current Production failed its compatibility smoke on that schema.
+3. The candidate passed `Candidate Production smoke`.
+
+Promote that candidate, then open a Bug for the incompatible migration: it is a
+defect even though the roll-forward restored service.
 
 ## Local development database
 
@@ -198,13 +331,14 @@ portability rule below: the same migrations run here, on Neon, or on RDS.
 | Name           | Where                        | Purpose                          |
 | -------------- | ---------------------------- | -------------------------------- |
 | `DATABASE_URL` | Vercel Preview + Production (pooled), and local `.env`; in CI, the migrate and `test:e2e` steps of `E2E build`, pointing at that job's service container | Postgres connection string. Required; must be `postgres://` or `postgresql://` with a host |
-| `E2E_BASE_URL` | The `E2E` job, and `pnpm verify:gates:e2e` | Target for Playwright; unset, it starts `next start` |
+| `E2E_BASE_URL` | The three smoke runs, and `pnpm verify:gates:e2e` | Target for Playwright; unset, it starts `next start` |
+| `PRODUCTION_URL` | GitHub repository variable, read by the compatibility and post-Promotion smoke runs | The production domain, which routes to Current Production |
 | `PRODUCTION_DATABASE_URL` | Secret of the GitHub environment `production-database` | Direct connection string the `Apply migrations` job applies migrations through |
 | `PREVIEW_DATABASE_URL` | Secret of the GitHub environment `preview-database` | Direct connection string the `Migrate preview` job applies migrations through |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub repository secret, read by the `E2E` job | Sent as `x-vercel-protection-bypass`, so Playwright gets past Deployment Protection |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub repository secret, read by the three smoke runs | Sent as `x-vercel-protection-bypass`, so Playwright gets past Deployment Protection |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Vercel Preview + Production (the secret marked Sensitive), and local `.env`; placeholders in the `test:e2e` step of `E2E build` | The Google OAuth client. Required everywhere, like `DATABASE_URL`; only Production and a local server can finish a Google sign-in. ADR-0021 |
 | `AUTH_TEST_LOGIN` | Vercel Preview only, local `.env`, and the `test:e2e` step of `E2E build` | Set to anything non-empty, `/sign-in` also offers the test sign-in. `parseEnv` refuses it when `VERCEL_ENV` is `production` |
-| `SMOKE_SESSION_TOKEN` | GitHub repository secret, read by the `E2E` job | The Smoke User's session token, presented as the `session` cookie. See [Authentication](#authentication) |
+| `SMOKE_SESSION_TOKEN` | GitHub repository secret, read by the three smoke runs | The Smoke User's session token, presented as the `session` cookie. See [Authentication](#authentication) |
 | `SMOKE_SESSION_EXPIRES_ON` | GitHub repository variable, read by `Smoke token expiry` | The day `SMOKE_SESSION_TOKEN` expires, `YYYY-MM-DD`, printed by `tools/seed-smoke-user.ts` |
 
 Nothing reads `process.env` inside `packages/core` -- a lint rule forbids it.
@@ -229,7 +363,7 @@ Google is the only way to sign in on Production. ADR-0021. Set up once:
 
 ### The Smoke User
 
-The smoke run reads Production signed in as the Smoke User, a User with no
+The smoke runs read Production signed in as the Smoke User, a User with no
 Identity whose one Session does not slide and ends after a year. Seed it, or
 rotate its token, from a checkout:
 
@@ -243,14 +377,12 @@ rm smoke-user.sql
 
 Run the SQL before setting the secret: from the moment it commits, the old token
 signs nobody in. The User and its Entry are kept across runs; only the Session
-is replaced. Rotate before the year is up, because the smoke run fails on the
-day the Session ends. The `Smoke token expiry` workflow
-(`.github/workflows/smoke-token-expiry.yml`) checks `SMOKE_SESSION_EXPIRES_ON`
-every Monday and opens a `Rotate SMOKE_SESSION_TOKEN` issue from 30 days
-before, or at once when the variable is unset.
-
-Seed it before `milestone/authentication` reaches `main`, so the first smoke
-run of that code has a Session to read with.
+is replaced. Rotate before the year is up, because every smoke run fails on the
+day the Session ends, and with them `Production ready`. The `Smoke token expiry`
+workflow (`.github/workflows/smoke-token-expiry.yml`) checks
+`SMOKE_SESSION_EXPIRES_ON` every Monday and opens a `Rotate
+SMOKE_SESSION_TOKEN` issue from 30 days before, or at once when the variable is
+unset.
 
 ## AWS migration readiness
 
