@@ -145,7 +145,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | Transaction boundary | A repository method that writes one aggregate is atomic by itself and may open a transaction to be so. Any boundary wider than one aggregate is owned by the use case, and a repository never opens one. ADR-0011. |
 | Authorization        | Checked at the use case entry point. Controllers pass the auth context, which `sessionProcedure` resolves from the `session` cookie; a use case given none answers `UNAUTHENTICATED`, 401. Every repository method over user data takes the `userId`, and another User's row is `NOT_FOUND`. ADR-0021. |
 | Structure            | Feature-first: layers inside features, not features inside layers.     |
-| Migrations           | Generated SQL committed with the schema change, on the milestone that needs it, and backwards compatible with Current Production. Applied from CI after the owner approves, and before the Production deployment carrying it can be promoted. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit Production was migrated at. ADR-0024. |
+| Migrations           | Generated SQL committed with the schema change, on the milestone that needs it, and backwards compatible with Current Production. Applied from CI after the owner approves, and before the Production deployment carrying it can be promoted. CI asks for that approval only when a file under `packages/db/drizzle/` changed since the last commit the production database was migrated at. ADR-0024. |
 | Dynamic imports      | Forbidden everywhere, the composition root included. ADR-0002.         |
 | Client writes        | Server Actions in `apps/web/app/**/actions.ts`, invoking `createCaller`. |
 | Wire types           | Contracts are JSON-safe. An instant crosses as an ISO 8601 string; `Date` exists only inside core, and the serializer that converts lives beside the schema. |
@@ -315,12 +315,10 @@ reaches Production" below keeps that behaviour from receiving traffic before
 its migration is applied. ADR-0024.
 
 Two milestones may each carry a migration at once. Drizzle's journal is linear,
-so when one of them reaches `main`, every other whose migration was generated
-from the older journal is behind: the owner syncs it with `main`, resolving
-`packages/db/drizzle/` to `main`'s side, and its migration is regenerated with
-`db:generate` in a pull request of its own onto the milestone, which the owner
-reviews again. Only then does its integration pull request open, so resolving
-the conflict is never hidden inside the integration.
+so when one reaches `main` the other's migration is regenerated on its milestone,
+in an owner-reviewed pull request of its own, before its integration pull
+request opens: the conflict is never resolved inside the integration.
+`docs/agents/issue-tracker.md`, "Regenerating a migration", has the procedure.
 
 `tools/check-pr-isolation.ts` decides the isolation column from the pull
 request's file list and the two branch names, and the `Spec isolation` job fails
@@ -372,11 +370,9 @@ work takes.
 
 ## How a release reaches Production
 
-Three words keep apart what used to be described as one event. A **Production
-deployment** is an artifact Vercel built for `main` with the Production
-environment's configuration; it exists, and need not receive traffic.
-**Promotion** assigns the production domains to one. **Current Production** is
-the deployment those domains route to. ADR-0024.
+A Production deployment, its Promotion and Current Production are three
+different things, defined in `docs/GLOSSARY.md`: a deployment can exist, built
+and green, without receiving traffic. ADR-0024.
 
 Vercel builds a Production deployment for every push to `main` through its Git
 integration, and its Deployment Checks leave it unpromoted until three checks
@@ -400,9 +396,10 @@ pass on a push to `main`:
 2. *Migrate preview.* The shared Preview database is migrated, as a canary. An
    unset `PREVIEW_DATABASE_URL` fails.
 3. *Recalculate pending migrations.* `tools/find-pending-migrations.ts`
-   compares `packages/db/drizzle/` at this commit with the last commit
-   Production was migrated at, and treats every doubt as pending. The commit is
-   checked against `main`'s head again, just before approval is asked.
+   compares `packages/db/drizzle/` at this commit with the last commit the
+   production database was migrated at, and treats every doubt as pending. The
+   commit is checked against `main`'s head again, just before approval is
+   asked.
 4. *Apply migrations*, only when something is pending, in the
    `production-database` environment, after the owner approves. An unset
    `PRODUCTION_DATABASE_URL` fails.
@@ -440,9 +437,10 @@ as the Smoke User and past Deployment Protection with the bypass secret:
 | Candidate | the Production deployment's own URL | Vercel's `vercel.deployment.ready` event, once `Production ready` passes on the event's SHA | the `Candidate Production smoke` status fails on that SHA |
 | Post-Promotion | `PRODUCTION_URL`, the new Current Production | Vercel's `vercel.deployment.promoted` event | reported; the owner decides, nothing rolls back |
 
-The candidate and post-Promotion runs check out the SHA their event carries and
-refuse an event with no valid SHA or an environment other than `production`,
-so a newer `main` commit can never satisfy an older deployment's check.
+The candidate and post-Promotion runs check out the SHA their event carries, so
+a newer `main` commit can never satisfy an older deployment's check. Each skips
+an event for another environment, such as a Preview's, and fails one with no
+environment or no valid SHA rather than smoking the default branch.
 
 Force Promote cannot be taken away by repository code, so the rule for it lives
 in `docs/DEPLOYMENT.md` with the rest of operating a release. Preview

@@ -25,7 +25,7 @@ both.
 | Copy             | Text a person reads in the UI, page metadata included. Lives in the message catalogue, never inline. `repo/no-inline-copy` catches it written as a literal; ADR-0007 lists what that misses. |
 | Current Production | The Production deployment the production domains route to, and so the one receiving production traffic. It changes only by Promotion or a rollback. ADR-0024. |
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
-| Deployment Check | A check Vercel requires on a Production deployment's commit before Promotion: `Production ready`, `E2E build` and `Candidate Production smoke`. A Vercel setting, seen by no gate here. ADR-0024. |
+| Deployment Check | A check Vercel requires on a Production deployment's commit before Promotion. A Vercel setting, seen by no gate here; `docs/ARCHITECTURE.md`, "How a release reaches Production", lists them. ADR-0024. |
 | Domain error     | A failure value carrying a stable `DomainErrorCode`. Never an exception.     |
 | E2E liveness     | The check that every spec fails against an empty page, each on a line of its own, so a spec that asserts nothing cannot land green. Decided by `tools/verify-e2e-liveness.ts`, run in `Gate liveness`. ADR-0006. |
 | Entry            | One posting: a calendar day, a memo, and two or more Entry lines that balance. The brief's word "record" means this and is not used. |

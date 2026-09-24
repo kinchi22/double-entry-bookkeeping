@@ -163,6 +163,11 @@ approval, and alone holds `PREVIEW_DATABASE_URL`.
 - The candidate smoke's commit status and the promoted run both depend on
   Vercel's repository-dispatch events being enabled. Without them the candidate
   status never appears, so Promotion waits rather than proceeds.
+- `PREVIEW_DATABASE_URL` and `PRODUCTION_DATABASE_URL` are secrets of
+  environments restricted to `main`, so no pull request job reads them. A change
+  to a workflow or to a package script a migrate job runs still could; `.github/`
+  is owned and package scripts are not, and for the Preview secret what leaks is
+  a disposable database.
 - The consequences ADR-0009 recorded for the retained parts stand: a smoke
   failure is read in the job log alone, one Vercel project per repository is
   assumed, Vercel's pnpm minor can differ from CI's, and a Postgres 17 volume
@@ -177,6 +182,10 @@ gone.
 
 **The milestone carries its migration, with automatic Promotion.** Behaviour
 would receive traffic against a schema it needs before the owner approved it.
+
+**The milestone merges into `main` twice**, schema first, rejected in ADR-0013
+and still: `main` would carry half a criterion, and the branch would have to
+survive a merge it is not finished with.
 
 **Deploy Production from CI with a Vercel token, or promote every deployment by
 hand.** A credential able to deploy Production in the repository, or a manual

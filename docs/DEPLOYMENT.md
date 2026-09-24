@@ -1,12 +1,10 @@
 # Deployment
 
-Three words are used strictly here. A **Production deployment** is an artifact
-Vercel built for `main` with the Production environment's configuration; it
-exists and need not receive traffic. **Promotion** assigns the production
-domains to one. **Current Production** is the deployment those domains route
-to. ADR-0024 records why the release is built this way, and
-`docs/ARCHITECTURE.md`, "How a release reaches Production", describes the
-sequence; this file is how to set it up and operate it.
+Production deployment, Promotion and Current Production mean what
+`docs/GLOSSARY.md` says, and are never used for one another. ADR-0024 records
+why the release is built this way, and `docs/ARCHITECTURE.md`, "How a release
+reaches Production", describes the sequence and its checks; this file is how to
+set it up and operate it.
 
 ## Connecting Vercel
 
@@ -90,9 +88,6 @@ without blocking every Promotion on a status that does not exist yet:
    unpromoted until the three checks pass, is promoted, and the post-Promotion
    smoke run passes against `PRODUCTION_URL`.
 
-The first milestone that carries a migration is the first real observation of
-the approval path.
-
 ### What runs against a deployment
 
 The specs' merge check does not involve Vercel: `E2E build`, in
@@ -117,15 +112,16 @@ The candidate run starts on Vercel's `vercel.deployment.ready` event for a
 Production deployment. It publishes `Candidate Production smoke` as `pending`
 on the event's SHA, waits for `Production ready` on that SHA, checks the SHA
 out and smokes the URL the event carries, then publishes `success` or
-`failure`. An event with no environment or no valid URL is published as a
-failure; one with no valid SHA cannot be attributed and fails the run.
+`failure`. A Preview's ready event skips the run. An event with no environment
+or no valid URL is published as a failure; one with no valid SHA cannot be
+attributed and fails the run.
 
 The post-Promotion run starts on Vercel's `vercel.deployment.promoted`
 repository-dispatch event, which Vercel sends only when a Production deployment
 becomes Current Production: previews, and Production deployments never
 promoted, send none. It checks out the SHA the event carries -- a missing or
-malformed SHA, or an environment other than `production`, fails the run rather
-than smoking the default branch -- and tests `PRODUCTION_URL`. It publishes no
+malformed SHA, or a missing environment, fails the run rather than smoking
+the default branch -- and tests `PRODUCTION_URL`. It publishes no
 status and changes nothing.
 
 Every URL tested sits behind Standard Protection's Vercel login.
@@ -156,12 +152,8 @@ its `routePath` and the `digest` a 500 page shows. ADR-0018.
 ## Releasing
 
 Every push to `main` is a release. Vercel builds its Production deployment at
-once; CI runs `Gates` and `Integration`, then the release sequence in
-`.github/workflows/production-release.yml`: migrate the Preview database, work
-out whether a Production migration is pending, apply it if so, and smoke
-Current Production on the result. `Production ready` passes when all of that
-did. The candidate smoke follows, and Vercel promotes once `Production ready`,
-`E2E build` and `Candidate Production smoke` are green on the commit.
+once and promotes it when its Deployment Checks pass; `docs/ARCHITECTURE.md`,
+"How a release reaches Production", has the sequence behind them.
 
 **Nothing to migrate.** Nobody is asked anything. `Apply migrations` is skipped
 as an intentional no-migration decision, and the release promotes itself when
@@ -187,7 +179,7 @@ is expected, not an incident.
 
 ## Migrations
 
-Migrations are applied to Production by the `Apply migrations` job, on push to
+Migrations are applied to the production database by the `Apply migrations` job, on push to
 `main`, after the gates and integration jobs pass and the Preview database has
 migrated. They are deliberately not applied from the Vercel build: a build runs
 for every preview and must never touch the production database, and Vercel
@@ -196,7 +188,7 @@ offers no hook that runs exactly once per Production deployment.
 The job runs in the GitHub environment `production-database`, which accepts only
 `main` and requires the owner's approval. It runs only when a migration is
 pending: `Recalculate pending migrations` compares `packages/db/drizzle/` at
-this commit with the last commit Production was migrated at, which it reads from
+this commit with the last commit the production database was migrated at, which it reads from
 the environment's successful deployments, and skips `Apply migrations` when
 nothing there changed. Every doubt -- no successful deployment, a failed API
 call, a commit git cannot compare -- counts as pending, so the cost of an error
@@ -205,7 +197,7 @@ is an approval request rather than a schema behind its code.
 that environment rather than of the repository, so no other job can read it.
 
 The successful deployment `Apply migrations` leaves in that environment is the
-record of what Production has applied. It is written when the migration
+record of what the production database has applied. It is written when the migration
 succeeds, before the compatibility smoke and before Promotion, so a failure
 after it does not make the migration look pending again.
 
@@ -221,10 +213,8 @@ Two rules follow from how a release works, and no gate enforces either:
    release once nothing reads them.
 
 When two milestones each carry a migration, the one that reaches `main` second
-must be regenerated first. The owner merges `main` into it, resolving
-`packages/db/drizzle/` to `main`'s side; the migration is then regenerated with
-`pnpm --filter @repo/db db:generate` in a pull request of its own onto the
-milestone, and the owner reviews it again before the integration pull request.
+has its migration regenerated first: `docs/agents/issue-tracker.md`,
+"Regenerating a migration".
 
 ## Preview
 
