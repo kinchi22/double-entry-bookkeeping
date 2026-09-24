@@ -251,7 +251,7 @@ test("never shows one User's Entry in another User's results", async ({ browser 
   await other.close();
 });
 
-test('orders the results latest day first, and within a day the latest written', async ({ page }) => {
+test('orders the results as `/entries` does: latest day first, and within a day the latest written', async ({ page }) => {
   test.slow();
   const run = randomUUID();
   const writtenFirst = `Morning ${run}`;
