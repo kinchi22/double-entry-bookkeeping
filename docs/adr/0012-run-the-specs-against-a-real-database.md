@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-16
+**Amended:** 2026-09-24, PR #PRNUM
 
 ## Problem
 
@@ -54,6 +55,15 @@ and each Neon project -- and nothing checks that they agree. A mismatch surfaces
 as a migration that passes CI and fails on Neon.
 
 `Gate liveness` is unaffected: it runs against an empty page, not a database.
+
+One database is shared by every spec in the run, which Playwright runs in
+parallel, and by every attempt of a spec, since a retry writes again. So a spec
+that writes finds what it wrote by a value no other run can have written -- a
+memo carrying a fresh UUID, a User signed in under a fresh identifier -- never
+by counting rows or by position in a list. Where order is the subject, the spec
+reads position only among the rows it wrote itself, after asserting how many of
+them there are. A spec that writes is never tagged `@smoke`: the smoke runs are
+reads against deployed databases.
 
 ## Rejected alternatives
 

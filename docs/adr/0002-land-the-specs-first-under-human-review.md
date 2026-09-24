@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-13
+**Amended:** 2026-09-24, PR #PRNUM
 
 ## Problem
 
@@ -146,7 +147,10 @@ check can tell a behaviour from a refactor. A product change can still come
 straight to `main`, and what refuses it is the reviewer, now backed by a hard
 stop rather than by hoping the pull request is noticed.
 
-Renaming a `data-testid` is a spec change: its own pull request, reviewed.
+Every name a spec selects by is the contract of its page, not only a
+`data-testid`: the accessible name of a form, a fieldset or group, a label, a
+button, a link or a region, a test id, and the name of the `session` cookie.
+Renaming any of them is a spec change: its own pull request, reviewed.
 
 The working agreement's "trunk-based" stops being literally true. A milestone branch is an
 integration branch, and `main` receives a criterion at once rather than
