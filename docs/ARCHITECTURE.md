@@ -368,6 +368,26 @@ This is what "one PR per acceptance criterion" in `AGENTS.md` now means: one
 milestone per criterion, and as many feature pull requests underneath it as the
 work takes.
 
+## Writing a spec
+
+The specs run in parallel against one database in `E2E build`, and a retry
+writes again. So a spec that writes finds what it wrote by a value no other run
+can have written, such as a memo carrying a fresh UUID, never by counting rows
+or by position in a list. Where order is the subject, it reads position only
+among the rows it wrote itself, after asserting how many there are. Which specs
+may run against Production is the Smoke tag's rule (`docs/GLOSSARY.md`).
+ADR-0012.
+
+An absence is asserted only after a presence: after the list it would be
+missing from has visibly rendered, or after the same question has been shown to
+have an answer. An absence alone is satisfied by an empty or failed page.
+
+A spec that writes three or more Entries through the form carries
+`test.slow()`, because it spends most of its budget before it reaches what it
+tests. The threshold is a rule rather than a tag to reach for because the cost
+lands in `Gate liveness`: every spec fails by timeout against the empty page,
+so a longer timeout is a longer wait there. ADR-0006.
+
 ## How a release reaches Production
 
 A Production deployment, its Promotion and Current Production are three
