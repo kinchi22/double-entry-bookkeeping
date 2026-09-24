@@ -2,8 +2,11 @@ import { expect, test } from '@playwright/test';
 
 /**
  * Every spec here is tagged `@smoke`: each one is a read, so each one may run
- * against Production, which the `E2E` job filters for with `--grep @smoke`.
- * A spec that writes stays untagged and runs in `E2E build` alone.
+ * against a deployment. The smoke runs filter for it with `--grep @smoke`:
+ * Current Production after migration, the candidate before Promotion, and the
+ * production domain after Promotion (`docs/DEPLOYMENT.md`, "What runs against
+ * a deployment"). A spec that writes stays untagged and runs in `E2E build`
+ * alone.
  */
 
 /**
