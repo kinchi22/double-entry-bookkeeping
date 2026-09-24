@@ -8,10 +8,6 @@ import { type User } from '../domain/user';
 import { createPostgresSessionRepository } from './postgres-session-repository';
 import { createPostgresUserRepository } from './postgres-user-repository';
 
-/**
- * Integration test: the repository against a real, migrated Postgres, for the
- * reason the health probe's test gives. Each test starts from empty tables.
- */
 const databaseUrl = process.env['TEST_DATABASE_URL'];
 if (databaseUrl === undefined) {
   throw new Error(
@@ -20,7 +16,6 @@ if (databaseUrl === undefined) {
   );
 }
 
-/** Port 1 is reserved and nothing binds it, so the connection is refused immediately. */
 const UNREACHABLE_URL = 'postgresql://absent:absent@127.0.0.1:1/absent';
 
 const logged: LogFields[] = [];
@@ -50,7 +45,6 @@ const SMOKE_USER_ID = '01920000-0000-7000-8000-00000000000a' as UserId;
 beforeEach(async () => {
   await database.execute(sql`truncate table users cascade`);
   await users.add(ADA, { provider: 'google', subject: 'google-ada' });
-  // The Smoke User is seeded with no Identity, by a script rather than a sign-in.
   await database.execute(
     sql`insert into users (id, email, created_at) values (${SMOKE_USER_ID}, 'smoke@test.invalid', now())`,
   );

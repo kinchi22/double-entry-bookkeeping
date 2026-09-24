@@ -5,25 +5,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 
-/**
- * Section 9, applied to the E2E suite: a pure function, plus a CLI entry point.
- * ADR-0006.
- *
- * A green suite never proves a spec asserts anything. A spec that opens the
- * home page and checks nothing passes against the app, and passes again against
- * a page with nothing on it. So the specs are run against exactly that page --
- * an empty 200 at `/`, 404 everywhere else -- and every one of them has to fail.
- *
- * Failing is not enough on its own. Measured on Playwright 1.62: with no browser
- * installed, every spec in `e2e/health.spec.ts` failed too, in `browserType.launch`,
- * before a line of any spec ran. What separates the two runs is where the error
- * points. A spec that failed on its own assertion carries an error located in
- * the spec directory; one that failed in the harness carries none.
- *
- * The decision is a function over Playwright's JSON report, because that is the
- * part that can be wrong. The server and the Playwright run are the CLI below.
- */
-
 export type ReportError = {
   readonly message: string;
   readonly location?: { readonly file: string; readonly line: number };
@@ -33,7 +14,6 @@ export type ReportResult = { readonly status: string; readonly errors: readonly 
 
 export type ReportSpec = {
   readonly title: string;
-  /** Relative to `config.rootDir`. */
   readonly file: string;
   readonly line: number;
   readonly tests: readonly { readonly status: string; readonly results: readonly ReportResult[] }[];
@@ -41,7 +21,6 @@ export type ReportSpec = {
 
 export type ReportSuite = { readonly specs: readonly ReportSpec[]; readonly suites?: readonly ReportSuite[] };
 
-/** The part of Playwright's JSON report this reads. A full report satisfies it. */
 export type LivenessReport = {
   readonly config: { readonly rootDir: string };
   readonly errors: readonly { readonly message: string }[];
@@ -51,17 +30,9 @@ export type LivenessReport = {
 const firstLine = (message: string): string =>
   stripVTControlCharacters(message).split('\n')[0] ?? '';
 
-/** Every spec in the report, describe blocks included. */
 const specsIn = (suites: readonly ReportSuite[]): readonly ReportSpec[] =>
   suites.flatMap((suite) => [...suite.specs, ...specsIn(suite.suites ?? [])]);
 
-/**
- * Every way a run against the empty page can fail to show the suite is alive,
- * as readable lines.
- *
- * `requests` is how many requests the empty page answered. None means the specs
- * ran against something else, and whatever they failed against proves nothing.
- */
 export function findLivenessProblems(report: LivenessReport, requests: number): readonly string[] {
   const problems: string[] = [];
 
@@ -91,7 +62,6 @@ export function findLivenessProblems(report: LivenessReport, requests: number): 
         problems.push(`was skipped, so it asserts nothing: ${name}`);
         continue;
       }
-      // `expected` passed outright; `flaky` failed first and then passed.
       if (test.status !== 'unexpected') {
         problems.push(`passed against an empty page, so it asserts nothing the app provides: ${name}`);
         continue;
@@ -113,10 +83,6 @@ export function findLivenessProblems(report: LivenessReport, requests: number): 
   return problems;
 }
 
-/**
- * Runs the suite against the empty page and returns the problems with that run.
- * The server and the report file are cleaned up whatever happens.
- */
 async function runAgainstEmptyPage(repoRoot: string): Promise<readonly string[]> {
   let requests = 0;
   const server = createServer((request, response) => {
@@ -131,9 +97,6 @@ async function runAgainstEmptyPage(repoRoot: string): Promise<readonly string[]>
   const reportFile = path.join(directory, 'report.json');
 
   try {
-    // Retries off, because a spec that fails and then passes on a retry is
-    // exactly what this is looking for. --forbid-only, because `test.only`
-    // would quietly shrink the suite to one spec.
     const exitStatus = await new Promise<number | null>((resolve, reject) => {
       const child = spawn(
         path.join(repoRoot, 'node_modules', '.bin', 'playwright'),

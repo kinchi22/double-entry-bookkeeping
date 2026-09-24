@@ -1,9 +1,3 @@
-/**
- * Internal layer rules for packages/core, plus the repo-wide bans that
- * eslint-plugin-boundaries cannot express because they are about external
- * packages, syntax, or globals rather than about internal elements.
- */
-
 const PURE_LAYER_GLOBS = [
   'packages/core/src/*/domain/**/*.ts',
   'packages/core/src/*/application/**/*.ts',
@@ -17,15 +11,6 @@ const ALL_SOURCE_GLOBS = [
   'apps/web/**/*.{ts,tsx}',
 ];
 
-/**
- * Selecting a runtime implementation with import() is invisible to static
- * analysis, so it is banned everywhere, with no exception.
- *
- * apps/web/server/container.ts used to be exempt, on the grounds that a person
- * reads the composition root. ADR-0002 reserved review for e2e/ and applied
- * migrations, which made that justification false; the file contains no
- * import(), so the exemption was permitting nothing.
- */
 const NO_DYNAMIC_IMPORT = {
   selector: 'ImportExpression',
   message:
@@ -33,10 +18,6 @@ const NO_DYNAMIC_IMPORT = {
     'banned everywhere, including the composition root. See ADR-0002.',
 };
 
-/**
- * The domain returns Result<T, DomainError>. A thrown error is a control-flow
- * path the type system cannot see.
- */
 const NO_THROW = {
   selector: 'ThrowStatement',
   message:

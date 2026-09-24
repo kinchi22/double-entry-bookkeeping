@@ -16,7 +16,6 @@ const CONTEXT = {
   revalidateReason: undefined,
 } as const;
 
-/** What Next hands the hook: an error carrying the digest it printed. */
 const failure = (): Error =>
   Object.assign(new Error('The entries could not be read.'), { digest: '2417318741' });
 

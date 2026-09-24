@@ -1,27 +1,6 @@
-/**
- * Repo-local ESLint rules.
- *
- * These exist because the corresponding project rules cannot be expressed with
- * stock rules, and a rule that is only written down in prose is not a rule.
- */
-
-/**
- * Matches a single non-ASCII code point. The 'u' flag makes an astral character
- * one match rather than two surrogate halves.
- *
- * no-control-regex is off here because naming the control range is the entire
- * point of the rule: it defines what ASCII is.
- */
-// eslint-disable-next-line no-control-regex
+// eslint-disable-next-line no-control-regex -- naming the control range is how the rule defines ASCII
 const NON_ASCII = /[^\x00-\x7F]/gu;
 
-/**
- * Disallow non-ASCII characters anywhere in a source file: identifiers,
- * comments, and string literals alike.
- *
- * The project is English-only. The files it applies to, and any path exempt
- * from it, are set beside its block in `base.mjs`.
- */
 const noNonAscii = {
   meta: {
     type: 'problem',
@@ -67,27 +46,10 @@ const noNonAscii = {
   },
 };
 
-/**
- * JSX text is copy when it holds a letter, in any script: the `: ` between two
- * expressions in `{name}: {state}` is layout, not language. Every other string
- * the rule checks is copy unless it is blank, so an ellipsis or a status code
- * on an attribute is text a person reads.
- */
 const LETTER = /\p{L}/u;
 
 const isBlank = (text) => text.trim() === '';
 
-/**
- * Attributes whose string value is markup rather than something a person reads.
- *
- * The list is closed on purpose. Any other attribute given a literal is copy
- * until its name is added here, so a new prop that carries text fails lint
- * instead of passing because nobody thought to name it. `tone` is StatusDot's,
- * an enum of two signals. `aria-labelledby` holds ids, `inputMode` a keyboard
- * hint, and `pattern` a regular expression the browser validates against.
- * `method` is a form's verb: it names how a submission is sent, not anything a
- * person reads.
- */
 const MARKUP_ATTRIBUTES = new Set([
   'aria-hidden',
   'aria-labelledby',
@@ -111,18 +73,11 @@ const isMarkupAttribute = (name) => name.startsWith('data-') || MARKUP_ATTRIBUTE
 const attributeName = (name) =>
   name.type === 'JSXNamespacedName' ? `${name.namespace.name}:${name.name.name}` : name.name;
 
-/** `x as T` and `x satisfies T` evaluate to `x`. */
 const unwrap = (node) =>
   node.type === 'TSAsExpression' || node.type === 'TSSatisfiesExpression'
     ? unwrap(node.expression)
     : node;
 
-/**
- * The string literals an expression can evaluate to. Only the branches that
- * become the value are followed -- both arms of a ternary, both operands of a
- * logical expression -- so the `'healthy'` in `status === 'healthy' ? a : b`
- * is a test, not copy.
- */
 function valueStrings(node) {
   const value = unwrap(node);
   switch (value.type) {
@@ -139,7 +94,6 @@ function valueStrings(node) {
   }
 }
 
-/** Every string in a metadata object, at any depth. Keys are not copy. */
 function metadataStrings(node) {
   const value = unwrap(node);
   switch (value.type) {
@@ -154,14 +108,6 @@ function metadataStrings(node) {
   }
 }
 
-/**
- * Disallow user-facing copy written inline: JSX text, a string on an attribute
- * not listed as markup, a string a JSX expression renders, and the strings of
- * `export const metadata`. ADR-0007.
- *
- * It sees literals only. `label={health.status}` renders a domain value as UI
- * text and passes, and so does a string assigned to a variable first.
- */
 const noInlineCopy = {
   meta: {
     type: 'problem',
@@ -199,8 +145,6 @@ const noInlineCopy = {
         const value = node.value.type === 'JSXExpressionContainer' ? node.value.expression : node.value;
         reportStrings(valueStrings(value), 'inlineAttributeCopy', name);
       },
-      // A child expression. An attribute's container belongs to the attribute
-      // above and is not matched here.
       ':matches(JSXElement, JSXFragment) > JSXExpressionContainer'(node) {
         reportStrings(valueStrings(node.expression), 'inlineCopy');
       },
@@ -212,9 +156,48 @@ const noInlineCopy = {
   },
 };
 
+const DIRECTIVE = /^(?:eslint-disable-next-line|eslint-disable-line|eslint-disable|eslint-enable|@ts-expect-error)(?=\s|$)/;
+const DIRECTIVE_REASON = /\s--\s*\S/;
+
+const noComments = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description: 'Disallow comments other than tool directives that state a reason. ADR-0025.',
+    },
+    schema: [],
+    messages: {
+      comment:
+        'Code carries no comments (ADR-0025). Delete it if an ADR, the architecture document, ' +
+        'a test name or an identifier already says it; state a rule as a test or a test name; ' +
+        'put an architectural reason in its ADR or docs/ARCHITECTURE.md; otherwise choose a ' +
+        'better name, or drop it.',
+      directiveWithoutReason:
+        'A directive states its reason after ` -- `, as in ' +
+        '`eslint-disable-next-line <rule> -- <reason>` (ADR-0025).',
+    },
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (comment.type === 'Shebang') continue;
+          const text = comment.value.trim();
+          if (!DIRECTIVE.test(text)) {
+            context.report({ loc: comment.loc, messageId: 'comment' });
+          } else if (!DIRECTIVE_REASON.test(text)) {
+            context.report({ loc: comment.loc, messageId: 'directiveWithoutReason' });
+          }
+        }
+      },
+    };
+  },
+};
+
 export const repoPlugin = {
   meta: { name: 'eslint-plugin-repo', version: '0.0.0' },
   rules: {
+    'no-comments': noComments,
     'no-inline-copy': noInlineCopy,
     'no-non-ascii': noNonAscii,
   },

@@ -26,21 +26,6 @@ export type PostgresEntryRepository = EntryRepository & {
 type EntryRow = typeof schema.entries.$inferSelect;
 type LineRow = typeof schema.entryLines.$inferSelect;
 
-/**
- * Entries in Postgres: a row in `entries` and one row per line in
- * `entry_lines`, numbered from 1 in the order the lines were entered.
- *
- * Every row in `entries` is written with its User, and every read filters on
- * it, so another User's entries are never read. ADR-0021.
- *
- * It takes a connection string for the reason the health probe does: the
- * composition root may not import @repo/db.
- *
- * A database failure is a returned `DEPENDENCY_UNAVAILABLE`, never a thrown
- * error. Its message stays generic, because a driver's message names hosts and
- * ports, and a message can reach an HTTP response. What went wrong goes to the
- * logger instead, described by `describeError`. ADR-0018.
- */
 export function createPostgresEntryRepository(
   connectionString: string,
   logger: Logger,
@@ -48,10 +33,6 @@ export function createPostgresEntryRepository(
   const { database, close } = createDatabase(connectionString);
 
   return {
-    /**
-     * One transaction, because an entry without all of its lines is a ledger
-     * that no longer balances and says nothing about it. ADR-0011.
-     */
     save: async (userId: UserId, entry: Entry): Promise<Result<void, DomainError>> => {
       try {
         await database.transaction(async (transaction) => {
@@ -82,16 +63,6 @@ export function createPostgresEntryRepository(
       }
     },
 
-    /**
-     * Two reads rather than a join, entries first. Under read committed an
-     * entry committed between them brings lines the first read has no entry
-     * for, and those are ignored; an entry the first read saw has all of its
-     * lines committed already, because they were written in its transaction.
-     *
-     * Matching happens in the query and never in memory, and both reads are
-     * narrowed the same way, so the lines that come back are the lines of the
-     * entries that matched.
-     */
     search: async (
       userId: UserId,
       criteria: SearchCriteria,
@@ -109,7 +80,6 @@ export function createPostgresEntryRepository(
             desc(schema.entries.createdAt),
             desc(schema.entries.id),
           );
-        // A line belongs to a User through its entry.
         lineRows = await database
           .select({
             entryId: schema.entryLines.entryId,
@@ -159,16 +129,6 @@ export function createPostgresEntryRepository(
 const unavailable = (message: string): Err<DomainError> =>
   err(domainError('DEPENDENCY_UNAVAILABLE', message));
 
-/**
- * What a searched entry has to satisfy, as one condition for the query planner.
- *
- * The User is always part of it, so a read that forgot a criterion would still
- * never cross into another User's books (ADR-0021). A criterion that was not
- * asked for adds no condition, which is what makes a search with none every
- * entry the User owns. Both ends of a day range are compared inclusively,
- * against `entry_date` -- the day the entry was posted, not the instant it was
- * typed.
- */
 function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
   return and(
     eq(schema.entries.userId, userId),
@@ -179,32 +139,10 @@ function matches(userId: UserId, criteria: SearchCriteria): SQL | undefined {
   );
 }
 
-/** The escape character `like` and `ilike` take unless one is named. */
 const LIKE_ESCAPE = '\\';
 
-/**
- * Every character `like` gives a meaning to, including the escape character,
- * which has to escape itself. `containing` escapes exactly what is in here, so
- * the set and the character that neutralises it cannot drift apart -- which
- * they could when one was a constant and the other a pattern written out again.
- */
 const LIKE_SPECIAL = new Set([LIKE_ESCAPE, '%', '_']);
 
-/**
- * A memo term as the pattern that finds it anywhere in a memo.
- *
- * `ilike` rather than `lower(memo) like lower(...)`: one operator, and the same
- * answer without lower-casing a column on every row. It is a pattern language,
- * so what the User typed is escaped into it. The wildcards in a term are the
- * User's to type and not to mean: a term of `%` finds the memo with a percent
- * sign in it, rather than every memo there is.
- *
- * Walked by code point, which is what `for...of` over a string yields, and each
- * character is either escaped or itself -- so a term is never scanned twice and
- * an escape this adds can never be escaped again.
- *
- * The pattern travels as a bound parameter, so nothing here is about quoting.
- */
 function containing(term: string): string {
   let literal = '';
   for (const character of term) {
@@ -213,18 +151,6 @@ function containing(term: string): string {
   return `%${literal}%`;
 }
 
-/**
- * That the entry has a line naming the account, as a condition on the entry.
- *
- * `exists` rather than a join: an entry with two lines on the account would
- * come back twice from a join, and the criterion is about the entry rather than
- * about which of its lines matched. Which is also why the condition stays on
- * the entry in both reads -- the lines that come back are the entry's lines,
- * every one of them, not the ones that matched.
- *
- * The subquery is built without a connection, because this condition is the
- * same whichever database it runs against.
- */
 function touches(account: AccountCode): SQL {
   return exists(
     new QueryBuilder()
@@ -239,14 +165,6 @@ function touches(account: AccountCode): SQL {
   );
 }
 
-/**
- * Rebuilds a stored entry through the same rules that admitted it.
- *
- * The database enforces shape and none of the rules (ADR-0010), so a row
- * written around the app can hold an unbalanced entry or an unknown side. That
- * is reported as this app's failure rather than answered with, and rather than
- * blamed on the caller with the code the rule would have given a draft.
- */
 function restore(row: EntryRow, lineRows: readonly LineRow[]): Result<Entry, DomainError> {
   const lines: EntryDraft['lines'][number][] = [];
   for (const line of lineRows) {
@@ -260,7 +178,6 @@ function restore(row: EntryRow, lineRows: readonly LineRow[]): Result<Entry, Dom
 
   const entry = makeEntry(
     { entryDate: row.entryDate, memo: row.memo, lines },
-    // The column is a uuid that only `save` writes, and it writes an EntryId.
     { id: row.id as EntryId, createdAt: row.createdAt },
   );
   return entry.ok

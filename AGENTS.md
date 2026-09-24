@@ -32,6 +32,11 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   failure mode in this repo.
 - **Introduce an interface only when there are two or more implementations.**
   No speculative abstraction.
+- **Code carries no comments.** `repo/no-comments` allows only an
+  `eslint-disable` family directive or `@ts-expect-error`, each with
+  `-- <reason>`. A reason worth keeping goes into a test, a name, its ADR or
+  `docs/ARCHITECTURE.md` -- never a new document. Test names and messages
+  describe behaviour and never carry history or issue numbers. ADR-0025.
 - **Tests assert behaviour, not mocks.** A test that only checks a spy was
   called will be rejected by the mutation threshold, and the fixture in
   `fixtures/mutation/` shows exactly that failure.

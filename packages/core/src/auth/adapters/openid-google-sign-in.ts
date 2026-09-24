@@ -8,29 +8,14 @@ import { type GoogleSignIn, type PendingSignIn } from '../ports/google-sign-in';
 export type OpenIdGoogleSignInOptions = {
   readonly clientId: string;
   readonly clientSecret: string;
-  /** Google. Only this adapter's own test names another issuer. */
   readonly issuer?: URL;
-  /** Only this adapter's own test passes any, to reach an issuer over http. */
   readonly discovery?: client.DiscoveryRequestOptions;
 };
 
 const GOOGLE = new URL('https://accounts.google.com');
 
-/** An ID token, an email and a name: nothing else is asked of Google. */
 const SCOPE = 'openid email profile';
 
-/**
- * Signing in with Google through `openid-client`. ADR-0021.
- *
- * The library does the part of OAuth worth not writing: discovery, the
- * authorization code exchange with PKCE, and validating the ID token's
- * signature and claims. This file only says what to ask for and what to keep.
- *
- * Discovery happens at first use, not at construction, for the reason
- * `getContainer` parses the environment late: `next build` loads the
- * composition root with no network to speak of. A failed discovery is forgotten,
- * so the next sign-in tries again.
- */
 export function createOpenIdGoogleSignIn(
   options: OpenIdGoogleSignInOptions,
   logger: Logger,
@@ -47,10 +32,6 @@ export function createOpenIdGoogleSignIn(
         options.discovery,
       )
       .then((config) => {
-        // An ID token straight from the token endpoint is not signature-checked
-        // by default, since TLS already authenticates Google (OpenID Connect
-        // Core 3.1.3.7). ADR-0021 has the library validate the signature, so it
-        // is asked to: one fetch of Google's keys, cached.
         client.enableNonRepudiationChecks(config);
         return config;
       });
@@ -114,11 +95,6 @@ function googleClaims(claims: client.IDToken): GoogleClaims {
   };
 }
 
-/**
- * Whether Google, or the browser, said no -- a state that does not match, a
- * code Google will not exchange, an ID token that does not verify, a person who
- * declined -- or whether Google could not be asked at all.
- */
 function refusedOrUnavailable(logger: Logger, error: unknown): Err<DomainError> {
   const said =
     error instanceof client.ClientError ||

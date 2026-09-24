@@ -32,14 +32,6 @@ import {
 } from './sign-in';
 import { createSignOut } from './sign-out';
 
-/**
- * Signing in, being recognised, and signing out, as one lifecycle.
- *
- * The repositories are stubs, not mocks: in-memory stores that keep what they
- * are given. What a test asserts is who a token signs in afterwards, and what
- * the stores hold, never which methods were called.
- */
-
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-09-18T12:00:00.000Z');
 const UNAVAILABLE = domainError('DEPENDENCY_UNAVAILABLE', 'The database is down.');
@@ -83,7 +75,6 @@ type SessionStore = SessionRepository & {
   readonly rows: Map<SessionTokenHash, StoredSession>;
 };
 
-/** A Session slides unless it was seeded otherwise, as the Smoke User's is. */
 function inMemorySessions(): SessionStore {
   const rows = new Map<SessionTokenHash, StoredSession>();
   return {
@@ -107,15 +98,10 @@ function inMemorySessions(): SessionStore {
   };
 }
 
-/** Any repository method, when the database is down. */
 const failing = (): Promise<Err<DomainError>> => Promise.resolve(err(UNAVAILABLE));
 
 const hash = (token: string): SessionTokenHash => `sha256(${token})` as SessionTokenHash;
 
-/**
- * A Google that answers a callback only when its `state` is the one the
- * pending sign-in holds, as the real one does, and vouches for `claims`.
- */
 function google(claims: GoogleClaims): GoogleSignIn {
   return {
     begin: (redirectUri) =>
@@ -179,13 +165,11 @@ function world(overrides: Partial<SignInDependencies> = {}) {
   };
 }
 
-/** The Session a sign-in issued, or a failed assertion. */
 function issued(result: Result<IssuedSession, DomainError>): IssuedSession {
   expect(isOk(result), 'the sign-in was expected to succeed').toBe(true);
   return isOk(result) ? result.value : { token: '' as SessionToken, expiresAt: NOW };
 }
 
-/** Who a token signs in, or a failed assertion. */
 async function whoIs(
   resolveSession: (token: string | undefined) => Promise<Result<AuthContext, DomainError>>,
   token: string | undefined,
@@ -287,10 +271,6 @@ describe('createTestSignIn', () => {
   });
 });
 
-/**
- * Two first sign-ins by one person at once: both find nobody, and the second
- * to add finds the Identity taken.
- */
 describe('a first sign-in that races another', () => {
   const EARLIER: User = {
     id: '01920000-0000-7000-8000-0000000000ff' as UserId,
@@ -299,7 +279,6 @@ describe('a first sign-in that races another', () => {
     createdAt: NOW,
   };
 
-  /** A store where the other sign-in adds its User just before this one does. */
   function racedBy(
     earlier: User | undefined,
     findAgain?: UserRepository['findByIdentity'],

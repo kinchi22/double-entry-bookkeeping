@@ -4,19 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { findIsolationProblems, isIntegration, SPEC_ROOT } from '../check-pr-isolation';
 import { REPO_ROOT } from './run-gate';
 
-/**
- * Section 9, applied to the isolation rule of ADR-0002.
- *
- * The rule is a function over a list of paths and two branch names, so the
- * deliberate breakages are inputs here rather than a fixture tree: nothing in it
- * resolves a path, which is what `fixtures/` exists to keep honest elsewhere.
- *
- * The last block runs the file as a command. CI depends on a non-zero exit and
- * on Node running a `.ts` file with no build step, and neither is visible to a
- * test that only calls the function.
- */
-
-/** The ordinary case: a feature branch aimed at a milestone. */
 const onFeatureBranch = (...files: readonly string[]): readonly string[] =>
   findIsolationProblems({ head: 'add-ledger-entry', base: 'milestone/ledger', files });
 
@@ -52,7 +39,6 @@ describe('the isolation rule', () => {
   });
 
   it('fails a spec moved out of the spec directory, which changes both sides', () => {
-    // A rename reaches the check as its old path and its new one.
     expect(onFeatureBranch('e2e/health.spec.ts', 'tools/health.spec.ts')).not.toEqual([]);
   });
 
@@ -155,7 +141,6 @@ describe('the isolation gate as CI runs it', () => {
   });
 
   it('exits non-zero when the branch names never arrive', () => {
-    // No arguments means head and base are empty, which is no milestone.
     expect(run('e2e/health.spec.ts\napps/web/app/page.tsx\n').status).toBe(1);
   });
 });

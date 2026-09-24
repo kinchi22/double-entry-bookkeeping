@@ -10,12 +10,6 @@ export type PostgresSessionRepository = SessionRepository & {
   close: () => Promise<void>;
 };
 
-/**
- * Sessions in Postgres, by the hash of their token. ADR-0021.
- *
- * A failure is logged without the hash: it is not the token, and it is still
- * the one value that names a live Session.
- */
 export function createPostgresSessionRepository(
   connectionString: string,
   logger: Logger,
@@ -37,10 +31,6 @@ export function createPostgresSessionRepository(
       }
     },
 
-    /**
-     * A Session slides unless its User has no Identity: the Smoke User, whose
-     * Session is seeded with a fixed expiry.
-     */
     find: async (
       tokenHash: SessionTokenHash,
     ): Promise<Result<StoredSession | undefined, DomainError>> => {
@@ -49,9 +39,6 @@ export function createPostgresSessionRepository(
           .select({
             userId: schema.sessions.userId,
             expiresAt: schema.sessions.expiresAt,
-            // Spelled out: inside a subquery Drizzle renders a column without
-            // its table, and `user_id = user_id` would compare identities to
-            // themselves.
             slides: sql<boolean>`exists (select 1 from identities where identities.user_id = sessions.user_id)`,
           })
           .from(schema.sessions)
@@ -59,8 +46,7 @@ export function createPostgresSessionRepository(
         return ok(
           row === undefined
             ? undefined
-            : // The column is a uuid only a UserId is written to.
-              {
+            : {
                 tokenHash,
                 userId: row.userId as UserId,
                 expiresAt: row.expiresAt,

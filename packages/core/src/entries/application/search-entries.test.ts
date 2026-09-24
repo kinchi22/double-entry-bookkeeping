@@ -32,19 +32,11 @@ const made = makeEntry(
 
 const ADA = '01920000-0000-7000-8000-0000000000a1' as UserId;
 
-/** A stub repository that answers `search` with a fixed result. */
 const holding = (searched: EntryRepository['search']): EntryRepository => ({
   save: () => Promise.resolve(ok(undefined)),
   search: searched,
 });
 
-/**
- * A stub repository that answers with the entries the criteria it was searched
- * with match, as a repository does: an absent criterion matches everything, and
- * those present combine with `and`. It is the port doing what a port does, not
- * a spy: what each case asserts is which entries came back, never that a call
- * was made.
- */
 const holdingMatching = (held: readonly Entry[]): EntryRepository =>
   holding((_userId, criteria) =>
     Promise.resolve(

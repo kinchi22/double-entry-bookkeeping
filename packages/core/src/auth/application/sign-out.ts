@@ -9,11 +9,6 @@ export type SignOutDependencies = {
 
 export type SignOut = (token: string | undefined) => Promise<Result<void, DomainError>>;
 
-/**
- * Ends the Session a cookie names, at once: the row is deleted, so the token
- * signs nobody in again, wherever it has been copied. Signing out with no
- * Session is already done.
- */
 export function createSignOut({ sessions, hashSessionToken }: SignOutDependencies): SignOut {
   return async (token) => {
     if (token === undefined || token === '') {

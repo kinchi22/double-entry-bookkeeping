@@ -10,14 +10,6 @@ import {
   sumMoney,
 } from './money';
 
-/**
- * Builds an amount for a test that is only meaningful if the amount is valid.
- * Asserting here keeps a broken constructor from quietly turning every other
- * assertion in the file into a test of a fallback value.
- *
- * It reports through `expect` rather than by throwing, because this file lives
- * in `domain/` and the no-throw rule applies to tests there too.
- */
 const amount = (minorUnits: number): Money => {
   const result = money(minorUnits);
   expect(isOk(result), `test setup used an invalid amount: ${String(minorUnits)}`).toBe(true);
@@ -117,8 +109,6 @@ describe('negateMoney', () => {
     expect(moneyToMinorUnits(negateMoney(amount(-1250)))).toBe(1250);
   });
 
-  // Not pedantry: -0 compares equal to 0 under === but not under Object.is,
-  // which is what toEqual uses, so a stray -0 makes two equal balances differ.
   it('leaves zero as positive zero rather than producing -0', () => {
     const negated = moneyToMinorUnits(negateMoney(MONEY_ZERO));
 

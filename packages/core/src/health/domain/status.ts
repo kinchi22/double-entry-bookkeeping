@@ -7,33 +7,17 @@ import {
   type Result,
 } from '@repo/contracts';
 
-/**
- * What a single checked component reported. Deliberately not a port type: the
- * domain describes the shape of an answer, not how the answer was obtained.
- */
 export type ComponentReport = {
   readonly name: string;
   readonly reachable: boolean;
 };
 
-/**
- * What the domain concluded, in domain terms.
- *
- * Deliberately not the contract type. `checkedAt` is an instant here and a
- * string on the wire, and keeping the two apart is what lets the transport
- * format change without the domain noticing.
- */
 export type HealthReport = {
   readonly status: HealthState;
   readonly components: readonly ComponentReport[];
   readonly checkedAt: Date;
 };
 
-/**
- * Pure. No clock, no IO, no environment. `checkedAt` is passed in so this
- * function has exactly one possible output for a given input, which is what
- * makes the mutation-testing gate meaningful.
- */
 export function evaluateHealth(
   reports: readonly ComponentReport[],
   checkedAt: Date,

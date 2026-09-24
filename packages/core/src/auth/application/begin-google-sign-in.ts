@@ -11,10 +11,6 @@ export type BeginGoogleSignIn = (
   Result<{ readonly authorizationUrl: URL; readonly pending: PendingSignIn }, DomainError>
 >;
 
-/**
- * Where to send the browser to sign in with Google. What it must bring back is
- * the controller's to keep, in a cookie, until the callback.
- */
 export function createBeginGoogleSignIn({ google }: BeginGoogleSignInDependencies): BeginGoogleSignIn {
   return (redirectUri) => google.begin(redirectUri);
 }

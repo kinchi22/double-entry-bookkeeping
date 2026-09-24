@@ -4,46 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { bin, REPO_ROOT, runGate } from './run-gate';
 import { type Collection, findCollectionProblems } from './test-collection';
 
-/**
- * Section 9, applied to the test suite itself.
- *
- * Every other gate here asserts that a rule still fires. This one asserts that
- * the tests still run: a `*.test.ts` file that no vitest config collects is a
- * green suite with a hole in it, and nothing else in the repository can see it.
- * `passWithNoTests: false` catches only a run that collected nothing at all.
- *
- * Both sides are gathered by running the real tools, because what rots is path
- * resolution: git reports the working tree, vitest reports what its own globs
- * match. The comparison is a pure function, and the deliberate breakages are
- * its inputs in the second half of this file.
- */
-
-/**
- * Test files that belong to another runner, and are therefore not vitest's to
- * collect. `fixtures/` is excluded from every tool in this repo -- eslint, tsc,
- * dependency-cruiser, jscpd -- and `fixtures/mutation/subject.test.ts` is run by
- * the Stryker fixture with its own config.
- *
- * `e2e/` is Playwright's `testDir`, and its default `testMatch` accepts `.test`
- * as readily as `.spec`, so a `.test.ts` written there runs under Playwright
- * rather than here. Excluding the directory is what keeps this gate from
- * claiming such a file runs nowhere.
- */
 const OTHER_RUNNERS = ['fixtures/', 'e2e/'];
 
 const posix = (file: string): string => file.replaceAll('\\', '/');
 
-/**
- * The working tree, not the index: a test file that has been written but not
- * committed is exactly when this gate is worth failing. Gitignored paths are
- * out, which is what keeps `node_modules/` and the Stryker sandbox out without
- * a hand-maintained list.
- *
- * `.spec` as well as `.test`, even though nothing under `packages` or `apps`
- * uses that name today. A `foo.spec.ts` there is collected by no vitest project
- * and would be seen by no runner at all, which is the failure this gate is for;
- * the only `.spec` files that do run are Playwright's, and they live in `e2e/`.
- */
 const testFilesOnDisk = (): readonly string[] => {
   const run = runGate(
     'git',
@@ -70,12 +34,6 @@ const testFilesOnDisk = (): readonly string[] => {
     .filter((file) => !OTHER_RUNNERS.some((prefix) => file.startsWith(prefix)));
 };
 
-/**
- * Every vitest config at the repository root. Discovered rather than listed, so
- * a new one counts without being added here. A per-package config would not be
- * found, and its tests would be reported as collected by nothing -- a false
- * positive, but a loud one, which is the direction this gate errs in.
- */
 const vitestConfigs = (): readonly string[] =>
   readdirSync(REPO_ROOT)
     .filter((name) => /^vitest[.].*config[.]ts$/.test(name))
@@ -83,11 +41,6 @@ const vitestConfigs = (): readonly string[] =>
 
 type ListedFile = { readonly file: string };
 
-/**
- * `vitest list --filesOnly` resolves the config's own globs and reports what it
- * would run, without running it. It does not execute `globalSetup`, so asking
- * the integration project what it collects does not start a container.
- */
 const collect = (config: string): Collection => {
   const run = runGate(
     bin('vitest'),
@@ -119,16 +72,6 @@ describe('the vitest projects', () => {
     expect(collections.length).toBeGreaterThan(0);
   });
 
-  /**
-   * The comparison passing proves nothing about the scan. A pathspec that
-   * stopped matching `*.test.tsx`, or a `git ls-files` that stopped reporting
-   * untracked files, would agree with an emptier tree and stay green -- the
-   * silent-success failure this gate exists to catch, one level up.
-   *
-   * So the breakage is made for real, where a component test would go, and
-   * removed again in the same test. It is also the only assertion that the
-   * decision against component tests is enforced rather than written down.
-   */
   it('reports a file no project collects, which is how it is shown to fail', () => {
     const probe = path.join(REPO_ROOT, 'packages', 'ui', 'src', 'collection-probe.test.tsx');
     writeFileSync(

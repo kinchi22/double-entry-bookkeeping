@@ -2,7 +2,6 @@ import { describeError, type LogFields } from '@repo/core';
 import { describe, expect, it } from 'vitest';
 import { createLogger, stderr } from './logger';
 
-/** Every line the logger wrote, parsed. */
 function capture(): { lines: () => unknown[]; destination: { write: (line: string) => void } } {
   const written: string[] = [];
   return {
@@ -48,10 +47,6 @@ describe('createLogger', () => {
 });
 
 describe('LogFields', () => {
-  /**
-   * A compile-time check, run by `tsc` over this file: each directive fails the
-   * typecheck gate if the line under it ever starts compiling.
-   */
   it('takes an error only as describeError describes it', () => {
     const raw = Object.assign(new Error('Failed query: insert into "entries"\nparams: Secret memo'), {
       params: ['Secret memo'],

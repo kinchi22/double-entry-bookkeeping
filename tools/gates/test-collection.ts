@@ -1,37 +1,10 @@
-/**
- * Which test files the vitest projects actually run, as a pure function.
- *
- * `passWithNoTests: false` is the liveness guard each config carries, and it
- * only catches a run that collected nothing at all. A glob that stops matching
- * one subtree -- a package renamed, a test moved out of `src/`, a new config
- * nobody added the directory to -- collects fewer files and stays green, which
- * is the failure this repo exists to prevent, applied to the test suite itself.
- * The unit include was `packages/<pkg>/src/**` until ADR-0003 and matched
- * nothing under `apps/`; nothing failed, because there was nothing there yet.
- *
- * So the check is a comparison rather than a pattern: every test file on disk
- * against every file the configs report collecting. Both sides are gathered by
- * the test beside this file, since what can rot there is a spawn and a path,
- * and what can be wrong here is the comparison.
- */
-
-/** A vitest config, and the test files it says it collects. */
 export type Collection = {
-  /** Config file name, e.g. `vitest.config.ts`. */
   readonly config: string;
-  /** Repository-relative paths, in posix form. */
   readonly files: readonly string[];
 };
 
 const sorted = (values: Iterable<string>): readonly string[] => [...values].sort();
 
-/**
- * Every way the test surface and the files on disk can disagree, as readable
- * lines. An empty side is a problem rather than a pass: this repository has
- * test files and vitest configs, so nothing to compare means the scan that
- * produced the list broke, and a gate that passes when its input goes missing
- * is worse than no gate.
- */
 export function findCollectionProblems(
   onDisk: readonly string[],
   collections: readonly Collection[],

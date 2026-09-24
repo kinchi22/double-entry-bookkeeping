@@ -4,24 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { SPEC_ROOT } from '../check-pr-isolation';
 import { REPO_ROOT } from './run-gate';
 
-/**
- * The human review surface is stated in two places, and ADR-0002 exists because
- * they disagreed: `docs/ARCHITECTURE.md` listed five subjects, `.github/CODEOWNERS`
- * listed three paths, and `e2e/` was on one of them. Only CODEOWNERS is executable,
- * so the prose was free to rot, and it did.
- *
- * This asserts the two are the same set, and that the directory the isolation
- * check protects is one of them. The two readers are pure functions over file
- * content, so this file never becomes a third copy of the list: the sample
- * inputs below prove the readers work without naming a single owned path.
- */
-
 const SECTION = '## Human review surface';
 
-/** `/e2e/` and `e2e/**` both normalise to `e2e`. */
 const normalise = (entry: string): string => entry.replace(/^\//, '').replace(/\/(\*\*)?$/, '');
 
-/** A CODEOWNERS rule line: a path starting at the root, then its owners. */
 const OWNED = /^(\/\S+)(?:[^\S\n]+@\S+)+[^\S\n]*$/gm;
 
 const ownedPaths = (codeowners: string): readonly string[] =>
@@ -29,7 +15,6 @@ const ownedPaths = (codeowners: string): readonly string[] =>
     match[1] === undefined ? [] : [normalise(match[1])],
   );
 
-/** The first column of every row in the table under the review-surface heading. */
 const ROW = /^\|\s*`([^`]+)`\s*\|/gm;
 
 const documentedPaths = (architecture: string): readonly string[] => {

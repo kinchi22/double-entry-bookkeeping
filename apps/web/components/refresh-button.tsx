@@ -5,17 +5,9 @@ import { type ReactNode } from 'react';
 import { en } from '../messages/en';
 
 export type RefreshButtonProps = {
-  /**
-   * The Server Action to run. Passed in rather than imported, so this component
-   * stays a button and does not learn what it is refreshing.
-   */
   readonly action: () => Promise<void>;
 };
 
-/**
- * `useFormStatus` reports the state of the nearest enclosing form, so it has to
- * live in a child of that form rather than in the component that renders it.
- */
 function SubmitButton(): ReactNode {
   const { pending } = useFormStatus();
 
@@ -30,10 +22,6 @@ function SubmitButton(): ReactNode {
   );
 }
 
-/**
- * A client component, and therefore a live test of the RSC boundary: if anyone
- * makes this file import @repo/core/server, the build fails.
- */
 export function RefreshButton({ action }: RefreshButtonProps): ReactNode {
   return (
     <form action={action}>

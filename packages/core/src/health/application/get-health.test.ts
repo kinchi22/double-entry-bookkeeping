@@ -3,10 +3,6 @@ import { isOk } from '@repo/contracts';
 import { createGetHealth } from './get-health';
 import { type HealthProbe } from '../ports/health-probe';
 
-/**
- * A stub, not a mock: it answers, and the assertions are about what the use case
- * produced, never about which methods were called on it.
- */
 const probe = (name: string, reachable: boolean): HealthProbe => ({
   name,
   check: () => Promise.resolve(reachable),

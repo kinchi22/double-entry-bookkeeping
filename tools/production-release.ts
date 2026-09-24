@@ -56,7 +56,6 @@ export type ReleaseDecision = {
 
 export type ReleaseQueueInput = {
   readonly runningCommit: string | null;
-  /** Ordered from oldest to newest. */
   readonly waitingCommits: readonly string[];
 };
 

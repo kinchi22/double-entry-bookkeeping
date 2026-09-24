@@ -1,35 +1,12 @@
 import { appendFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-/**
- * Whether `Apply migrations` has anything to apply: pure functions, plus a CLI
- * entry point.
- *
- * Every push to `main` used to wait for the owner's approval, migration or not.
- * Now the job runs only when a file under `packages/db/drizzle/` changed since
- * the last commit Production was migrated at. That commit is read from the
- * `production-database` deployments GitHub records for each run of the job:
- * the newest one whose latest status is `success`.
- *
- * Measuring from the last applied commit rather than from this push is the
- * point. A queued release for a commit `main` has moved past stops before it
- * gets here, and an approval can be rejected; either way the migration is
- * still pending, and the newest release, which runs this after the one before
- * it finished, asks for all of it at once.
- *
- * Every doubt resolves to "pending": no successful deployment, an API call
- * that failed, a commit git cannot compare. The cost of a wrong "pending" is an
- * approval request, which is what every push cost before; the cost of a wrong
- * "nothing pending" is a production schema behind its code.
- */
-
 export const MIGRATIONS_ROOT = 'packages/db/drizzle/';
 
 export const ENVIRONMENT = 'production-database';
 
 export type Deployment = {
   readonly sha: string;
-  /** The deployment's newest status, e.g. `success`, `error`, `waiting`. */
   readonly state: string;
 };
 
@@ -38,11 +15,6 @@ export type Verdict = {
   readonly reason: string;
 };
 
-/**
- * The commit of the newest successful deployment. Deployments arrive newest
- * first, and the search stops at the first success, so a caller that fetches
- * each status lazily fetches no more than it needs.
- */
 export function lastAppliedSha(deployments: Iterable<Deployment>): string | undefined {
   for (const deployment of deployments) {
     if (deployment.state === 'success') {
@@ -52,10 +24,6 @@ export function lastAppliedSha(deployments: Iterable<Deployment>): string | unde
   return undefined;
 }
 
-/**
- * `changed` is every path that differs between the applied commit and this
- * one, or undefined when git could not compare them.
- */
 export function decide(
   appliedSha: string | undefined,
   changed: readonly string[] | undefined,
@@ -89,7 +57,6 @@ export function decide(
   };
 }
 
-/** A command's trimmed output, or undefined when it failed. */
 function run(command: string, args: readonly string[]): string | undefined {
   const result = spawnSync(command, [...args], { encoding: 'utf8', shell: false });
   return result.status === 0 ? result.stdout.trim() : undefined;
@@ -101,7 +68,6 @@ const lines = (text: string): readonly string[] =>
     .map((line) => line.trim())
     .filter((line) => line !== '');
 
-/** Deployments newest first, each status fetched only when it is reached. */
 function* deploymentsOf(repository: string): Generator<Deployment> {
   const listed = run('gh', [
     'api',
@@ -127,8 +93,6 @@ function* deploymentsOf(repository: string): Generator<Deployment> {
 }
 
 if (import.meta.main) {
-  // The repository comes from the environment Actions sets, and `gh` reads
-  // GH_TOKEN from it. Run locally, both come from the developer's shell.
   const repository = process.env['GITHUB_REPOSITORY'] ?? '';
   const appliedSha = lastAppliedSha(deploymentsOf(repository));
   const diff =

@@ -7,20 +7,6 @@ export type EntrySearchResultsProps = {
   readonly entries: readonly PostedEntry[];
 };
 
-/**
- * What an Entry search answered.
- *
- * The region is named `Results` rather than `Entries`, so that what is asserted
- * about this page is that the search answered rather than that some list
- * rendered. It stays on the page when the answer is empty, because an honest
- * empty answer has to be tellable apart from a page that failed.
- *
- * The empty state is this page's own and says that nothing matched. `EntryList`
- * has one too, and it says that nothing has been written yet: the two
- * emptinesses are different answers, and one message would be wrong for one of
- * them, so the list is reused exactly as `/entries` renders it and this is
- * rendered instead of it.
- */
 export function EntrySearchResults({ entries }: EntrySearchResultsProps): ReactNode {
   const titleId = useId();
 

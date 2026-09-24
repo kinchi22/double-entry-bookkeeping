@@ -2,18 +2,6 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { createPostgresHealthProbe } from './postgres-health-probe';
 
-/**
- * Integration test: the adapter runs against a real Postgres, never a mock.
- *
- * A mocked pg client would prove that this file calls the methods it calls,
- * which is a restatement of the source rather than a test of it. The behaviour
- * worth asserting -- that a live database answers, and that an absent one
- * becomes `false` instead of an exception -- only exists when there is a real
- * server on the other end.
- *
- * The connection string comes from the container started in
- * tools/integration/postgres-container.ts.
- */
 const databaseUrl = process.env['TEST_DATABASE_URL'];
 if (databaseUrl === undefined) {
   throw new Error(
@@ -22,10 +10,8 @@ if (databaseUrl === undefined) {
   );
 }
 
-/** Port 1 is reserved and nothing binds it, so the connection is refused immediately. */
 const UNREACHABLE_URL = 'postgresql://absent:absent@127.0.0.1:1/absent';
 
-/** A logger that keeps what it is given, so a test can read what was reported. */
 const logged: LogFields[] = [];
 const logger: Logger = {
   error: (fields) => {

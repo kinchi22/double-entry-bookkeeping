@@ -18,12 +18,6 @@ import { type EntryRepository } from '../ports/entry-repository';
 import { createSearchEntries, type SearchEntries } from './search-entries';
 import { createPostEntry, type PostEntry } from './post-entry';
 
-/**
- * A stub, not a mock: an in-memory repository that keeps what it is given, as
- * the User it was given for, and answers each User's back. What a test asserts
- * is what posting did to the entries a reader can find, never which methods were
- * called.
- */
 function inMemoryEntries(): EntryRepository {
   const stored: { readonly userId: UserId; readonly entry: Entry }[] = [];
   return {
@@ -41,7 +35,6 @@ function inMemoryEntries(): EntryRepository {
 const ADA: AuthContext = { userId: '01920000-0000-7000-8000-0000000000a1' as UserId };
 const GRACE: AuthContext = { userId: '01920000-0000-7000-8000-0000000000a2' as UserId };
 
-/** A repository whose database is down: every write fails and nothing is kept. */
 const unavailableEntries: EntryRepository = {
   save: () => Promise.resolve(err(domainError('DEPENDENCY_UNAVAILABLE', 'The database is down.'))),
   search: () => Promise.resolve(ok([])),

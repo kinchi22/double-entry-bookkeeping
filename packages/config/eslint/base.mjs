@@ -23,15 +23,12 @@ export function createBaseConfig({ tsconfigRootDir }) {
         globals: { ...globals.node },
       },
       rules: {
-        // The brief forbids `any`. strictTypeChecked already reports it, but
-        // stating it here means a future preset change cannot quietly relax it.
         '@typescript-eslint/no-explicit-any': 'error',
         '@typescript-eslint/consistent-type-imports': [
           'error',
           { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
         ],
         '@typescript-eslint/explicit-module-boundary-types': 'error',
-        // Unused code is either a mistake or a leftover. Both are worth failing.
         '@typescript-eslint/no-unused-vars': [
           'error',
           { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
@@ -40,13 +37,6 @@ export function createBaseConfig({ tsconfigRootDir }) {
     },
 
     {
-      // The whole project is English-only. ESLint treats a trailing `/*` as
-      // universal: this block applies wherever another block lints, and makes
-      // no file linted on its own.
-      //
-      // No path is exempt. The change that ships a non-English catalogue ignores
-      // its exact path; a name glob like `**/messages/**` would also exempt the
-      // source of any feature with that name.
       name: 'repo/english-only',
       files: ['**/*'],
       plugins: { repo: repoPlugin },
@@ -56,8 +46,15 @@ export function createBaseConfig({ tsconfigRootDir }) {
     },
 
     {
-      // Config and tooling files are plain JS and are not in any tsconfig, so
-      // type-aware rules must be switched off for them or they error out.
+      name: 'repo/no-comments',
+      files: ['**/*'],
+      plugins: { repo: repoPlugin },
+      rules: {
+        'repo/no-comments': 'error',
+      },
+    },
+
+    {
       name: 'repo/plain-js',
       files: ['**/*.{js,mjs,cjs}'],
       languageOptions: {

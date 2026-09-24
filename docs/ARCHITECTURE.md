@@ -60,6 +60,7 @@ status in the ADR itself.
 | [ADR-0020: Keep `health.get` as the deployment's healthcheck](adr/0020-keep-health-get-as-the-healthcheck.md) | Accepted |
 | [ADR-0021: Authenticate every user with Google](adr/0021-authenticate-every-user-with-google.md) | Accepted |
 | [ADR-0024: Promote a Production deployment only after its migration](adr/0024-promote-production-only-after-its-migration.md) | Accepted |
+| [ADR-0025: Ban comments in code](adr/0025-ban-comments-in-code.md) | Accepted |
 
 ## Package layout
 
@@ -125,8 +126,14 @@ The overlap is intentional: the two tools fail differently.
 nothing does not fail loudly; it silently stops checking. Element patterns match
 *folders*, and pnpm resolves workspace packages through a `node_modules`
 symlink, so the element list in `packages/config/eslint/boundaries.mjs` names
-both the real path and the linked one. `boundaries/no-unknown-files` is on so an
-unclassified source file fails instead of escaping the matrix.
+both the real path and the linked one. The first element a folder matches wins,
+so the catch-all for `packages/core/src` comes after the four layer folders.
+The plugin's resolver is given the TypeScript extensions, without which every
+relative import resolves to nothing and is classified unknown, and externality
+is decided by the import specifier rather than the resolved path, without which
+every `@repo/*` import would be external and skip the matrix.
+`boundaries/no-unknown-files` is on so an unclassified source file fails instead
+of escaping the matrix.
 
 **Silently unsupported tooling.** TypeScript is pinned to `~6.0.x` because
 `typescript-eslint@8` supports `<6.1.0`. On TypeScript 7 the parser degrades and
@@ -168,7 +175,7 @@ Raise the TypeScript major only together with `typescript-eslint`.
 | the composition root, `routers/**`, `app/**` | Playwright, against a production build in CI (`E2E build`), on a Postgres service container migrated before the suite. Nothing else reaches them. |
 
 "Measured" means the mutation score, which is the only coverage floor here:
-there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.mjs`
+there is no line-coverage gate and no `@vitest/coverage-v8`. `stryker.config.ts`
 states the measured surface as patterns rather than a list, so a new file in a
 measured directory is measured by existing. A file nobody tests scores 0, and the
 break threshold of 90 is over the whole surface, so what fails is a named file
@@ -223,6 +230,11 @@ cannot see.
 `useFormStatus` and `useActionState` cover pending state and form errors, so a
 client component that needs them needs nothing installed.
 
+A read is not a write. The Entry search is a plain `GET` form, so its criteria
+travel in the URL's query and the page reads them on the render path: a search
+is reloadable, bookmarkable and walkable with the back button, and no Server
+Action is involved.
+
 ## Dates on the wire
 
 `checkedAt` is a `Date` in `core` and an ISO 8601 string in `packages/contracts`,
@@ -254,7 +266,7 @@ Four paths are owned on top of that:
 | `e2e/**`                 | The requirements, as executable specs. An agent that may edit them can make a failing requirement pass by rewriting it. |
 | `packages/db/drizzle/**` | An applied migration is the one change a later fix cannot undo.                                                        |
 | `.github/**`             | The gates, and the ownership list itself: how everything else on this page stops being a promise.                      |
-| `stryker.config.mjs`     | The coverage floor. One `!` line takes a file out of the only gate that requires it to be tested, and on a milestone branch nothing else would review that. ADR-0004. |
+| `stryker.config.ts`      | The coverage floor. One `!` line takes a file out of the only gate that requires it to be tested, and on a milestone branch nothing else would review that. ADR-0004. |
 
 `.github/CODEOWNERS` declares exactly these four: this table and that file are
 the same list said twice, and `tools/gates/review-surface-gate.test.ts` fails

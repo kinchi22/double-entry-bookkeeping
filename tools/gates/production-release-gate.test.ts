@@ -238,8 +238,6 @@ describe('Post-Promotion smoke workflow', () => {
   const workflows = path.join(REPO_ROOT, '.github/workflows');
   const promoted = readFileSync(path.join(workflows, 'promoted-production-smoke.yml'), 'utf8');
 
-  // The step's own script, run as the runner would, so the test judges what it
-  // does with a payload rather than how it is spelled.
   const checkEvent = (env: Record<string, string>) => {
     const script = /- name: Check the promoted event\n[\s\S]*?run: \|\n([\s\S]*?)\n\s+- uses:/.exec(promoted)?.[1];
     if (script === undefined) throw new Error('The promoted-event check step is missing.');

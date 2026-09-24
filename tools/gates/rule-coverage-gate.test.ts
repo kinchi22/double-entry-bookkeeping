@@ -10,21 +10,6 @@ import {
 } from './fixture-map';
 import { VIOLATIONS_DIR } from './run-gate';
 
-/**
- * The other gate tests prove that a rule with a fixture still fires. Neither of
- * them can see a rule that was added without a fixture: the expectation tables
- * are hand-written, so a new rule is simply absent from them and everything
- * stays green. That is the same silent-success failure mode the fixtures exist
- * to prevent, one level up.
- *
- * This test closes it by reading the shipped configuration instead of a list,
- * and asserting the list accounts for everything the configuration turns on.
- *
- * It checks both directions. A rule with no fixture and no exemption fails, and
- * so does a fixture row or exemption naming a rule that no longer exists --
- * otherwise a deleted rule would leave behind a row that quietly proves nothing.
- */
-
 const severityOf = (entry: EslintRuleEntry): EslintRuleSeverity =>
   typeof entry === 'object' ? entry[0] : entry;
 
@@ -33,13 +18,6 @@ const isEnabled = (entry: EslintRuleEntry): boolean => {
   return severity !== 'off' && severity !== 0;
 };
 
-/**
- * Rule ids the repo's own configuration blocks switch on.
- *
- * Only blocks named `repo/*` count. Everything else in the composed config is a
- * third-party preset spread in as-is (`js.configs.recommended`,
- * `tseslint.configs.strictTypeChecked`), and this repo does not claim those.
- */
 const configuredRepoRules = (): ReadonlySet<string> => {
   const config = createEslintConfig({ tsconfigRootDir: VIOLATIONS_DIR });
 

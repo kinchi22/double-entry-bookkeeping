@@ -12,12 +12,6 @@ import {
   decodePendingSignIn,
 } from '../../../../server/session-cookie';
 
-/**
- * Where Google returns the browser. The pending sign-in is read and forgotten
- * in one step, so a callback is answered once. A callback this browser did not
- * begin -- no pending sign-in, or a state that does not match it -- signs
- * nobody in and returns to `/sign-in` with an error. ADR-0021.
- */
 export async function GET(request: Request): Promise<never> {
   const cookieStore = await cookies();
   const kept = decodePendingSignIn(cookieStore.get(PENDING_SIGN_IN_COOKIE)?.value);

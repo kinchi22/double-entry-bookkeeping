@@ -1,11 +1,3 @@
-/**
- * Section 9: proves the RSC boundary is enforced by the build.
- *
- * The only honest way to test `server-only` is to actually build the app with a
- * client component that imports a server entry point, so this temporarily plants
- * the fixture inside apps/web and removes it again. The removal is in a finally
- * block: leaving it behind would break the real build.
- */
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
@@ -38,8 +30,6 @@ try {
   if (result.status === 0) {
     fail('next build succeeded with a client component importing @repo/core/server');
   }
-  // Assert on the reason, not just the exit code: a build that fails for an
-  // unrelated reason would otherwise look like a working gate.
   if (!/server-only|Server Component|server only/i.test(output)) {
     fail(
       `next build failed, but not because of the server-only marker. Output:\n${output.slice(-4000)}`,

@@ -11,16 +11,6 @@ import {
 } from '../find-pending-migrations';
 import { REPO_ROOT } from './run-gate';
 
-/**
- * `Apply migrations` asks for approval only when a migration is pending.
- *
- * The decision is two functions over values, so the cases that matter -- a
- * cancelled run, a rejected one, a failed API call -- are inputs here. The last
- * block runs the file as a command, against a `gh` that answers from a script
- * and a git repository made for the test, because CI depends on the output
- * file it writes and on a commit git cannot find resolving to "pending".
- */
-
 const SHA_APPLIED = 'a'.repeat(40);
 const SHA_OLDER = 'b'.repeat(40);
 
@@ -127,7 +117,6 @@ describe('find-pending-migrations.ts, run as CI runs it', () => {
   };
 
   beforeAll(() => {
-    // A repository with a commit before a migration and one after it.
     mkdirSync(path.join(repository, 'packages/db/drizzle'), { recursive: true });
     git('init', '--quiet');
     writeFileSync(path.join(repository, 'README.md'), 'before\n');
@@ -139,8 +128,6 @@ describe('find-pending-migrations.ts, run as CI runs it', () => {
     git('commit', '--quiet', '-m', 'migration');
     afterMigration = git('rev-parse', 'HEAD');
 
-    // A `gh` that answers the two calls the command makes from STUB_DEPLOYMENTS:
-    // `id sha state` per line, newest first. STUB_FAIL makes every call fail.
     mkdirSync(stubBin);
     writeFileSync(
       path.join(stubBin, 'gh'),

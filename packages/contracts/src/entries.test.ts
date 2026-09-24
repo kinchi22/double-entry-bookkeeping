@@ -129,12 +129,6 @@ describe('toPostedEntry', () => {
 
 type Fields = Readonly<Record<string, string | readonly string[]>>;
 
-/**
- * Submitted fields that answer the way `FormData` does: `get` gives the first
- * value or `null`, `getAll` gives every value in order. This package has no DOM
- * or Node types, so `FormData` itself is checked against `SubmittedFields` where
- * the Server Action passes one.
- */
 function submitted(fields: Fields): SubmittedFields {
   const values = (name: string): readonly string[] => {
     const value = fields[name];

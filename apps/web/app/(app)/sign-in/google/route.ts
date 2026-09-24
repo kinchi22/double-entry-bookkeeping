@@ -10,11 +10,6 @@ import {
   encodePendingSignIn,
 } from '../../../../server/session-cookie';
 
-/**
- * Begins a sign-in with Google: keeps the state and the PKCE verifier in a
- * cookie of their own, with where the visitor was going, and sends the browser
- * to Google. Google returns it to this deployment's callback. ADR-0021.
- */
 export async function GET(request: Request): Promise<never> {
   const url = new URL(request.url);
   const caller = createCaller(await createContext());

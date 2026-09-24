@@ -2,7 +2,6 @@ import { TRPCError } from '@trpc/server';
 import { describe, expect, it } from 'vitest';
 import { orSignIn } from './sign-in-redirect';
 
-/** What a call threw, or a failed assertion if it returned. */
 async function thrownBy(call: Promise<unknown>): Promise<unknown> {
   try {
     await call;
@@ -12,7 +11,6 @@ async function thrownBy(call: Promise<unknown>): Promise<unknown> {
   expect.fail('the call was expected to throw');
 }
 
-/** Where a redirect Next threw sends the browser, read off its digest. */
 const location = (thrown: unknown): string | undefined => {
   const digest: unknown = typeof thrown === 'object' && thrown !== null ? Reflect.get(thrown, 'digest') : undefined;
   return typeof digest === 'string' ? digest.split(';')[2] : undefined;

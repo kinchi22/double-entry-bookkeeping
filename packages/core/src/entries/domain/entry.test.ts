@@ -3,7 +3,6 @@ import { isErr, isOk, type DomainErrorCode, type EntryId, type Money, type Side 
 import { MONEY_ZERO, money } from '../../money/domain/money';
 import { isAccountCode, makeEntry, type EntryDraft } from './entry';
 
-/** A valid amount, or a failed assertion: see the same helper in money.test.ts. */
 const amount = (minorUnits: number): Money => {
   const result = money(minorUnits);
   expect(isOk(result), `test setup used an invalid amount: ${String(minorUnits)}`).toBe(true);

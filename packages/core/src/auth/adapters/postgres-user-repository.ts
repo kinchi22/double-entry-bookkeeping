@@ -11,17 +11,8 @@ export type PostgresUserRepository = UserRepository & {
   close: () => Promise<void>;
 };
 
-/** The SQLSTATE Postgres reports a duplicate key with. */
 const UNIQUE_VIOLATION = '23505';
 
-/**
- * Users in Postgres, found through `identities`. ADR-0021.
- *
- * It takes a connection string for the reason the health probe does: the
- * composition root may not import @repo/db. A database failure is a returned
- * `DEPENDENCY_UNAVAILABLE` with a generic message, and what went wrong goes to
- * the logger, never an email or a name. ADR-0018.
- */
 export function createPostgresUserRepository(
   connectionString: string,
   logger: Logger,
@@ -41,7 +32,6 @@ export function createPostgresUserRepository(
               eq(schema.identities.providerSubject, identity.subject),
             ),
           );
-        // The column is a uuid that only `add` writes, and it writes a UserId.
         return ok(row === undefined ? undefined : { ...row.user, id: row.user.id as UserId });
       } catch (error) {
         return databaseFailure(
@@ -53,7 +43,6 @@ export function createPostgresUserRepository(
       }
     },
 
-    /** One transaction: a User with no Identity is one nobody can sign in as. */
     add: async (user: User, identity: Identity): Promise<Result<void, DomainError>> => {
       try {
         await database.transaction(async (transaction) => {
@@ -66,8 +55,6 @@ export function createPostgresUserRepository(
         });
         return ok(undefined);
       } catch (error) {
-        // Two first sign-ins at once: the other one added the Identity. Not a
-        // failure of this app, so not logged as one.
         if (describeError(error).code === UNIQUE_VIOLATION) {
           return err(domainError('CONFLICT', 'That Identity already belongs to a User.'));
         }

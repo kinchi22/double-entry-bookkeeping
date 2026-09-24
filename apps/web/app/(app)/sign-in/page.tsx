@@ -6,7 +6,6 @@ import { returnPath } from '../../../server/return-path';
 import { createCaller } from '../../../server/root-router';
 import { signInWithTestIdentifier } from './actions';
 
-// The page reads configuration at request time, so it must not be prerendered.
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
@@ -17,11 +16,6 @@ type SignInPageProps = {
   readonly searchParams: Promise<Readonly<Record<string, string | string[] | undefined>>>;
 };
 
-/**
- * Composition only. Google is the way in; the test sign-in is offered beside it
- * only where `AUTH_TEST_LOGIN` is set. `error` is set by a sign-in with Google
- * that failed, and `returnTo` by the page that sent the visitor here. ADR-0021.
- */
 export default async function SignInPage({ searchParams }: SignInPageProps): Promise<ReactNode> {
   const query = await searchParams;
   const returnTo = returnPath(query['returnTo']);
@@ -36,7 +30,6 @@ export default async function SignInPage({ searchParams }: SignInPageProps): Pro
           {en.signInPage.failed}
         </p>
       )}
-      {/* A plain link, not `next/link`: it leads to a route handler, which must not be prefetched. */}
       <a
         href={`/sign-in/google?${new URLSearchParams({ returnTo }).toString()}`}
         className="self-start rounded border border-neutral-300 px-3 py-1 text-sm"

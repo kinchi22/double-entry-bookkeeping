@@ -8,14 +8,12 @@ import { type UserRepository } from '../ports/user-repository';
 export type SignInDependencies = {
   readonly users: UserRepository;
   readonly sessions: SessionRepository;
-  /** Generating an id, a token, or an instant is an effect, so each is injected. */
   readonly newUserId: () => UserId;
   readonly newSessionToken: () => SessionToken;
   readonly hashSessionToken: (token: string) => SessionTokenHash;
   readonly now: () => Date;
 };
 
-/** What the browser is given: the token for its cookie, and when it ends. */
 export type IssuedSession = {
   readonly token: SessionToken;
   readonly expiresAt: Date;
@@ -28,10 +26,6 @@ export type FinishGoogleSignIn = (
   pending: PendingSignIn | undefined,
 ) => Promise<Result<IssuedSession, DomainError>>;
 
-/**
- * Signs in by an identifier, as the test sign-in does. Whether the test sign-in
- * exists at all is the composition root's decision, read from `AUTH_TEST_LOGIN`.
- */
 export function createTestSignIn(dependencies: SignInDependencies): TestSignIn {
   return async (identifier) => {
     const claims = testSignIn(identifier);
@@ -39,11 +33,6 @@ export function createTestSignIn(dependencies: SignInDependencies): TestSignIn {
   };
 }
 
-/**
- * Finishes the round trip to Google. A callback this browser never began --
- * no pending sign-in, or one whose state Google's answer does not carry -- signs
- * nobody in.
- */
 export function createFinishGoogleSignIn(
   dependencies: SignInDependencies & { readonly google: GoogleSignIn },
 ): FinishGoogleSignIn {
@@ -60,10 +49,6 @@ export function createFinishGoogleSignIn(
   };
 }
 
-/**
- * Finds the User an Identity belongs to, or creates one, and begins a Session
- * for them. A first sign-in is sign-up.
- */
 async function signIn(
   dependencies: SignInDependencies,
   claims: SignInClaims,
@@ -103,9 +88,6 @@ async function findOrAddUser(
   if (added.ok) {
     return ok(user.id);
   }
-  // Another first sign-in by the same person may have added the User in
-  // between, which is the `CONFLICT` a repository reports. If it did, that User
-  // is this one; if nobody did, the failure to add stands.
   const raced = await users.findByIdentity(identity);
   if (!raced.ok) {
     return raced;

@@ -4,19 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { type AdrFile, findAdrProblems, findTemplateProblems, type IndexRow } from './adr-shape';
 import { REPO_ROOT } from './run-gate';
 
-/**
- * Section 9, applied to the decision record.
- *
- * A deferred decision is revisited by editing its own file, and
- * `docs/ARCHITECTURE.md` indexes what exists. Neither property fails to
- * compile when it stops holding, so both are asserted here, in both directions:
- * the ADRs against the index, and the index against the ADRs.
- *
- * The second half checks the checker. A validator that quietly stopped
- * reporting would leave this suite green over a directory that had rotted,
- * which is the failure `fixtures/` exists to prevent everywhere else.
- */
-
 const DOCS_DIR = path.join(REPO_ROOT, 'docs');
 const ADR_DIR = path.join(DOCS_DIR, 'adr');
 
@@ -25,10 +12,6 @@ const readAdrs = (): readonly AdrFile[] =>
     .filter((name) => name.endsWith('.md') && name !== 'template.md')
     .map((name) => ({ name, content: readFileSync(path.join(ADR_DIR, name), 'utf8') }));
 
-/**
- * Rows of the index table, not every link in the file. A passing mention of an
- * ADR in prose is not an index entry, and the template is linked from prose.
- */
 const INDEX_ROW = /^\|\s*\[[^\]]+\]\((adr\/[^)]+\.md)\)\s*\|\s*([^|]+?)\s*\|\s*$/gm;
 
 const readIndex = (): readonly IndexRow[] => {
@@ -83,7 +66,6 @@ const accepted = (number: string): AdrFile =>
 const listing = (...files: readonly AdrFile[]): readonly IndexRow[] =>
   files.map((file) => ({ file: `adr/${file.name}`, status: 'Accepted' }));
 
-/** One ADR, correctly indexed, so each case below produces exactly one problem. */
 const check = (file: AdrFile, status = 'Accepted'): readonly string[] =>
   findAdrProblems([file], [{ file: `adr/${file.name}`, status }]);
 

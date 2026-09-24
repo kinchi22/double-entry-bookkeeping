@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { describeError } from './describe-error';
 
-/** A pg error as node-postgres builds one: a code, and a detail quoting the row. */
 const pgError = (message: string, code: string): Error =>
   Object.assign(new Error(message), {
     name: 'DatabaseError',
@@ -9,7 +8,6 @@ const pgError = (message: string, code: string): Error =>
     detail: 'Failing row contains (Office supplies for the secret project).',
   });
 
-/** drizzle's wrapper: its message and its params quote what was written. */
 const queryError = (cause?: Error): Error =>
   Object.assign(
     new Error('Failed query: insert into "entries" values ($1)\nparams: Secret memo', { cause }),
@@ -18,7 +16,6 @@ const queryError = (cause?: Error): Error =>
 
 describe('describeError', () => {
   it('describes an error by its name and message', () => {
-    // Strict, so a description without a code has no `code` key at all.
     expect(describeError(new TypeError('Cannot read properties of undefined'))).toStrictEqual({
       name: 'TypeError',
       message: 'Cannot read properties of undefined',
