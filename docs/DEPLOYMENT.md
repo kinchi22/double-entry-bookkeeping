@@ -93,27 +93,6 @@ without blocking every Promotion on a status that does not exist yet:
    unpromoted until the three checks pass, is promoted, and the post-Promotion
    smoke run passes against `PRODUCTION_URL`.
 
-This was done on 2026-09-24. Before step 5, 6b19ebf was promoted before its
-`Production ready` finished. The verification push was 750f002 (#109, a
-comment-only change carrying no migration), times in UTC:
-
-| Time | Event |
-| ---- | ----- |
-| 02:21:41 | Merged into `main`; the Production deployment starts building |
-| 02:22:02 | `vercel.deployment.ready`; the candidate smoke run starts |
-| 02:22:48 | `Candidate Production smoke` pending |
-| 02:23:17 | `E2E build` passes |
-| 02:23:50 | `Apply migrations` skipped: nothing pending, no approval requested |
-| 02:25:06 | `Production ready` passes |
-| 02:26:14 | `Candidate Production smoke` passes, the last required check |
-| 02:26:17 | `vercel.deployment.promoted`; the post-Promotion smoke run starts |
-| 02:27:04 | Post-Promotion smoke passes against `PRODUCTION_URL` at 750f002 |
-
-The deployment was ready about four minutes before Promotion and was promoted
-three seconds after its last check passed. Expect a release with no migration
-to take about five minutes from merge to Promotion, most of it waiting for the
-checks.
-
 Vercel matches the three checks by name, and no gate here reads its list.
 Renaming the `Production ready` or `E2E build` job, or the status context
 `Candidate Production smoke`, holds every later Promotion until the Deployment
