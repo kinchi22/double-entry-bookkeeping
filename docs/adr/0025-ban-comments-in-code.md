@@ -69,8 +69,9 @@ what a person would once have learned by opening a file is now learned only from
 its history. That loss is accepted in exchange for a rule a machine enforces.
 
 ADR-0004 moved the Stryker config from JSON to `.mjs` so that its exclusions
-could carry their reasons inline. Those reasons now live in ADR-0004 alone, the
-place its rejected alternatives said a reader would not look. The ownership of
+could carry their reasons inline. Those reasons now live in ADR-0004 and
+`docs/ARCHITECTURE.md`, the places its rejected alternatives said a reader would
+not look. The ownership of
 the file (`.github/CODEOWNERS`) is what still makes an exclusion visible.
 
 Directives stay possible, and each costs a sentence. A suppression without a

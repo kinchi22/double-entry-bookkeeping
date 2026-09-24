@@ -133,7 +133,10 @@ relative import resolves to nothing and is classified unknown, and externality
 is decided by the import specifier rather than the resolved path, without which
 every `@repo/*` import would be external and skip the matrix.
 `boundaries/no-unknown-files` is on so an unclassified source file fails instead
-of escaping the matrix.
+of escaping the matrix. Element patterns are relative to the working directory,
+so `fixtures/violations/` is a miniature copy of the repo root, linted from its
+own root with the production preset unmodified: a relaxed fixture config would
+prove nothing about the gate that runs in CI.
 
 **Silently unsupported tooling.** TypeScript is pinned to `~6.0.x` because
 `typescript-eslint@8` supports `<6.1.0`. On TypeScript 7 the parser degrades and

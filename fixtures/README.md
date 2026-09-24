@@ -18,11 +18,6 @@ and `rule-coverage-gate.test.ts` checks the shipped configuration has no rule
 missing from the list. Adding a rule without adding a fixture therefore fails CI
 instead of passing unnoticed.
 
-`violations/` is a miniature copy of the repo root, linted from its own root
-with the production preset unmodified, because eslint-plugin-boundaries element
-patterns are relative to the working directory. A relaxed fixture config would
-prove nothing about the gate that runs in CI.
-
 Nothing here is part of the product build: the root ESLint config, tsconfig,
 dependency-cruiser config, jscpd config, and Vitest unit project all exclude it.
 `mutation/subject.test.ts` is run by the Stryker fixture with its own config, so

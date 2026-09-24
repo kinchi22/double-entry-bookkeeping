@@ -74,11 +74,12 @@ feature adds `core/src/x/{domain,application}` (matched), `contracts/src/x.ts`
 (matched), `server/routers/x.ts` (already excluded by directory) and pages under
 `app/**` (outside), and needs no edit here at all.
 
-The config moves from `stryker.config.json` to code, now `stryker.config.ts`.
-It moved first to `.mjs` so that its exclusions could carry their reasons in
-comments; ADR-0025 bans comments, so those reasons are this record's alone.
-Nothing referenced the file by name; `pnpm test:mutation` passes the path
-explicitly rather than relying on discovery.
+The config moves from `stryker.config.json` to `stryker.config.mjs`, because an
+exclusion list whose entries are claims about `server-only` needs to carry that
+reason beside it and JSON cannot hold a comment. It is `stryker.config.ts` now,
+and carries no comment (ADR-0025). Nothing referenced the file by name;
+`pnpm test:mutation` passes the path explicitly rather than relying on
+discovery.
 
 `apps/web/server/domain-error.test.ts` is the first unit test under `apps/`, so
 it is also what proves ADR-0003's widened include reaches there. `apps/web`
@@ -147,9 +148,8 @@ times the mutants, for about one and a half times the wall clock. Locally 1m23s 
 dominates, which is why 33 more mutants cost half a minute.
 
 `stryker.config.ts` is typechecked by the root `tsconfig.json`, which includes
-`*.config.ts`: the options are checked with `satisfies` against what `Stryker`'s
-constructor takes, which stands in for the `$schema` reference the JSON file
-had.
+`*.config.ts`. It loses the `$schema` reference that gave the JSON file editor
+validation.
 
 ## Rejected alternatives
 
@@ -174,9 +174,7 @@ which is the move this gate exists to prevent.
 exclusion list would then be five bare paths in a file a reader cannot ask "why
 is `trpc.ts` here" of. Every other configuration file in this repository carries
 its reasoning inline, and the two failure modes `docs/ARCHITECTURE.md` names are
-both "the config looks right and has stopped doing anything". ADR-0025 took the
-reasons out of the file all the same, by banning comments: the file's ownership
-is what keeps an exclusion visible now.
+both "the config looks right and has stopped doing anything".
 
 **A gate that proves each exclusion is genuinely unimportable**, by walking the
 module graph for a transitive `server-only` import. It is the strongest option and

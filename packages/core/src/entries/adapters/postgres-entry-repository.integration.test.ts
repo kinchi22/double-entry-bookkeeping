@@ -508,7 +508,7 @@ describe('createPostgresEntryRepository', () => {
     expect(await found(ADA, { memo: 'coffee' })).toEqual([matching]);
   });
 
-  it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {
+  it('cannot hold an entry with no User (ADR-0021)', async () => {
     const refused = database.execute(
       sql`insert into entries (id, entry_date, memo, created_at) values ('01920000-0000-7000-8000-0000000000ff', '2026-09-15', 'Ownerless', now())`,
     );
