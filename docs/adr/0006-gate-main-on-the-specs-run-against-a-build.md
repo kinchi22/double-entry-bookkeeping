@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-09-14
 **Amended:** 2026-09-22, PR #77
-**Amended:** 2026-09-24, PR #PRNUM
+**Amended:** 2026-09-24, PR #115
 
 ## Problem
 
