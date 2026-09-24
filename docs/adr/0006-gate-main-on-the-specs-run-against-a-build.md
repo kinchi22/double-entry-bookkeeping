@@ -3,7 +3,6 @@
 **Status:** Accepted
 **Date:** 2026-09-14
 **Amended:** 2026-09-22, PR #77
-**Amended:** 2026-09-24, PR #115
 
 ## Problem
 
@@ -131,16 +130,6 @@ The same goes for specs that share state: when a `beforeAll` hook fails, or a
 test in a serial describe block, Playwright marks the tests after it skipped, and
 this script reports a skipped spec. There is no exemption for either; one would
 be a change to this script, and a decision to take when such a spec exists.
-
-An assertion of absence alone is exactly what an empty page can satisfy,
-and so can a page that failed to render. An absence is therefore asserted only
-after a presence: after the list it would be missing from has visibly rendered,
-or after the same question has been shown to have an answer.
-
-A spec fails against the empty page by waiting out its timeout, so a longer
-timeout is a longer wait in `Gate liveness`. That is why `test.slow()`, which
-triples it, is a rule about how much a spec writes rather than a tag to reach
-for: a spec that writes three or more Entries through the form carries it.
 
 The located-error rule separates "failed on its own line" from "never started".
 It does not separate an assertion from a network error thrown by the spec's own

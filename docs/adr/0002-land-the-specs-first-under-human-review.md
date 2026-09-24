@@ -149,8 +149,9 @@ stop rather than by hoping the pull request is noticed.
 
 Every name a spec selects by is the contract of its page, not only a
 `data-testid`: the accessible name of a form, a fieldset or group, a label, a
-button, a link or a region, a test id, and the name of the `session` cookie.
-Renaming any of them is a spec change: its own pull request, reviewed.
+button, a link or a region. So is the name of the `session` cookie the specs
+set to sign in. Renaming any of them is a spec change: its own pull request,
+reviewed.
 
 The working agreement's "trunk-based" stops being literally true. A milestone branch is an
 integration branch, and `main` receives a criterion at once rather than
