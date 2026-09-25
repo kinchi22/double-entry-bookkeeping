@@ -10,7 +10,7 @@ found along the way that is not the current Task becomes an issue of its own.
 
 | Item    | Label          | What it is |
 | ------- | -------------- | ---------- |
-| Feature | `type:feature` | One acceptance criterion, so one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"). Its body is the spec. Closed by the `milestone/<name> -> main` pull request. |
+| Feature | `type:feature` | One acceptance criterion. Its body is the spec. A criterion the app does not yet meet gets one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"), and the `milestone/<name> -> main` pull request closes it. A criterion the app already meets gets none, and its specs pull request closes it ("A Feature whose behaviour exists"). |
 | Task    | `type:task`    | A sub-issue of a Feature, sized to one session: one Task, one branch, one pull request. A Task that needs more than one session is split before it starts. |
 | Bug     | `type:bug`     | A defect. Worked like a Task, and with no Feature above it, its pull request goes to `main`. |
 
@@ -52,6 +52,9 @@ skill's template:
 `milestone/<name>`
 ```
 
+For a criterion the app already meets, the section reads
+`None: the app already meets the criterion.` instead.
+
 **Publishing tickets** opens each Task labelled `type:task`, adds it as a
 sub-issue of the Feature, records every blocking edge as a native dependency,
 and sets its Status to Ready. The Status replaces the `ready-for-agent` label.
@@ -62,7 +65,9 @@ Every Feature gets these Tasks beside its vertical slices:
 - **Specs for `<criterion>`**, first. The failing Playwright specs under `e2e/`
   that state the acceptance criterion, in a pull request onto the milestone that
   touches nothing else (ADR-0002). The owner reviews it as code owner. It blocks
-  every other Task.
+  every other Task. For a criterion the app already meets, the specs are green,
+  the pull request goes to `main`, and it is the Feature's only Task ("A Feature
+  whose behaviour exists").
 - **Migration for `<change>`**, when the schema changes. The schema and its
   generated SQL, in a pull request onto the milestone that touches no
   behaviour, which the owner reviews as code owner of `packages/db/drizzle/`
@@ -109,12 +114,12 @@ only, goes to `main`, is approved by the owner as code owner, and carries
 
 | Task                  | Pull request into |
 | --------------------- | ----------------- |
-| Specs                 | `milestone/<name>`, which this Task creates from `main` when it does not exist |
+| Specs of a Feature whose behaviour exists | `main` |
+| Specs of any other Feature | `milestone/<name>`, which this Task creates from `main` when it does not exist |
 | Migration             | `milestone/<name>` |
 | Regenerate a migration | `milestone/<name>` |
 | Any other Feature Task | `milestone/<name>` |
 | A Task of a Feature with no specs | `main` |
-| Specs of a Feature whose behaviour exists | `main` |
 | Bug                   | `main` |
 
 A pull request is squashed, and its body carries `Closes #<task>`.

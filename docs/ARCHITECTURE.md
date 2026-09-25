@@ -288,11 +288,12 @@ the composition root carried on the strength of being read by a person.
 
 ## How a criterion ships
 
-A specification lands before the behaviour it describes. A spec can only be
-green after the behaviour exists, so it needs somewhere to be red in the
-meantime, and that is a milestone branch: one branch per acceptance criterion,
-branched from `main`, named `milestone/<name>`. A criterion the app already
-meets has no milestone: its specs go to `main` green.
+A specification of a criterion the app does not yet meet lands before the
+behaviour it describes. Such a spec can only be green after the behaviour
+exists, so it needs somewhere to be red in the meantime, and that is a milestone
+branch: one branch per acceptance criterion the app does not yet meet, branched
+from `main`, named `milestone/<name>`. A criterion the app already meets has no
+milestone: its specs go to `main` green.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
@@ -301,6 +302,7 @@ meets has no milestone: its specs go to `main` green.
 | feature -> `milestone/x`    | nobody      | not on the pull request (the specs would fail until the behaviour lands); `E2E build (advisory)` on the merge | no specs |
 | `main` -> `milestone/x`     | the owner, who pushes it: a merge commit, not a pull request | `E2E build (advisory)`, on the push | exempt |
 | `milestone/x` -> `main`     | the owner, like every pull request into `main` | green, required | exempt |
+| specs -> `main`, for a criterion the app already meets | the owner, as code owner | green, required | e2e only |
 
 A feature branch merges with no approval at all: what it may do was settled when
 the spec was approved, and the one thing it must not do -- edit the spec -- is
@@ -378,11 +380,11 @@ here checks them.
 A green suite does not prove a spec asserts anything, so `Gate liveness`, which
 runs on every pull request, runs the specs against an empty page and fails
 unless each one fails on a line of its own. A spec that asserts nothing is
-caught on the pull request that lands it on the milestone.
+caught on the pull request that lands it, on the milestone or on `main`.
 
 This is what "one PR per acceptance criterion" in `AGENTS.md` now means: one
-milestone per criterion, and as many feature pull requests underneath it as the
-work takes.
+milestone per criterion the app does not yet meet, and as many feature pull
+requests underneath it as the work takes.
 
 ## Writing a spec
 

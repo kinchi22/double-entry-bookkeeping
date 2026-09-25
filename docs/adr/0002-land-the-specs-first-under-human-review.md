@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-09-13
 **Amended:** 2026-09-24, PR #115
+**Amended:** 2026-09-25, PR #121
 
 ## Problem
 
@@ -71,10 +72,11 @@ path in the diff is exactly what pulls a person in.
 
 ### The order
 
-A specification lands before the behaviour it describes, on a milestone branch:
+A specification of a criterion the app does not yet meet lands before the
+behaviour it describes, on a milestone branch:
 
 1. `milestone/<name>` is branched from `main`, one branch per acceptance
-   criterion.
+   criterion the app does not yet meet.
 2. The specs land on it first, in their own pull request, which the owner
    reviews because `e2e/**` is in its diff.
 3. Feature branches target the milestone. They carry no owned path, so they
@@ -86,6 +88,14 @@ A specification lands before the behaviour it describes, on a milestone branch:
 5. `milestone/<name> -> main` is the integration pull request. Every spec is
    green by then, and the owner approves it -- as they approve everything that
    reaches `main`.
+
+A criterion the app already meets has no behaviour to build, so it has no
+milestone branch. Its specs go to `main` green, in a pull request of their own
+that touches `e2e/**` alone: the isolation rule holds, the owner reviews it as
+code owner, and `E2E build` is required on it as on every pull request into
+`main`. This is not the specs-onto-`main` route rejected below. Those specs wait
+red or skipped for behaviour still to come; these are green when they land,
+because the behaviour is already there.
 
 The `main` ruleset covers `refs/heads/milestone/**` as well, so a milestone
 branch takes no direct pushes and no force pushes either: everything above
