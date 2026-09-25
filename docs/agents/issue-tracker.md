@@ -97,6 +97,14 @@ write as specs. Such a Feature has no milestone branch and no specs Task: each
 of its Tasks goes to `main` in a pull request of its own, which the owner
 approves, and the last of them carries `Closes #<feature>` as well.
 
+## A Feature whose behaviour exists
+
+A criterion the app already meets, stated as specs so nothing breaks it
+silently, has no milestone branch: there is no behaviour to build against a
+failing spec. It gets its specs Task alone, whose pull request touches `e2e/`
+only, goes to `main`, is approved by the owner as code owner, and carries
+`Closes #<feature>` as well.
+
 ## Base branch
 
 | Task                  | Pull request into |
@@ -106,6 +114,7 @@ approves, and the last of them carries `Closes #<feature>` as well.
 | Regenerate a migration | `milestone/<name>` |
 | Any other Feature Task | `milestone/<name>` |
 | A Task of a Feature with no specs | `main` |
+| Specs of a Feature whose behaviour exists | `main` |
 | Bug                   | `main` |
 
 A pull request is squashed, and its body carries `Closes #<task>`.

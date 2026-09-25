@@ -291,7 +291,8 @@ the composition root carried on the strength of being read by a person.
 A specification lands before the behaviour it describes. A spec can only be
 green after the behaviour exists, so it needs somewhere to be red in the
 meantime, and that is a milestone branch: one branch per acceptance criterion,
-branched from `main`, named `milestone/<name>`.
+branched from `main`, named `milestone/<name>`. A criterion the app already
+meets has no milestone: its specs go to `main` green.
 
 | Pull request                | Approved by | E2E    | Isolation |
 | --------------------------- | ----------- | ------ | --------- |
