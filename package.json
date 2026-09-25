@@ -20,7 +20,7 @@
     "dep-cruise:graph": "depcruise packages apps --config .dependency-cruiser.cjs --output-type dot | dot -T svg > reports/dependency-graph.svg",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:mutation": "stryker run stryker.config.mjs",
+    "test:mutation": "stryker run stryker.config.ts",
     "build": "turbo run build",
     "test:e2e": "playwright test",
     "jscpd": "jscpd",

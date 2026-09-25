@@ -6,11 +6,6 @@ import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { type Identity, type User } from '../domain/user';
 import { createPostgresUserRepository } from './postgres-user-repository';
 
-/**
- * Integration test: the repository against a real, migrated Postgres, for the
- * reason the health probe's test gives. The container comes from
- * tools/integration/postgres-container.ts; each test starts from empty tables.
- */
 const databaseUrl = process.env['TEST_DATABASE_URL'];
 if (databaseUrl === undefined) {
   throw new Error(
@@ -19,7 +14,6 @@ if (databaseUrl === undefined) {
   );
 }
 
-/** Port 1 is reserved and nothing binds it, so the connection is refused immediately. */
 const UNREACHABLE_URL = 'postgresql://absent:absent@127.0.0.1:1/absent';
 
 const logged: LogFields[] = [];

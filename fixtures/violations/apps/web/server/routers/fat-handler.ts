@@ -1,6 +1,3 @@
-// VIOLATION: a route handler parses input, invokes a use case, and maps the
-// response. Anything longer is orchestration that belongs in core.
-// Expected gate: eslint, rule max-lines-per-function.
 export function handleLedgerRequest(amount: number): number {
   const a1 = amount + 1;
   const a2 = a1 + 1;

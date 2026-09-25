@@ -15,19 +15,12 @@ const ENTRY = {
   createdAt: '2026-06-15T00:30:00.000Z',
 } as PostedEntry;
 
-/** A search that answers with what it holds, and remembers what it was asked. */
 const holding = (entries: readonly PostedEntry[]): SearchForEntries => () =>
   Promise.resolve(entries);
 
-/** A search that refuses, the way the procedure refuses one. */
 const refusing = (code: Parameters<typeof domainError>[0]): SearchForEntries => () =>
   Promise.reject(toTrpcError(domainError(code, 'No.')));
 
-/**
- * A search that narrows by the day range it is given, so that what comes back
- * says which criteria reached the procedure. A stub, not a spy: every case
- * below asserts the answer rather than the call.
- */
 const inRange: SearchForEntries = (criteria: SearchCriteriaInput) =>
   Promise.resolve(
     criteria.from !== undefined && ENTRY.entryDate < criteria.from ? [] : [ENTRY],
@@ -70,10 +63,6 @@ describe('answerEntrySearch', () => {
     });
   });
 
-  // The criterion comes back with the refusal, which is what a caller can see
-  // here. What the form does with an Account no chart holds is the form's: a
-  // select over the chart cannot show one, so it shows "any Account" and the
-  // alert says why nothing was searched.
   it('refuses an Account the procedure refuses, and carries the criterion back with it', async () => {
     const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { account: 'petty-cash' });
 
@@ -90,9 +79,6 @@ describe('answerEntrySearch', () => {
     });
   });
 
-  // How long a term may be is the domain's rule, so the term here is an
-  // ordinary one: what this layer decides is that a refusal from the procedure
-  // becomes `refused`, carrying back whatever was asked for.
   it('refuses a memo term the procedure refuses, and carries the term back with it', async () => {
     const answer = await answerEntrySearch(refusing('INVALID_INPUT'), { memo: 'supplies' });
 
@@ -118,13 +104,6 @@ describe('answerEntrySearch', () => {
     });
   });
 
-  /**
-   * The Session is checked by the procedure, so a malformed query must not be
-   * answered before the procedure has been asked: a visitor with no Session
-   * would be told about their typo instead of being sent to sign in (ADR-0021).
-   * What the page passes in turns that refusal into a redirect, which is a
-   * throw; here it is a value this test can recognise on the way out.
-   */
   it('asks the procedure even when the query is malformed, so a missing Session still wins', async () => {
     const redirected = new Error('NEXT_REDIRECT');
 

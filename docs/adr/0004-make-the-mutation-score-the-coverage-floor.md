@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-13
+**Amended:** 2026-09-24, PR #116
 
 ## Problem
 
@@ -75,8 +76,9 @@ feature adds `core/src/x/{domain,application}` (matched), `contracts/src/x.ts`
 
 The config moves from `stryker.config.json` to `stryker.config.mjs`, because an
 exclusion list whose entries are claims about `server-only` needs to carry that
-reason beside it and JSON cannot hold a comment. Nothing referenced the file by
-name; `pnpm test:mutation` now passes the path explicitly rather than relying on
+reason beside it and JSON cannot hold a comment. It is `stryker.config.ts` now,
+and carries no comment (ADR-0025). Nothing referenced the file by name;
+`pnpm test:mutation` passes the path explicitly rather than relying on
 discovery.
 
 `apps/web/server/domain-error.test.ts` is the first unit test under `apps/`, so
@@ -145,11 +147,9 @@ times the mutants, for about one and a half times the wall clock. Locally 1m23s 
 1m43s across runs against 55s; the CI job went from 29s to 36s. The initial dry run
 dominates, which is why 33 more mutants cost half a minute.
 
-`stryker.config.mjs` is not typechecked -- the root `tsconfig.json` includes
-`*.config.ts`, not `.mjs` -- and it loses the `$schema` reference that gave the
-JSON file editor validation. A JSDoc `@type` annotation keeps completion, and a
-malformed option fails the run loudly, as the first attempt at this file did: a
-`*/` inside the comment closed it early and Node refused to parse it.
+`stryker.config.ts` is typechecked by the root `tsconfig.json`, which includes
+`*.config.ts`. It loses the `$schema` reference that gave the JSON file editor
+validation.
 
 ## Rejected alternatives
 

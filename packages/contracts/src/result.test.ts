@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { err, isErr, isOk, ok, type Result } from './result';
 
-/**
- * The error model every other package returns, so a mutant here is a mutant
- * everywhere: an `ok` that reports `ok: false` turns every success into a
- * failure, and a predicate that answers `undefined` sends every caller down the
- * wrong branch.
- *
- * Stryker sandboxes the repository and symlinks `node_modules`, so a workspace
- * import of `@repo/contracts` resolves to the unmutated original. These mutants
- * are therefore reachable only from tests inside this package, which import by
- * relative path. See ADR-0004.
- */
 describe('ok', () => {
   it('wraps the value and marks the result a success', () => {
     expect(ok(42)).toEqual({ ok: true, value: 42 });

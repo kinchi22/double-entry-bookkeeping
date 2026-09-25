@@ -10,15 +10,10 @@ export type GateRun = {
   readonly stderr: string;
 };
 
-/** Absolute path to a locally installed binary. */
 export function bin(name: string): string {
   return path.join(REPO_ROOT, 'node_modules', '.bin', name);
 }
 
-/**
- * Runs a gate and returns its result instead of throwing, because a non-zero
- * exit is the expected outcome here rather than a failure.
- */
 export function runGate(command: string, args: readonly string[], cwd: string): GateRun {
   const result = spawnSync(command, [...args], {
     cwd,

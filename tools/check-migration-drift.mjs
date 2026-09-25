@@ -1,14 +1,3 @@
-/**
- * Fails when the Drizzle schema has changed without a migration to match.
- *
- * `drizzle-kit generate` is the only thing that can answer "is there drift?",
- * because the answer is a diff against the snapshot in drizzle/meta. So the
- * check runs it for real and then puts the directory back exactly as it was.
- *
- * The restore works from an in-memory snapshot rather than from git, on purpose:
- * a developer part-way through writing a migration has uncommitted files in
- * there, and a `git checkout` would delete their work to answer a question.
- */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -23,11 +12,6 @@ const { values } = parseArgs({
 const packageDir = path.resolve(REPO_ROOT, values['package-dir']);
 const migrationsDir = path.join(packageDir, 'drizzle');
 
-/**
- * The real JS entrypoint rather than the .bin shim, matching how the db package
- * scripts invoke drizzle-kit. It is a devDependency of packages/db only, so it
- * is resolved from there even when the check runs against another directory.
- */
 const DRIZZLE_KIT = path.join(
   REPO_ROOT,
   'packages',
@@ -42,7 +26,6 @@ if (!existsSync(DRIZZLE_KIT)) {
   process.exit(1);
 }
 
-/** Every file under a directory, as path -> contents. Absent directory is an empty snapshot. */
 const snapshot = (directory) => {
   const files = new Map();
   if (!existsSync(directory)) return files;
@@ -74,12 +57,6 @@ const result = spawnSync(process.execPath, [DRIZZLE_KIT, 'generate'], {
 
 const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
 
-/**
- * drizzle-kit reports failure in its output rather than in its exit status: a
- * schema it cannot compile, and a diff it wants to ask about but has no TTY for,
- * both exit 0 having written nothing. Exit status alone would read either as a
- * clean schema. So the run has to say which of the two things it did.
- */
 const RAN = [/Your SQL migration file/, /No schema changes/];
 
 if (result.status !== 0 || !RAN.some((marker) => marker.test(output))) {

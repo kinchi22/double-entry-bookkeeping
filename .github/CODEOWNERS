@@ -15,7 +15,7 @@
 #                         cannot undo.
 #   .github/              the gates, and this file. Both are what make
 #                         everything above enforceable rather than stated.
-#   stryker.config.mjs    the coverage floor. Its `!` lines take files out of
+#   stryker.config.ts     the coverage floor. Its `!` lines take files out of
 #                         the only gate that requires them to be tested, so a
 #                         test that got hard to write has a one-line way out
 #                         that nothing else would review. ADR-0004.
@@ -23,4 +23,4 @@
 /e2e/                      @kinchi22
 /packages/db/drizzle/      @kinchi22
 /.github/                  @kinchi22
-/stryker.config.mjs        @kinchi22
+/stryker.config.ts         @kinchi22

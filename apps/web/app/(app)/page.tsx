@@ -8,18 +8,10 @@ import { createContext } from '../../server/context';
 import { createCaller } from '../../server/root-router';
 import { recheckHealth } from './actions';
 
-// The page performs IO, so it must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
-/**
- * Composition only. The page asks whether anybody is signed in, calls the
- * health procedure and renders the result; it contains no rule about what
- * healthy means.
- */
 export default async function HomePage(): Promise<ReactNode> {
   const caller = createCaller(await createContext());
-  // A signed-in User's home is their books (ADR-0021). A session store that
-  // cannot answer leaves them here, on the page that reports it (ADR-0020).
   if (await caller.auth.signedIn().catch(() => false)) {
     redirect('/entries');
   }
@@ -48,11 +40,6 @@ export default async function HomePage(): Promise<ReactNode> {
               </li>
             ))}
           </ul>
-          {/*
-            The instant arrives as an ISO string, because that is what the
-            contract carries. Rendering it raw keeps the page free of a
-            formatting policy nobody has decided yet.
-          */}
           <time
             className="text-xs text-neutral-500"
             dateTime={health.checkedAt}

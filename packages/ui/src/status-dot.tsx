@@ -7,13 +7,6 @@ export type StatusDotProps = {
   readonly label: string;
 };
 
-/**
- * Tone is an abstract signal, not a domain concept. The caller decides what
- * "positive" means; this component only decides what it looks like.
- *
- * The label is rendered as text rather than conveyed by color alone, so the
- * status survives both a screen reader and a colorblind reader.
- */
 export function StatusDot({ tone, label }: StatusDotProps): ReactNode {
   const toneClass = tone === 'positive' ? 'bg-emerald-500' : 'bg-amber-500';
 

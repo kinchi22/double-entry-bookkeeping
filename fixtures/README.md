@@ -37,6 +37,8 @@ the test-collection gate excludes this directory too.
 | `violations/.../domain/throws.ts`                | `no-restricted-syntax` (throw)                   |
 | `violations/.../domain/dynamic-import.ts`        | `no-restricted-syntax` (import())                |
 | `violations/.../domain/non-ascii.ts`             | `repo/no-non-ascii`                              |
+| `violations/.../domain/comment.ts`               | `repo/no-comments` (a prose comment)             |
+| `violations/.../domain/directive-without-reason.ts` | `repo/no-comments` (a directive with no `-- reason`) |
 | `violations/.../domain/explicit-any.ts`          | `@typescript-eslint/no-explicit-any`             |
 | `violations/.../domain/value-type-import.ts`     | `@typescript-eslint/consistent-type-imports`     |
 | `violations/.../domain/untyped-boundary.ts`      | `@typescript-eslint/explicit-module-boundary-types` |

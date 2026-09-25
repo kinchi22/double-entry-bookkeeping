@@ -4,27 +4,12 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { fromTrpcError, toTrpcError } from './domain-error';
 
-/**
- * The first unit test under `apps/`, and what proves ADR-0003's widened include
- * reaches here.
- *
- * The expected status for each code is written out rather than read from the
- * table under test: the mapping is the specification, so a test that imported
- * the table would agree with it whatever it said. Typing the expectation as
- * `Record<DomainErrorCode, ...>` is what makes it exhaustive -- a new code fails
- * to compile here as well as in the subject -- and comparing the whole map in one
- * assertion is what makes a wrong entry fail rather than an untested one pass.
- */
 const EXPECTED_STATUS: Record<DomainErrorCode, TRPCError['code']> = {
   INVALID_INPUT: 'BAD_REQUEST',
   NOT_FOUND: 'NOT_FOUND',
   CONFLICT: 'CONFLICT',
-  // A dependency this app could not reach is this app's failure rather than the
-  // caller's, so it is the one code that must not come back as a 4xx.
   DEPENDENCY_UNAVAILABLE: 'INTERNAL_SERVER_ERROR',
-  // Well-formed, and breaks a bookkeeping rule: 422 rather than 400.
   UNBALANCED: 'UNPROCESSABLE_CONTENT',
-  // No Session: 401, which the specs pin. ADR-0021.
   UNAUTHENTICATED: 'UNAUTHORIZED',
 };
 
@@ -48,11 +33,6 @@ describe('toTrpcError', () => {
   });
 });
 
-/**
- * A router of its own, called in process the way a Server Action calls the
- * app's: the real one reaches the composition root, which no unit test can
- * import. What is asserted is the round trip `createCaller` actually performs.
- */
 const t = initTRPC.create();
 const caller = t.createCallerFactory(
   t.router({
@@ -63,7 +43,6 @@ const caller = t.createCallerFactory(
   }),
 )({});
 
-/** What a call threw, or a failed assertion if it returned. */
 async function thrownBy(call: () => Promise<unknown>): Promise<unknown> {
   try {
     await call();

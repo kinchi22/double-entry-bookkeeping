@@ -7,16 +7,6 @@ import { makeEntry, type Entry, type EntryDraft } from '../domain/entry';
 import { NO_CRITERIA, type SearchCriteria } from '../domain/search-criteria';
 import { createPostgresEntryRepository } from './postgres-entry-repository';
 
-/**
- * Integration test: the repository against a real, migrated Postgres, for the
- * reason the health probe's test gives. What is worth asserting here -- that an
- * entry comes back as it went in, in the promised order, and that a half-written
- * entry cannot exist -- only happens on a real server.
- *
- * The container comes from tools/integration/postgres-container.ts, migrated
- * with the committed migrations. Files take turns on it, and each test here
- * starts from empty tables.
- */
 const databaseUrl = process.env['TEST_DATABASE_URL'];
 if (databaseUrl === undefined) {
   throw new Error(
@@ -25,10 +15,8 @@ if (databaseUrl === undefined) {
   );
 }
 
-/** Port 1 is reserved and nothing binds it, so the connection is refused immediately. */
 const UNREACHABLE_URL = 'postgresql://absent:absent@127.0.0.1:1/absent';
 
-/** A logger that keeps what it is given, so a test can read what was reported. */
 const logged: LogFields[] = [];
 const logger: Logger = {
   error: (fields) => {
@@ -62,7 +50,6 @@ beforeEach(async () => {
 
 let sequence = 0;
 
-/** A valid entry, with a fresh v7-shaped id, or a failed assertion. */
 function entry(overrides: Partial<EntryDraft> & { readonly createdAt?: Date } = {}): Entry {
   sequence += 1;
   const { createdAt = new Date('2026-09-15T00:30:00.000Z'), ...draft } = overrides;
@@ -94,7 +81,6 @@ async function found(
   return isOk(result) ? result.value : [];
 }
 
-/** The memos of what a search answered, which is what each range case is about. */
 async function memosFound(criteria: SearchCriteria, userId: UserId = ADA): Promise<string[]> {
   return (await found(userId, criteria)).map((entry) => entry.memo);
 }
@@ -163,8 +149,6 @@ describe('createPostgresEntryRepository', () => {
 
   it('writes nothing when the database refuses one of the lines (ADR-0011)', async () => {
     const valid = entry();
-    // NaN passes the type and no bigint column accepts it, so the lines insert
-    // fails after the entry insert has run inside the transaction.
     const refused: Entry = {
       ...valid,
       lines: valid.lines.map((line, index) =>
@@ -182,7 +166,6 @@ describe('createPostgresEntryRepository', () => {
       {
         event: 'entries.save_failed',
         entryId: valid.id,
-        // invalid_text_representation: Postgres read "NaN" as a bigint.
         error: expect.objectContaining({ code: '22P02' }) as unknown,
       },
     ]);
@@ -196,8 +179,6 @@ describe('createPostgresEntryRepository', () => {
 
     expect(isErr(result)).toBe(true);
     expect(await found()).toEqual([saved]);
-    // unique_violation, and not a word of the refused row: the memo travels in
-    // the query's params, which are never logged.
     expect(logged).toEqual([
       {
         event: 'entries.save_failed',
@@ -527,7 +508,7 @@ describe('createPostgresEntryRepository', () => {
     expect(await found(ADA, { memo: 'coffee' })).toEqual([matching]);
   });
 
-  it('cannot hold an entry with no User, since M2 (ADR-0021)', async () => {
+  it('cannot hold an entry with no User (ADR-0021)', async () => {
     const refused = database.execute(
       sql`insert into entries (id, entry_date, memo, created_at) values ('01920000-0000-7000-8000-0000000000ff', '2026-09-15', 'Ownerless', now())`,
     );

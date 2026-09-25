@@ -1,41 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-/**
- * Seeds the Smoke User on Production, or rotates its Session. ADR-0021.
- *
- *   node tools/seed-smoke-user.ts > smoke-user.sql
- *
- * Standard output is SQL, to run once against the production database -- in
- * Neon's SQL editor, or `psql "$DIRECT_URL" -f smoke-user.sql`. Standard error
- * is the Session's token, for `gh secret set SMOKE_SESSION_TOKEN`, and the day
- * it expires, for the repository variable `SMOKE_SESSION_EXPIRES_ON` that the
- * `Smoke token expiry` workflow reminds from. The token
- * appears nowhere else: the SQL carries only its hash, as the sessions table
- * does, so the file is not a credential.
- *
- * The script holds no database credential, which is the reason it prints SQL
- * rather than connecting: the owner runs it with the access they already have.
- *
- * Running it again is how the token is rotated. The User and its Entry are
- * inserted once and kept; the User's Sessions are replaced by one new Session,
- * so the old token signs nobody in from the moment the SQL commits. The Session
- * ends a year later and does not slide, because the User has no Identity, so
- * the smoke run fails on the day it ends rather than never.
- */
-
-/** Fixed, so every run names the same User and the same Entry. */
 const SMOKE_USER_ID = '01995d40-0000-7000-8000-000000000001';
 const SMOKE_ENTRY_ID = '01995d40-0000-7000-8000-000000000002';
 
-/** Hashed as `hashSessionToken` in `packages/core/src/auth/adapters` hashes one. */
 const token = randomBytes(32).toString('base64url');
 const tokenHash = createHash('sha256').update(token).digest('hex');
 
-/**
- * A year from now, stated here rather than as `now()` in the SQL, so the day the
- * reminder counts to is the day the Session ends. The SQL runs a little after
- * this, so the Session ends a little after the day printed, never before.
- */
 const expiresAt = new Date();
 expiresAt.setUTCFullYear(expiresAt.getUTCFullYear() + 1);
 const expiresOn = expiresAt.toISOString().slice(0, 10);

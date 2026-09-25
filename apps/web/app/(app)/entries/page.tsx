@@ -10,22 +10,14 @@ import { createCaller } from '../../../server/root-router';
 import { orSignIn } from '../../../server/sign-in-redirect';
 import { postEntry, signOut } from './actions';
 
-// The page reads the database, so it must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: en.entriesPage.title,
 };
 
-/**
- * Composition only. The page lists what one procedure returns and hands the
- * form its action; which entries exist, in what order, and whether a new one
- * balances are all decided in core.
- */
 export default async function EntriesPage(): Promise<ReactNode> {
   const caller = createCaller(await createContext());
-  // With no Session the procedure refuses, and the visitor is sent to sign in.
-  // An Entry search with no criterion is the listing this page has always done.
   const entries = await orSignIn(caller.entries.search(NO_CRITERIA), '/entries');
 
   return (

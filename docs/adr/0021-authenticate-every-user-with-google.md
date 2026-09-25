@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-18
+**Amended:** 2026-09-24, PR #116
 
 ## Problem
 
@@ -92,7 +93,9 @@ that redirect is a courtesy, and the use case check is the one that holds. After
 signing in, the User returns to the path they asked for, accepted only as a
 same-origin relative path, or lands on `/entries` when there is none. A callback
 whose `state` the app did not issue returns to `/sign-in` with an error and
-creates no Session.
+creates no Session. `/sign-in` links to `/sign-in/google` with a plain anchor
+rather than `next/link`: a route handler that begins a sign-in must not be
+prefetched, or a visitor who never chose to would start one.
 
 **Configuration.** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` join
 `DATABASE_URL`, validated by `parseEnv` (ADR-0005), and are set in Vercel's

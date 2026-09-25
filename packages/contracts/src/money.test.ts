@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { moneySchema } from './money';
 
-/**
- * The transport rule for an amount, which is narrower than what JSON can carry:
- * a whole number of minor units inside the safe integer range. The same
- * invariant is owned again by the constructor in `@repo/core/money`, for values
- * that never crossed a transport boundary.
- */
 describe('moneySchema', () => {
   it('accepts a whole number of minor units and hands back the amount', () => {
     expect(moneySchema.parse(1500)).toBe(1500);

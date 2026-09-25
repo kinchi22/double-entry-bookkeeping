@@ -3,11 +3,6 @@ import { isErr, isOk } from '@repo/contracts';
 import { MEMO_MAX_LENGTH } from './entry';
 import { makeSearchCriteria, NO_CRITERIA } from './search-criteria';
 
-/**
- * Pure: the rule between the criteria, and nothing about how they were typed.
- * The shape of a day is `@repo/contracts`' job, so every day here is already
- * `YYYY-MM-DD`.
- */
 describe('makeSearchCriteria', () => {
   it('narrows by nothing when it is given nothing', () => {
     const criteria = makeSearchCriteria({});
@@ -189,8 +184,6 @@ describe('makeSearchCriteria', () => {
   });
 
   it('measures a term the way a memo is measured, in code points', () => {
-    // Two UTF-16 units each, so a term of `MEMO_MAX_LENGTH` of them is twice
-    // that by `length` and still exactly as long as a memo it could match.
     const grinning = String.fromCodePoint(0x1f600);
 
     const criteria = makeSearchCriteria({ memo: grinning.repeat(MEMO_MAX_LENGTH) });

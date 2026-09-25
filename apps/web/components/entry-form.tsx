@@ -13,26 +13,17 @@ import {
 } from 'react';
 import { en } from '../messages/en';
 
-/** What the last submission came to. The Server Action returns it. */
 export type EntryFormState =
   | { readonly outcome: 'idle' }
   | { readonly outcome: 'saved' }
   | { readonly outcome: 'rejected'; readonly code: DomainErrorCode };
 
 export type EntryFormProps = {
-  /**
-   * The Server Action to submit to. Passed in rather than imported, as
-   * `RefreshButton` takes its action, so this component stays a form.
-   */
   readonly action: (previous: EntryFormState, form: FormData) => Promise<EntryFormState>;
 };
 
 const IDLE: EntryFormState = { outcome: 'idle' };
 
-/**
- * The message for each way a submission can be refused. Exhaustive by type, so
- * a new domain error code has to be given copy here before this compiles.
- */
 const REFUSAL: Readonly<Record<DomainErrorCode, string>> = {
   UNBALANCED: en.entryForm.unbalanced,
   INVALID_INPUT: en.entryForm.invalid,
@@ -42,7 +33,6 @@ const REFUSAL: Readonly<Record<DomainErrorCode, string>> = {
   UNAUTHENTICATED: en.entryForm.signedOut,
 };
 
-/** The Phase 1 form has two lines (ADR-0010), a debit above a credit. */
 const LINES: readonly { readonly number: number; readonly side: Side }[] = [
   { number: 1, side: 'debit' },
   { number: 2, side: 'credit' },
@@ -53,11 +43,6 @@ const SIDES: readonly Side[] = ['debit', 'credit'];
 const FIELD = 'flex flex-col gap-1 text-sm';
 const CONTROL = 'rounded border border-neutral-300 px-2 py-1';
 
-/**
- * Submits through `onSubmit` rather than the `action` prop. React resets a form
- * after every action it runs, refused ones included, so a refused entry would
- * come back blank; here the fields are reset only once an entry is saved.
- */
 export function EntryForm({ action }: EntryFormProps): ReactNode {
   const [state, submitAction, pending] = useActionState(action, IDLE);
   const form = useRef<HTMLFormElement>(null);

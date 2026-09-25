@@ -9,11 +9,6 @@ export type GetHealthDependencies = {
 
 export type GetHealth = () => Promise<Result<HealthReport, DomainError>>;
 
-/**
- * The use case owns orchestration and the transaction boundary. It talks to
- * ports only; it has never heard of Postgres, and could not import the adapter
- * that knows about Postgres even if someone tried.
- */
 export function createGetHealth({ probes, now }: GetHealthDependencies): GetHealth {
   return async (): Promise<Result<HealthReport, DomainError>> => {
     const reports: ComponentReport[] = await Promise.all(

@@ -1,21 +1,9 @@
-/**
- * The shape rules for `docs/adr/`, as pure functions.
- *
- * Pure because the interesting cases are the broken ones. The other gates here
- * run real tooling against a fixture that is wrong on purpose, since what rots
- * in them is the tool's own path resolution. Nothing here resolves a path, so
- * the deliberate breakages are inputs in the test beside the assertion.
- */
-
 export type AdrFile = {
-  /** Base name, e.g. `0010-model-a-record-as-a-balanced-entry-of-lines.md`. */
   readonly name: string;
   readonly content: string;
 };
 
-/** One row of the index in `docs/ARCHITECTURE.md`. */
 export type IndexRow = {
-  /** Link target relative to `docs/`, e.g. `adr/0010-model-a-record-as-a-balanced-entry-of-lines.md`. */
   readonly file: string;
   readonly status: string;
 };
@@ -26,17 +14,8 @@ const STATUS_LINE = /^\*\*Status:\*\* (.+)$/m;
 const DATE_LINE = /^\*\*Date:\*\* \d{4}-\d{2}-\d{2}$/m;
 const SUPERSEDED_BY = /^Superseded by ADR-(\d{4})$/;
 
-/**
- * A deferred ADR is the one that rots. Nothing is being built from it, so
- * nothing fails when it drifts, and the reason it was deferred goes first.
- */
 const TRIGGER_LINE = /^\*\*Trigger:\*\* \S/m;
 
-/**
- * Adoption is the whole point of deferring: the record is edited in place
- * rather than replaced, so the decision and the reason it waited stay together.
- * An adopted ADR keeps its trigger and says when the wait ended.
- */
 const ADOPTED_LINE = /^\*\*Adopted:\*\* (.+)$/m;
 const ADOPTED_FORM = /^\d{4}-\d{2}-\d{2}, PR #\d+$/;
 
@@ -56,7 +35,6 @@ const numberOf = (name: string): number | undefined => {
   return match?.[1] === undefined ? undefined : Number(match[1]);
 };
 
-/** The prose under a `## Heading`, or undefined when the heading is absent. */
 const sectionBody = (content: string, heading: string): string | undefined => {
   const marker = `\n## ${heading}\n`;
   const start = content.indexOf(marker);
@@ -92,13 +70,8 @@ const statusProblems = (
 
   if (deferred) {
     if (!hasTrigger) problems.push(`${file.name}: a Deferred ADR needs a '**Trigger:** ...' line`);
-    // Adopted and Deferred together says the record was adopted and the status
-    // never followed, which is the drift this whole gate exists to catch.
     if (adopted !== undefined) problems.push(`${file.name}: adopted, but still marked Deferred`);
   } else if (superseded === null && hasTrigger && adopted === undefined) {
-    // A trigger on a record that is in force means it waited and then landed.
-    // A superseded one may have waited and been replaced instead, never built,
-    // so it keeps its trigger and has no adoption to record.
     problems.push(`${file.name}: was deferred, so it needs an '**Adopted:** ...' line`);
   }
 
@@ -109,15 +82,6 @@ const statusProblems = (
   return problems;
 };
 
-/**
- * Every way `docs/adr/` can be wrong, as human-readable lines.
- *
- * The index check runs in both directions and covers the status column, not
- * just the link: an ADR missing from the index is invisible to a reader who
- * starts where `AGENTS.md` points them, a row pointing at nothing is a decision
- * that looks recorded and is not, and a row whose status disagrees with the
- * record is the index saying a rule is not in force when it is.
- */
 export function findAdrProblems(
   files: readonly AdrFile[],
   index: readonly IndexRow[],
@@ -184,12 +148,6 @@ export function findAdrProblems(
   return problems;
 }
 
-/**
- * The template is the shape every ADR is copied from, and it is the one file the
- * checks above skip: it has no number, so it cannot be an ADR. Left unchecked it
- * drifts, and records copied from it start failing for reasons their author did
- * not introduce.
- */
 export function findTemplateProblems(template: string): readonly string[] {
   const problems: string[] = [];
 

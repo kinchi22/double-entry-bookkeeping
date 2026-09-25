@@ -11,20 +11,6 @@ import {
 } from '@repo/contracts';
 import { moneyToMinorUnits, sumMoney } from '../../money/domain/money';
 
-/**
- * An entry: a calendar day, a memo, and two or more lines whose debits balance
- * its credits. ADR-0010 is the model; this file is where its rules are decided,
- * and the only place. The database stores what this accepted and checks no
- * rule of its own.
- *
- * Everything here is pure: the id and the instant an entry is stamped with are
- * arguments, because generating either is an effect.
- */
-
-/**
- * The accounts a line may name, one per type: asset, liability, equity, revenue,
- * expense. A constant until ADR-0015 makes accounts data.
- */
 export const CHART_OF_ACCOUNTS = ['cash', 'payable', 'capital', 'sales', 'expense'] as const;
 
 export type AccountCode = (typeof CHART_OF_ACCOUNTS)[number];
@@ -33,22 +19,10 @@ export function isAccountCode(value: string): value is AccountCode {
   return CHART_OF_ACCOUNTS.some((code) => code === value);
 }
 
-/** Counted in code points once trimmed, so an emoji counts as one. */
 export const MEMO_MAX_LENGTH = 200;
 
-/**
- * How long a memo is, and the one place that decides what a character is here.
- *
- * ADR-0010 limits a memo in code points, which is what spreading a string
- * yields. The rule wants graphemes; a family emoji is then one character here
- * and several there, and the ADR chose the count that needs no Intl data.
- *
- * A memo term is measured with this too, so the cap on a search term is the cap
- * on the thing it could match, rather than a second count that could drift from
- * it.
- */
 export function memoLength(memo: string): number {
-  // eslint-disable-next-line @typescript-eslint/no-misused-spread
+  // eslint-disable-next-line @typescript-eslint/no-misused-spread -- ADR-0010 counts a memo in code points, which is what spreading yields
   return [...memo].length;
 }
 
@@ -60,17 +34,13 @@ export type EntryLine = {
 
 export type Entry = {
   readonly id: EntryId;
-  /** `YYYY-MM-DD`, as the contract parsed it. Any day, future days included. */
   readonly entryDate: string;
   readonly memo: string;
-  /** In the order they were entered. */
   readonly lines: readonly EntryLine[];
-  /** The sum of the debits, which is the sum of the credits. */
   readonly total: Money;
   readonly createdAt: Date;
 };
 
-/** An entry as it was asked for, before any rule has been applied to it. */
 export type EntryDraft = {
   readonly entryDate: string;
   readonly memo: string;
@@ -81,7 +51,6 @@ export type EntryDraft = {
   }[];
 };
 
-/** What the caller supplies because it is an effect: the id and the instant. */
 export type EntryStamp = {
   readonly id: EntryId;
   readonly createdAt: Date;
@@ -90,11 +59,6 @@ export type EntryStamp = {
 const invalid = (message: string): Err<DomainError> =>
   err(domainError('INVALID_INPUT', message));
 
-/**
- * Applies every rule an entry has, and returns the entry or the first rule it
- * breaks. Reading a stored entry goes through here too, so a row written around
- * the app that breaks a rule is reported rather than listed.
- */
 export function makeEntry(draft: EntryDraft, stamp: EntryStamp): Result<Entry, DomainError> {
   const memo = draft.memo.trim();
   const length = memoLength(memo);
@@ -132,7 +96,6 @@ function checkLines(drafts: EntryDraft['lines']): Result<readonly EntryLine[], D
     if (!isAccountCode(line.account)) {
       return invalid(`"${line.account}" is not in the chart of accounts.`);
     }
-    // The side carries the direction, so an amount is never negative or zero.
     if (moneyToMinorUnits(line.amount) <= 0) {
       return invalid('Every line needs an amount greater than zero.');
     }
@@ -141,10 +104,6 @@ function checkLines(drafts: EntryDraft['lines']): Result<readonly EntryLine[], D
   return ok(lines);
 }
 
-/**
- * Each side is summed through `sumMoney`, so a total too large to hold exactly
- * is an error rather than a rounded number that happens to balance.
- */
 function balancedTotal(lines: readonly EntryLine[]): Result<Money, DomainError> {
   const debits = lines.filter((line) => line.side === 'debit').map((line) => line.amount);
   const credits = lines.filter((line) => line.side === 'credit').map((line) => line.amount);

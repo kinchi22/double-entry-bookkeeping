@@ -8,16 +8,6 @@ import { type LogFields, type Logger } from '../../logging/ports/logger';
 import { type PendingSignIn } from '../ports/google-sign-in';
 import { createOpenIdGoogleSignIn } from './openid-google-sign-in';
 
-/**
- * The adapter against an OpenID provider of this test's own, on 127.0.0.1.
- *
- * Google cannot be driven from a test, and a mocked `openid-client` would prove
- * only that this file calls it. The provider here is real enough for the
- * library to do its whole job -- discovery, the code exchange with PKCE, and the
- * ID token's signature and claims -- so what is asserted is what the adapter
- * makes of the answers, including the ones that must sign nobody in.
- */
-
 const CLIENT_ID = 'client-id';
 const CLIENT_SECRET = 'client-secret';
 const REDIRECT_URI = new URL('http://127.0.0.1/auth/callback/google');
@@ -26,13 +16,11 @@ const CODE = 'the-code';
 const signingKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const strangerKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
 
-/** What the next token request is answered with. */
 let answer: {
   readonly key: KeyObject;
   readonly claims: Record<string, unknown>;
   readonly status: number;
 };
-/** The PKCE challenge the last authorization URL carried. */
 let challenge = '';
 
 const logged: LogFields[] = [];
@@ -123,12 +111,7 @@ function claims(overrides: Record<string, unknown> = {}): Record<string, unknown
   };
 }
 
-/**
- * The provider here speaks http, which `openid-client` refuses unless told. The
- * library marks the switch deprecated only so that it stands out; a test issuer
- * on 127.0.0.1 is the use it names.
- */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- openid-client names a test issuer on 127.0.0.1 as the use of this switch
 const OVER_HTTP = { execute: [allowInsecureRequests] };
 
 const googleSignIn = (): ReturnType<typeof createOpenIdGoogleSignIn> =>
@@ -142,7 +125,6 @@ const googleSignIn = (): ReturnType<typeof createOpenIdGoogleSignIn> =>
     logger,
   );
 
-/** Begins a sign-in, and answers as Google would, with `state` in the callback. */
 async function beginAndReturn(state?: string): Promise<{
   pending: PendingSignIn;
   callbackUrl: URL;
@@ -284,7 +266,6 @@ describe('createOpenIdGoogleSignIn', () => {
       {
         clientId: CLIENT_ID,
         clientSecret: CLIENT_SECRET,
-        // Port 1 is reserved and nothing binds it, so the connection is refused.
         issuer: new URL('http://127.0.0.1:1'),
         discovery: OVER_HTTP,
       },

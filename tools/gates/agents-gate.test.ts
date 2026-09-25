@@ -14,28 +14,11 @@ import {
 } from './agents-shape';
 import { REPO_ROOT } from './run-gate';
 
-/**
- * Section 9, applied to the harness layout.
- *
- * The working agreement lives in one file that every harness reads, the Skill
- * bodies sit outside both harness directories, and the Harness vocabulary has a
- * table of its own. None of that fails to compile when it stops holding: a rule
- * can creep back into `CLAUDE.md`, a renamed body can leave one harness with a
- * dead pointer, a new file under `docs/agents/` can go unindexed, a vendor path
- * can leak into the shared prose, and a term can end up defined twice.
- *
- * So the five properties are asserted here against the real repository. Nothing
- * below resolves a path or runs a tool, so there is no fixture: the second half
- * of this file feeds the same predicates deliberately broken inputs, and a
- * validator that quietly stopped reporting fails the suite there.
- */
-
 const AGENTS_DIR = path.join(REPO_ROOT, 'docs', 'agents');
 
 const read = (...segments: readonly string[]): string =>
   readFileSync(path.join(REPO_ROOT, ...segments), 'utf8');
 
-/** Every file under `docs/agents/`, as posix paths relative to that directory. */
 const agentsFiles = (dir: string = AGENTS_DIR, prefix = ''): readonly string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory()
@@ -43,11 +26,6 @@ const agentsFiles = (dir: string = AGENTS_DIR, prefix = ''): readonly string[] =
       : [`${prefix}${entry.name}`],
   );
 
-/**
- * One stub per harness. Listed rather than discovered: the point of the check is
- * that both exist and agree, and a scan of whichever skill directories happen to
- * be present would agree with itself after one of them was deleted.
- */
 const STUB_PATHS: ReadonlyArray<readonly [harness: string, file: string]> = [
   ['Claude Code', '.claude/skills/implement-issue/SKILL.md'],
   ['Codex', '.agents/skills/implement-issue/SKILL.md'],
@@ -61,7 +39,6 @@ const repositoryBodies = (): readonly string[] =>
     .filter((file) => file.startsWith('skills/'))
     .map((file) => `docs/agents/${file}`);
 
-/** The agreement and everything the agreement points at, `harnesses.md` included. */
 const sharedProse = (): readonly DocFile[] => [
   { path: 'AGENTS.md', content: read('AGENTS.md') },
   ...agentsFiles().map((file) => ({
@@ -197,11 +174,6 @@ describe('the Skill stub check', () => {
     ]);
   });
 
-  /**
-   * A pointer is a path into `docs/agents/skills/`, so a stub that also cites
-   * reference prose is pointing at its body all the same. The check is aimed at
-   * a body that moved, not at every backticked file name a stub may carry.
-   */
   it('passes a stub that cites reference prose beside its pointer', () => {
     const citing = [
       '---',
@@ -334,11 +306,6 @@ describe('the vendor path check', () => {
     ).toEqual([named('docs/agents/skills/implement-issue.md', '.codex')]);
   });
 
-  /**
-   * The slash is not what makes it a harness directory. A rule that said
-   * "settings live in `.claude`" would name one just as squarely, and a check
-   * that only matched a path separator would be an escape hatch in writing.
-   */
   it('rejects one named without a trailing slash', () => {
     expect(
       findVendorPathProblems([
@@ -417,12 +384,6 @@ describe('the two-glossary check', () => {
     expect(findSharedTermProblems(glossaryOf('Skill body'), harnessesOf('Harness'))).toEqual([]);
   });
 
-  /**
-   * A meaning cell is prose, and prose in this repository quotes code: one day a
-   * row will want a `|` in it. A term whose row stops matching leaves the
-   * comparison silently, which is a clash defined in both tables and reported
-   * by nobody, so the row is matched by its first cell rather than its shape.
-   */
   it('still compares a term whose meaning cell contains a pipe', () => {
     const glossary = [
       '# Glossary',

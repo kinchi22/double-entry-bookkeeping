@@ -1,9 +1,3 @@
-/**
- * Public surface of the auth feature.
- *
- * Adapters are absent on purpose, as in the health feature: they are reachable
- * only through @repo/core/server, which carries the `server-only` marker.
- */
 export { SIGNED_OUT, requireUser } from './domain/auth-context';
 export type { AuthContext } from './domain/auth-context';
 

@@ -10,7 +10,6 @@ import { ENTRY_SEARCH_PATH, pathWithQuery } from '../../../../server/return-path
 import { createCaller } from '../../../../server/root-router';
 import { orSignIn } from '../../../../server/sign-in-redirect';
 
-// The page reads the database, so it must not be prerendered at build time.
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
@@ -21,20 +20,6 @@ type EntrySearchPageProps = {
   readonly searchParams: Promise<SearchQuery>;
 };
 
-/**
- * Composition only. The criteria come from the URL's query and the results are
- * what one procedure answered with; `answerEntrySearch` decides which of the
- * two things this page can render it is, and whether a refusal is one of them.
- *
- * A search is a read, so the criteria travel in the query and this page renders
- * them on the read path -- no Server Action, which is the write path. That is
- * also what makes a search reloadable, bookmarkable, shareable, and walkable
- * with the back button.
- *
- * With no Session the procedure refuses and the visitor is sent to sign in, and
- * back to this search once they have -- which is what the query in the return
- * path carries.
- */
 export default async function EntrySearchPage({
   searchParams,
 }: EntrySearchPageProps): Promise<ReactNode> {

@@ -18,7 +18,6 @@ describe('newSessionToken', () => {
 
 describe('hashSessionToken', () => {
   it('is the SHA-256 of the token, hex encoded', () => {
-    // echo -n abc | sha256sum
     expect(hashSessionToken('abc')).toBe(
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     );

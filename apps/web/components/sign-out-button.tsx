@@ -2,7 +2,6 @@ import { type ReactNode } from 'react';
 import { en } from '../messages/en';
 
 export type SignOutButtonProps = {
-  /** The Server Action that ends the Session, passed in as `RefreshButton` takes its own. */
   readonly action: () => Promise<void>;
 };
 

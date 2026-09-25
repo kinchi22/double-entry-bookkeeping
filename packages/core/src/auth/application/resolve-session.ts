@@ -9,18 +9,10 @@ export type ResolveSessionDependencies = {
   readonly now: () => Date;
 };
 
-/** The token is whatever the cookie held, if it held anything. */
 export type ResolveSession = (
   token: string | undefined,
 ) => Promise<Result<AuthContext, DomainError>>;
 
-/**
- * Who a request's session cookie signs in. A token the app never issued, and
- * a Session that has ended, are nobody: signed out, not a failure. Only a
- * Session store that cannot answer is one.
- *
- * A request in the second half of a Session's lifetime renews it.
- */
 export function createResolveSession({
   sessions,
   hashSessionToken,

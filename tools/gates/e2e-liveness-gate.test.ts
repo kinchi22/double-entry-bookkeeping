@@ -7,20 +7,6 @@ import {
   type ReportSpec,
 } from '../verify-e2e-liveness';
 
-/**
- * Section 9, applied to the E2E suite. ADR-0006.
- *
- * A green suite never proves a spec asserts anything, so the specs are run
- * against a page with nothing on it and every one of them has to fail. The
- * decision is a function over Playwright's JSON report, so the deliberate
- * breakages are reports here rather than a fixture tree.
- *
- * The shapes are cut down from real runs of `e2e/health.spec.ts`: one against
- * the empty page, and one with no browser installed. The second is why failing
- * is not enough on its own -- every spec failed there too, having never reached
- * a line of the spec.
- */
-
 const ROOT = '/repo/e2e';
 
 const atLine = (line: number, message = 'Error: expect(locator).toBeVisible() failed'): ReportError => ({
@@ -30,7 +16,6 @@ const atLine = (line: number, message = 'Error: expect(locator).toBeVisible() fa
 
 const failedAt = (line: number): ReportResult => ({ status: 'failed', errors: [atLine(line)] });
 
-/** What `browserType.launch` leaves behind when the executable is missing. */
 const neverLaunched: ReportResult = {
   status: 'failed',
   errors: [{ message: "Error: browserType.launch: Executable doesn't exist at /ms-playwright/chromium" }],
@@ -58,13 +43,10 @@ const report = (
   ...extra,
 });
 
-/** Every spec failed on one of its own lines: the suite is alive. */
 const alive = report([
   spec('renders pipeline health', 17, 'unexpected', failedAt(21)),
   spec('re-checks health', 37, 'unexpected', {
     status: 'timedOut',
-    // A timeout carries one error with no location and one on the spec line
-    // that was waiting. The located one is what counts.
     errors: [{ message: 'Test timeout of 30000ms exceeded.' }, atLine(41)],
   }),
   spec('serves the health procedure', 48, 'unexpected', failedAt(51)),
