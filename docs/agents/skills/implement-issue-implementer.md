@@ -15,8 +15,10 @@ the base branch for your Task and the `gh` commands.
    stop until it answers.
 2. **Claim.** Assign yourself and set the Task In Progress.
 3. **Branch.** From the Task's base branch, fetched fresh:
-   `git switch -c <type>/<short-name> origin/<base>`. For the specs Task, create
-   `milestone/<name>` from `origin/main` first when it does not exist:
+   `git switch -c <type>/<short-name> origin/<base>`. The specs Task of a
+   criterion the app already meets targets `main` and creates no milestone. For
+   any other specs Task, create `milestone/<name>` from `origin/main` first when
+   it does not exist:
    `gh api -X POST repos/{owner}/{repo}/git/refs -f ref=refs/heads/milestone/<name> -f sha=$(git rev-parse origin/main)`.
    When the ruleset refuses it, return that to the Driver: the owner creates it.
 4. **Build.** Test-first, with the `tdd` Skill. Stay inside the Task. Work you

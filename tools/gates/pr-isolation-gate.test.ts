@@ -21,7 +21,7 @@ describe('the isolation rule', () => {
   it('fails a pull request that changes a spec and the code it judges', () => {
     expect(onFeatureBranch('e2e/health.spec.ts', 'apps/web/app/page.tsx')).toEqual([
       'a pull request changes e2e/ or the rest of the repository, never both.',
-      'The spec goes in its own pull request onto the milestone branch, and it lands first.',
+      'The spec goes in its own pull request, onto the milestone branch, or onto main for a criterion the app already meets.',
       '  spec:  e2e/health.spec.ts',
       '  other: apps/web/app/page.tsx',
     ]);

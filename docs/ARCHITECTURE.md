@@ -307,7 +307,8 @@ milestone: its specs go to `main` green.
 A feature branch merges with no approval at all: what it may do was settled when
 the spec was approved, and the one thing it must not do -- edit the spec -- is
 checked rather than reviewed. A spec that turns out to be wrong is corrected in
-its own pull request onto the milestone, reviewed like the first one.
+its own pull request onto the milestone, reviewed like the first one; for a
+criterion the app already meets, that pull request goes to `main`.
 
 Nothing forces product code through this route. A pull request straight into
 `main` is allowed and sometimes right -- a spec correction, a tooling change, a

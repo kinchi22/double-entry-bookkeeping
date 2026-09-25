@@ -10,7 +10,7 @@ found along the way that is not the current Task becomes an issue of its own.
 
 | Item    | Label          | What it is |
 | ------- | -------------- | ---------- |
-| Feature | `type:feature` | One acceptance criterion. Its body is the spec. A criterion the app does not yet meet gets one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"), and the `milestone/<name> -> main` pull request closes it. A criterion the app already meets gets none, and its specs pull request closes it ("A Feature whose behaviour exists"). |
+| Feature | `type:feature` | One acceptance criterion. Its body is the spec. A criterion the app does not yet meet gets one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"), and the `milestone/<name> -> main` pull request closes it. A criterion the app already meets gets none, and its specs pull request closes it ("A criterion the app already meets"). |
 | Task    | `type:task`    | A sub-issue of a Feature, sized to one session: one Task, one branch, one pull request. A Task that needs more than one session is split before it starts. |
 | Bug     | `type:bug`     | A defect. Worked like a Task, and with no Feature above it, its pull request goes to `main`. |
 
@@ -66,8 +66,8 @@ Every Feature gets these Tasks beside its vertical slices:
   that state the acceptance criterion, in a pull request onto the milestone that
   touches nothing else (ADR-0002). The owner reviews it as code owner. It blocks
   every other Task. For a criterion the app already meets, the specs are green,
-  the pull request goes to `main`, and it is the Feature's only Task ("A Feature
-  whose behaviour exists").
+  the pull request goes to `main`, and it is the Feature's only Task ("A
+  criterion the app already meets").
 - **Migration for `<change>`**, when the schema changes. The schema and its
   generated SQL, in a pull request onto the milestone that touches no
   behaviour, which the owner reviews as code owner of `packages/db/drizzle/`
@@ -102,7 +102,7 @@ write as specs. Such a Feature has no milestone branch and no specs Task: each
 of its Tasks goes to `main` in a pull request of its own, which the owner
 approves, and the last of them carries `Closes #<feature>` as well.
 
-## A Feature whose behaviour exists
+## A criterion the app already meets
 
 A criterion the app already meets, stated as specs so nothing breaks it
 silently, has no milestone branch: there is no behaviour to build against a
@@ -114,7 +114,7 @@ only, goes to `main`, is approved by the owner as code owner, and carries
 
 | Task                  | Pull request into |
 | --------------------- | ----------------- |
-| Specs of a Feature whose behaviour exists | `main` |
+| Specs of a criterion the app already meets | `main` |
 | Specs of any other Feature | `milestone/<name>`, which this Task creates from `main` when it does not exist |
 | Migration             | `milestone/<name>` |
 | Regenerate a migration | `milestone/<name>` |
