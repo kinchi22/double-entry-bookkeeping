@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-09-18
+**Amended:** 2026-09-24, PR #116
 
 ## Problem
 
