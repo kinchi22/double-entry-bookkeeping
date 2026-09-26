@@ -29,7 +29,10 @@ the base branch for your Task and the `gh` commands.
 6. **Open.** Push and open the pull request into the base branch. The title is
    the change in the imperative, as the log reads. The body says what changed
    and why, names every owned path in the diff and why the owner is needed, and
-   ends with `Closes #<n>`. Set the Task In Review.
+   ends with `Closes #<n>`. When the pull request also closes the Feature --
+   the specs Task of a criterion the app already meets, or the last Task of a
+   Feature with no specs -- it carries `Closes #<feature>` as well. Set the Task
+   In Review.
 7. **Return** the pull request number.
 
 When the Driver sends review findings, fix them on the same branch, run the

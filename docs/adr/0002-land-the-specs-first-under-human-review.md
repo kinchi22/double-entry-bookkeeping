@@ -37,7 +37,10 @@ one of the two orders is worthless. If a spec may only land green, it can only
 land after the behaviour it describes -- at which point it is a description of
 an implementation rather than a requirement, and the human approving it is
 approving code they were never shown. The repository needs somewhere a failing
-spec can live while the behaviour that answers it is being built.
+spec can live while the behaviour that answers it is being built. A criterion
+the app already meets is the exception: its behaviour exists and was reviewed
+when it landed, so a green spec pins that behaviour down rather than describing
+an implementation nobody has been shown.
 
 ## Decision
 
@@ -82,7 +85,8 @@ behaviour it describes, on a milestone branch:
 3. Feature branches target the milestone. They carry no owned path, so they
    merge without a human -- and they may not touch `e2e/**`, which is what the
    isolation rule below enforces. A spec that turns out to be wrong is corrected
-   in its own pull request onto the milestone, reviewed like the first one.
+   in its own pull request onto the milestone, reviewed like the first one; for
+   a criterion the app already meets, that pull request goes to `main`.
 4. `main` is merged into the milestone by pull request when the milestone falls
    behind.
 5. `milestone/<name> -> main` is the integration pull request. Every spec is

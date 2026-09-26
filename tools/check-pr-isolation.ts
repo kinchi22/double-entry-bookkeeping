@@ -38,7 +38,7 @@ export function findIsolationProblems(pr: PullRequest): readonly string[] {
 
   return [
     `a pull request changes ${SPEC_ROOT} or the rest of the repository, never both.`,
-    'The spec goes in its own pull request, onto the milestone branch, or onto main for a criterion the app already meets.',
+    'The spec goes in its own pull request: onto the milestone branch, where it lands first, or onto main for a criterion the app already meets.',
     ...specs.map((file) => `  spec:  ${file}`),
     ...rest.map((file) => `  other: ${file}`),
   ];

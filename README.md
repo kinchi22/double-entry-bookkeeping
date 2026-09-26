@@ -117,7 +117,8 @@ proceeds unattended on a milestone branch instead, one per acceptance criterion
 the app does not yet meet: the specs land on `milestone/<name>` first and the
 owner reviews them, feature branches merge into it unreviewed, and it goes to
 `main` when the suite is green. A criterion the app already meets has no
-milestone: its specs go to `main` green, reviewed by the owner. See "How a criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
+milestone: its specs go to `main` green, reviewed by the owner. See "How a
+criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
 
 ### Unit tests
 
