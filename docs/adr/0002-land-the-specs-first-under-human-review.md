@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-09-13
 **Amended:** 2026-09-24, PR #115
+**Amended:** 2026-09-25, PR #121
 
 ## Problem
 
@@ -36,7 +37,10 @@ one of the two orders is worthless. If a spec may only land green, it can only
 land after the behaviour it describes -- at which point it is a description of
 an implementation rather than a requirement, and the human approving it is
 approving code they were never shown. The repository needs somewhere a failing
-spec can live while the behaviour that answers it is being built.
+spec can live while the behaviour that answers it is being built. A criterion
+the app already meets is the exception: its behaviour exists and was reviewed
+when it landed, so a green spec pins that behaviour down rather than describing
+an implementation nobody has been shown.
 
 ## Decision
 
@@ -71,28 +75,43 @@ path in the diff is exactly what pulls a person in.
 
 ### The order
 
-A specification lands before the behaviour it describes, on a milestone branch:
+A specification of a criterion the app does not yet meet lands before the
+behaviour it describes, on a milestone branch:
 
 1. `milestone/<name>` is branched from `main`, one branch per acceptance
-   criterion.
+   criterion the app does not yet meet.
 2. The specs land on it first, in their own pull request, which the owner
    reviews because `e2e/**` is in its diff.
 3. Feature branches target the milestone. They carry no owned path, so they
    merge without a human -- and they may not touch `e2e/**`, which is what the
    isolation rule below enforces. A spec that turns out to be wrong is corrected
-   in its own pull request onto the milestone, reviewed like the first one.
-4. `main` is merged into the milestone by pull request when the milestone falls
-   behind.
+   in its own pull request onto the milestone, reviewed like the first one; for
+   a criterion the app already meets, that pull request goes to `main`.
+4. `main` is merged into the milestone only when the milestone needs something
+   from it, and not by pull request: every pull request onto a milestone is
+   squashed, and a squashed sync leaves the first later edit to a file it
+   touched to conflict when the milestone meets `main`. The owner, the one
+   bypass actor on the `milestone/**` ruleset, syncs with
+   `git merge origin/main` and a push (`docs/ARCHITECTURE.md`).
 5. `milestone/<name> -> main` is the integration pull request. Every spec is
    green by then, and the owner approves it -- as they approve everything that
    reaches `main`.
 
+A criterion the app already meets has no behaviour to build, so it has no
+milestone branch. Its specs go to `main` green, in a pull request of their own
+that touches `e2e/**` alone: the isolation rule holds, the owner reviews it as
+code owner, and `E2E build` is required on it as on every pull request into
+`main`. This is not the specs-onto-`main` route rejected below. Those specs wait
+red or skipped for behaviour still to come; these are green when they land,
+because the behaviour is already there.
+
 The `main` ruleset covers `refs/heads/milestone/**` as well, so a milestone
 branch takes no direct pushes and no force pushes either: everything above
-arrives as a reviewed or checked pull request. (Since step 3 there are two
-rulesets rather than one -- `main` on the default branch, `milestone` on
-`refs/heads/milestone/**` -- and both require a pull request and block force
-pushes, so this still holds.)
+except the owner's sync arrives as a reviewed or checked pull request. (Since
+step 3 of the rollout there are two rulesets rather than one -- `main` on the
+default branch, `milestone` on `refs/heads/milestone/**` -- and both block
+force pushes and require a pull request, which only the owner's sync bypasses,
+so this still holds.)
 
 ### The isolation rule
 

@@ -23,6 +23,7 @@ both.
 | Composition root | `apps/web/server/container.ts`. The only place implementations are chosen.   |
 | Contract         | A zod schema plus its inferred type, in `packages/contracts`.                |
 | Copy             | Text a person reads in the UI, page metadata included. Lives in the message catalogue, never inline. `repo/no-inline-copy` catches it written as a literal; ADR-0007 lists what that misses. |
+| Criterion the app already meets | An acceptance criterion the app meets before its specs exist, stated as specs so nothing breaks it silently. Its Feature has no Milestone branch: its specs go to `main` green, in the pull request that closes the Feature. Its opposite is a criterion the app does not yet meet. ADR-0002. |
 | Current Production | The Production deployment the production domains route to, and so the one receiving production traffic. It changes only by Promotion or a rollback. ADR-0024. |
 | Deferred         | The status of an ADR whose decision is taken and deliberately not built. Not a rule, and not an open question. |
 | Deployment Check | A check Vercel requires on a Production deployment's commit before Promotion. A Vercel setting, seen by no gate here; `docs/ARCHITECTURE.md`, "How a release reaches Production", lists them. ADR-0024. |
@@ -37,7 +38,7 @@ both.
 | Identity         | One way a User signs in: a provider and that provider's subject for the person, such as Google's `sub`. A User is found by its Identity, never by its email. Never called an account: Account already means what an Entry line is posted against. ADR-0021. |
 | Logger           | The port an Adapter reports an infrastructure failure through: an event name such as `entries.search_failed`, fields, and a message. A field holds a primitive or an `ErrorDescription`, which is branded so an error reaches the logger only as `describeError` describes it. ADR-0018. |
 | Message catalogue | `apps/web/messages/{locale}.ts`: the copy for one locale, a plain object keyed in English, grouped by the part of the UI that renders it. `en.ts` is the only one until ADR-0008 is adopted. |
-| Milestone branch | `milestone/<name>`, one per acceptance criterion. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
+| Milestone branch | `milestone/<name>`, one per acceptance criterion the app does not yet meet. Its specs land first and are owner-reviewed; feature branches merge into it; it reaches `main` once they are green. |
 | Minor units      | The smallest denomination an amount is counted in. Scale 0 today, so one minor unit is one whole unit: no decimal places, no currency symbol, grouping applied only at display. |
 | Money            | A branded integer count of minor units. Built and combined only through `@repo/core/money`. |
 | Port             | An interface stated in domain terms that the application layer depends on.   |

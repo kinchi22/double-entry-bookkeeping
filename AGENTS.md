@@ -47,19 +47,20 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
 - **Nothing reaches `main` without an approval.** Every PR into `main` needs one,
   so you cannot merge there alone, whatever the change is. A milestone branch is
   the only place work proceeds unattended.
-- **One milestone branch per acceptance criterion.** `milestone/<name>`, branched
-  from `main`. The specs land on it first, reviewed by the owner; a schema
-  change lands next, its migration in a pull request of its own, reviewed by
-  the owner as code owner (ADR-0024); feature branches then target the
-  milestone and merge with no review; the milestone goes
-  to `main` once every spec is green. Feature flags are for anything incomplete
-  that reaches `main`, not for work in progress on a milestone.
+- **One milestone branch per acceptance criterion the app does not yet meet.**
+  `milestone/<name>`, branched from `main`. The specs land on it first,
+  reviewed by the owner; a schema change lands next, its migration in a pull
+  request of its own, reviewed by the owner as code owner (ADR-0024); feature
+  branches then target the milestone and merge with no review; the milestone
+  goes to `main` once every spec is green. Feature flags are for anything
+  incomplete that reaches `main`, not for work in progress on a milestone.
 - **A PR touches `e2e/` or everything else, never both.** The specs are the
   requirements, and they land before the behaviour. Changing a spec beside the
   code it judges is how a failing requirement gets made to pass, so the
   `Spec isolation` job fails it. The exception is a milestone meeting `main`,
   which carries both halves. A spec that is wrong is corrected in its own PR onto
-  the milestone. See ADR-0002.
+  the milestone, or onto `main` for a criterion the app already meets. See
+  ADR-0002.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 

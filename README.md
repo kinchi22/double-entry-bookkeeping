@@ -113,10 +113,12 @@ it judges is how a failing requirement gets rewritten into a passing one. It
 needs a pull request to read, so `pnpm gates` cannot run it.
 
 Every pull request into `main` needs an approval, whatever it changes. Work
-proceeds unattended on a milestone branch instead, one per acceptance criterion:
-the specs land on `milestone/<name>` first and the owner reviews them, feature
-branches merge into it unreviewed, and it goes to `main` when the suite is
-green. See "How a criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
+proceeds unattended on a milestone branch instead, one per acceptance criterion
+the app does not yet meet: the specs land on `milestone/<name>` first and the
+owner reviews them, feature branches merge into it unreviewed, and it goes to
+`main` when the suite is green. A criterion the app already meets has no
+milestone: its specs go to `main` green, reviewed by the owner. See "How a
+criterion ships" in `docs/ARCHITECTURE.md`, and ADR-0002.
 
 ### Unit tests
 
