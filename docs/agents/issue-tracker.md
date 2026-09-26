@@ -10,7 +10,7 @@ found along the way that is not the current Task becomes an issue of its own.
 
 | Item    | Label          | What it is |
 | ------- | -------------- | ---------- |
-| Feature | `type:feature` | One acceptance criterion. Its body is the spec. A criterion the app does not yet meet gets one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"), and the `milestone/<name> -> main` pull request closes it. A criterion the app already meets gets none, and its specs pull request closes it ("A criterion the app already meets"). |
+| Feature | `type:feature` | One acceptance criterion. Its body is the spec. It gets one milestone branch (`docs/ARCHITECTURE.md`, "How a criterion ships"), and the `milestone/<name> -> main` pull request closes it, except as "Features with no milestone" says. |
 | Task    | `type:task`    | A sub-issue of a Feature, sized to one session: one Task, one branch, one pull request. A Task that needs more than one session is split before it starts. |
 | Bug     | `type:bug`     | A defect. Worked like a Task, and with no Feature above it, its pull request goes to `main`. |
 
@@ -65,9 +65,8 @@ Every Feature gets these Tasks beside its vertical slices:
 - **Specs for `<criterion>`**, first. The failing Playwright specs under `e2e/`
   that state the acceptance criterion, in a pull request onto the milestone that
   touches nothing else (ADR-0002). The owner reviews it as code owner. It blocks
-  every other Task. For a criterion the app already meets, the specs are green,
-  the pull request goes to `main`, and it is the Feature's only Task ("A
-  criterion the app already meets").
+  every other Task. A criterion the app already meets ships its specs
+  differently: see "A criterion the app already meets".
 - **Migration for `<change>`**, when the schema changes. The schema and its
   generated SQL, in a pull request onto the milestone that touches no
   behaviour, which the owner reviews as code owner of `packages/db/drizzle/`
@@ -94,7 +93,12 @@ integration pull request:
    `pnpm db:drift` fails `Gates` on every other pull request into the milestone.
    Being an open Task, it also holds the integration pull request back.
 
-## A Feature with no specs
+## Features with no milestone
+
+A Feature has no milestone branch in two cases, each stated below. The Base
+branch table names where their pull requests go.
+
+### A Feature with no specs
 
 Tooling, deployment and documentation are tracked as Features and Tasks like
 anything else, and they state no acceptance criterion, so there is nothing to
@@ -102,7 +106,7 @@ write as specs. Such a Feature has no milestone branch and no specs Task: each
 of its Tasks goes to `main` in a pull request of its own, which the owner
 approves, and the last of them carries `Closes #<feature>` as well.
 
-## A criterion the app already meets
+### A criterion the app already meets
 
 A criterion the app already meets, stated as specs so nothing breaks it
 silently, has no milestone branch: there is no behaviour to build against a

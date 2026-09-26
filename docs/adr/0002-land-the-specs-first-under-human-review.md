@@ -87,8 +87,11 @@ behaviour it describes, on a milestone branch:
    isolation rule below enforces. A spec that turns out to be wrong is corrected
    in its own pull request onto the milestone, reviewed like the first one; for
    a criterion the app already meets, that pull request goes to `main`.
-4. `main` is merged into the milestone by pull request when the milestone falls
-   behind.
+4. `main` is merged into the milestone only when the milestone needs something
+   from it, and not by pull request: every pull request onto a milestone is
+   squashed, and a squashed sync conflicts when the milestone meets `main`. The
+   owner, the one bypass actor on the `milestone/**` ruleset, syncs with
+   `git merge origin/main` and a push (`docs/ARCHITECTURE.md`).
 5. `milestone/<name> -> main` is the integration pull request. Every spec is
    green by then, and the owner approves it -- as they approve everything that
    reaches `main`.
@@ -106,7 +109,7 @@ branch takes no direct pushes and no force pushes either: everything above
 arrives as a reviewed or checked pull request. (Since step 3 there are two
 rulesets rather than one -- `main` on the default branch, `milestone` on
 `refs/heads/milestone/**` -- and both require a pull request and block force
-pushes, so this still holds.)
+pushes, so this still holds, apart from the owner's sync in step 4.)
 
 ### The isolation rule
 
