@@ -1,9 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { ENTRIES_URL, SIGN_IN_URL } from './routes';
 import { SESSION_COOKIE, freshIdentifier, signIn, submitTestSignIn } from './session';
-
-const SIGN_IN = /\/sign-in(\?.*)?$/;
-const ENTRIES = /\/entries$/;
 
 test('offers Google on the sign-in page', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/sign-in');
@@ -37,7 +35,7 @@ test('starts a Google sign-in only when the visitor follows the link', async ({ 
 test('sends a signed-out visitor from the entries page to sign in', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/entries');
 
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
   await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
 });
 
@@ -60,11 +58,11 @@ test('refuses the entries procedures without a Session', async ({ request }) => 
 
 test('returns a visitor to the page they asked for once they sign in', async ({ page }) => {
   await page.goto('/entries');
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
 
   await submitTestSignIn(page, freshIdentifier());
 
-  await expect(page).toHaveURL(ENTRIES);
+  await expect(page).toHaveURL(ENTRIES_URL);
   await expect(page.getByRole('form', { name: 'New entry' })).toBeVisible();
 });
 
@@ -72,10 +70,10 @@ test('ends the Session when the User signs out', async ({ page }) => {
   await signIn(page);
 
   await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page).not.toHaveURL(ENTRIES);
+  await expect(page).not.toHaveURL(ENTRIES_URL);
 
   await page.goto('/entries');
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
 });
 
 test('treats an unknown session token as signed out', { tag: '@smoke' }, async ({ page, context, baseURL }) => {
@@ -85,17 +83,17 @@ test('treats an unknown session token as signed out', { tag: '@smoke' }, async (
 
   await page.goto('/entries');
 
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
 });
 
 test('refuses a Google callback whose state it did not issue', async ({ page }) => {
   await page.goto(`/auth/callback/google?state=${randomUUID()}&code=${randomUUID()}`);
 
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
   await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
 
   await page.goto('/entries');
-  await expect(page).toHaveURL(SIGN_IN);
+  await expect(page).toHaveURL(SIGN_IN_URL);
 });
 
 test('sends a signed-in User from the home page to the entries page', async ({ page }) => {
@@ -103,5 +101,5 @@ test('sends a signed-in User from the home page to the entries page', async ({ p
 
   await page.goto('/');
 
-  await expect(page).toHaveURL(ENTRIES);
+  await expect(page).toHaveURL(ENTRIES_URL);
 });
