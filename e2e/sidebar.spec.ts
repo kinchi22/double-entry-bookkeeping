@@ -14,7 +14,7 @@ const sidebarSignOut = (page: Page): Locator =>
 
 const SIGNED_IN_PAGES = ['/entries', '/entries/search', '/settings'] as const;
 
-test('shows the Sidebar on every signed-in page, with links to Entries, Entry search and Settings', async ({ page }) => {
+test('shows the Sidebar on every signed-in page, with links to Entries, Entry search and Settings and the only Sign out', async ({ page }) => {
   await signIn(page);
 
   for (const path of SIGNED_IN_PAGES) {
@@ -23,6 +23,7 @@ test('shows the Sidebar on every signed-in page, with links to Entries, Entry se
     await expect(sidebarLink(page, 'Entry search')).toBeVisible();
     await expect(sidebarLink(page, 'Settings')).toBeVisible();
     await expect(sidebarSignOut(page)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(1);
   }
 });
 
