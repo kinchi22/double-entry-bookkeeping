@@ -11,6 +11,29 @@ test('offers Google on the sign-in page', { tag: '@smoke' }, async ({ page }) =>
   await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
 });
 
+test('starts a Google sign-in only when the visitor follows the link', async ({ page }) => {
+  const googleSignIns: string[] = [];
+  await page.route(
+    (url) => url.pathname === '/sign-in/google',
+    async (route) => {
+      googleSignIns.push(route.request().url());
+      await route.abort();
+    },
+  );
+
+  await page.goto('/sign-in');
+  const google = page.getByRole('link', { name: 'Sign in with Google' });
+  await expect(google).toBeVisible();
+
+  await google.hover();
+  await google.focus();
+  await page.waitForLoadState('networkidle');
+  expect(googleSignIns).toEqual([]);
+
+  await google.click();
+  await expect.poll(() => googleSignIns.length).toBeGreaterThan(0);
+});
+
 test('sends a signed-out visitor from the entries page to sign in', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/entries');
 
