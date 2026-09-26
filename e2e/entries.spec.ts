@@ -9,6 +9,7 @@ import {
   TWELVE_THOUSAND_FIVE_HUNDRED,
 } from './entries';
 import { signIn, signInForSmoke } from './session';
+import { setEntryFormMode } from './settings';
 
 async function expectListedAsSubmitted(entry: Locator): Promise<void> {
   await expect(entry).toHaveCount(1);
@@ -26,15 +27,16 @@ async function expectListedAsSubmitted(entry: Locator): Promise<void> {
   await expect(entry.getByTestId('entry-total')).toContainText(TWELVE_THOUSAND_FIVE_HUNDRED);
 }
 
-test('lists a Two-line mode entry as one debit and one credit line of its amount, and after a reload', async ({ page }) => {
+test('lists a Two-line mode Entry as one debit and one credit line of its amount, and after a reload', async ({ page }) => {
   const memo = `Office supplies ${randomUUID()}`;
   await signIn(page);
+  await setEntryFormMode(page, 'Two-line mode');
   await page.goto('/entries');
 
   const form = entryForm(page);
   await expect(form).toBeVisible();
 
-  await submitTwoLineEntry(form, { day: DAY, memo, debit: 'expense', credit: 'cash', amount: AMOUNT });
+  await submitTwoLineEntry(form, { day: DAY, memo, debitAccount: 'expense', creditAccount: 'cash', amount: AMOUNT });
 
   const entry = listedEntry(page, memo);
   await expectListedAsSubmitted(entry);
@@ -51,17 +53,19 @@ test('renders the entry form and the list of entries', { tag: '@smoke' }, async 
   await expect(page.getByRole('region', { name: 'Entries' })).toBeVisible();
 });
 
-test("does not show one User's entries to another", async ({ browser }) => {
+test("does not show one User's Entries to another", async ({ browser }) => {
   const memo = `Private ${randomUUID()}`;
 
   const owner = await browser.newContext();
   const ownerPage = await owner.newPage();
   await signIn(ownerPage);
+  await setEntryFormMode(ownerPage, 'Two-line mode');
+  await ownerPage.goto('/entries');
   await submitTwoLineEntry(entryForm(ownerPage), {
     day: DAY,
     memo,
-    debit: 'expense',
-    credit: 'cash',
+    debitAccount: 'expense',
+    creditAccount: 'cash',
     amount: AMOUNT,
   });
   await expectListedAsSubmitted(listedEntry(ownerPage, memo));

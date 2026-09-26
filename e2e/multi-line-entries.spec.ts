@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
+  amountShown,
   DAY,
   entryForm,
   fillLine,
@@ -11,13 +12,11 @@ import {
   TWELVE_THOUSAND_FIVE_HUNDRED,
 } from './entries';
 import { signIn } from './session';
-import { chooseEntryFormMode } from './settings';
-
-const exactly = (digits: string): RegExp => new RegExp(`(?<![\\d,.-])${digits}(?![\\d,.])`);
+import { setEntryFormMode } from './settings';
 
 async function openMultiLineForm(page: Page): Promise<Locator> {
   await signIn(page);
-  await chooseEntryFormMode(page, 'Multi-line mode');
+  await setEntryFormMode(page, 'Multi-line mode');
   await page.goto('/entries');
   const form = entryForm(page);
   await expect(lineGroup(form, 1)).toBeVisible();
@@ -59,30 +58,34 @@ test('shows the debit total, the credit total and their difference while the Use
   const creditTotal = form.getByTestId('credit-total');
   const difference = form.getByTestId('difference');
 
-  await expect(debitTotal).toHaveText(exactly('0'));
-  await expect(creditTotal).toHaveText(exactly('0'));
-  await expect(difference).toHaveText(exactly('0'));
+  await expect(debitTotal).toHaveText(amountShown('0'));
+  await expect(creditTotal).toHaveText(amountShown('0'));
+  await expect(difference).toHaveText(amountShown('0'));
 
   await fillLine(form, 1, { account: 'expense', side: 'debit', amount: '12500' });
   await expect(debitTotal).toHaveText(TWELVE_THOUSAND_FIVE_HUNDRED);
-  await expect(creditTotal).toHaveText(exactly('0'));
+  await expect(creditTotal).toHaveText(amountShown('0'));
   await expect(difference).toHaveText(TWELVE_THOUSAND_FIVE_HUNDRED);
 
   await fillLine(form, 2, { account: 'cash', side: 'credit', amount: '12000' });
   await expect(debitTotal).toHaveText(TWELVE_THOUSAND_FIVE_HUNDRED);
-  await expect(creditTotal).toHaveText(/\b12,000\b/);
-  await expect(difference).toHaveText(exactly('500'));
+  await expect(creditTotal).toHaveText(amountShown('12,000'));
+  await expect(difference).toHaveText(amountShown('500'));
 
   await form.getByRole('button', { name: 'Add line' }).click();
   await expect(lineGroup(form, 3)).toBeVisible();
-  await expect(difference).toHaveText(exactly('500'));
+  await expect(difference).toHaveText(amountShown('500'));
 
   await fillLine(form, 3, { account: 'payable', side: 'credit', amount: '500' });
   await expect(creditTotal).toHaveText(TWELVE_THOUSAND_FIVE_HUNDRED);
-  await expect(difference).toHaveText(exactly('0'));
+  await expect(difference).toHaveText(amountShown('0'));
+
+  await lineGroup(form, 3).getByLabel('Amount').fill('1000');
+  await expect(creditTotal).toHaveText(amountShown('13,000'));
+  await expect(difference).toHaveText(amountShown('-500'));
 });
 
-test('lists an entry of three lines with every line, and after a reload', async ({ page }) => {
+test('lists an Entry of three lines with every line, and after a reload', async ({ page }) => {
   const memo = `Supplies on account ${randomUUID()}`;
   const form = await openMultiLineForm(page);
 
@@ -108,10 +111,10 @@ test('lists an entry of three lines with every line, and after a reload', async 
     await expect(lines.nth(0)).toContainText(TWELVE_THOUSAND_FIVE_HUNDRED);
     await expect(lines.nth(1)).toContainText(/cash/i);
     await expect(lines.nth(1)).toContainText(/credit/i);
-    await expect(lines.nth(1)).toContainText(/\b5,000\b/);
+    await expect(lines.nth(1)).toContainText(amountShown('5,000'));
     await expect(lines.nth(2)).toContainText(/payable/i);
     await expect(lines.nth(2)).toContainText(/credit/i);
-    await expect(lines.nth(2)).toContainText(/\b7,500\b/);
+    await expect(lines.nth(2)).toContainText(amountShown('7,500'));
 
     await expect(entry.getByTestId('entry-total')).toContainText(TWELVE_THOUSAND_FIVE_HUNDRED);
   };
@@ -122,7 +125,7 @@ test('lists an entry of three lines with every line, and after a reload', async 
   await expectListedWithEveryLine();
 });
 
-test('refuses an entry whose debits and credits differ', async ({ page }) => {
+test('refuses an Entry whose debits and credits differ', async ({ page }) => {
   const memo = `Unbalanced ${randomUUID()}`;
   const form = await openMultiLineForm(page);
 
