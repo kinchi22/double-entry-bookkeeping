@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator } from '@playwright/test';
-import { submitEntry, TWELVE_THOUSAND_FIVE_HUNDRED } from './entries';
+import {
+  AMOUNT,
+  DAY,
+  entryForm,
+  listedEntry,
+  submitTwoLineEntry,
+  TWELVE_THOUSAND_FIVE_HUNDRED,
+} from './entries';
 import { signIn, signInForSmoke } from './session';
-
-const DAY = '2026-09-15';
 
 async function expectListedAsSubmitted(entry: Locator): Promise<void> {
   await expect(entry).toHaveCount(1);
@@ -21,59 +26,28 @@ async function expectListedAsSubmitted(entry: Locator): Promise<void> {
   await expect(entry.getByTestId('entry-total')).toContainText(TWELVE_THOUSAND_FIVE_HUNDRED);
 }
 
-test('lists a balanced entry once it is submitted, and after a reload', async ({ page }) => {
+test('lists a Two-line mode entry as one debit and one credit line of its amount, and after a reload', async ({ page }) => {
   const memo = `Office supplies ${randomUUID()}`;
   await signIn(page);
   await page.goto('/entries');
 
-  const form = page.getByRole('form', { name: 'New entry' });
+  const form = entryForm(page);
   await expect(form).toBeVisible();
 
-  await submitEntry(form, {
-    day: DAY,
-    memo,
-    lines: [
-      { account: 'expense', side: 'debit', amount: '12500' },
-      { account: 'cash', side: 'credit', amount: '12500' },
-    ],
-  });
+  await submitTwoLineEntry(form, { day: DAY, memo, debit: 'expense', credit: 'cash', amount: AMOUNT });
 
-  const entry = page.getByTestId('entry').filter({ hasText: memo });
+  const entry = listedEntry(page, memo);
   await expectListedAsSubmitted(entry);
 
   await page.reload();
   await expectListedAsSubmitted(entry);
-});
-
-test('refuses an entry whose debits and credits differ', async ({ page }) => {
-  const memo = `Unbalanced ${randomUUID()}`;
-  await signIn(page);
-  await page.goto('/entries');
-
-  const form = page.getByRole('form', { name: 'New entry' });
-  await expect(form).toBeVisible();
-
-  await submitEntry(form, {
-    day: DAY,
-    memo,
-    lines: [
-      { account: 'expense', side: 'debit', amount: '12500' },
-      { account: 'cash', side: 'credit', amount: '12000' },
-    ],
-  });
-
-  await expect(form.getByRole('alert')).toContainText(/balance/i);
-
-  await page.reload();
-  await expect(page.getByRole('region', { name: 'Entries' })).toBeVisible();
-  await expect(page.getByTestId('entry').filter({ hasText: memo })).toHaveCount(0);
 });
 
 test('renders the entry form and the list of entries', { tag: '@smoke' }, async ({ page, context, baseURL }) => {
   await signInForSmoke(page, context, baseURL);
   await page.goto('/entries');
 
-  await expect(page.getByRole('form', { name: 'New entry' })).toBeVisible();
+  await expect(entryForm(page)).toBeVisible();
   await expect(page.getByRole('region', { name: 'Entries' })).toBeVisible();
 });
 
@@ -83,21 +57,20 @@ test("does not show one User's entries to another", async ({ browser }) => {
   const owner = await browser.newContext();
   const ownerPage = await owner.newPage();
   await signIn(ownerPage);
-  await submitEntry(ownerPage.getByRole('form', { name: 'New entry' }), {
+  await submitTwoLineEntry(entryForm(ownerPage), {
     day: DAY,
     memo,
-    lines: [
-      { account: 'expense', side: 'debit', amount: '12500' },
-      { account: 'cash', side: 'credit', amount: '12500' },
-    ],
+    debit: 'expense',
+    credit: 'cash',
+    amount: AMOUNT,
   });
-  await expectListedAsSubmitted(ownerPage.getByTestId('entry').filter({ hasText: memo }));
+  await expectListedAsSubmitted(listedEntry(ownerPage, memo));
 
   const other = await browser.newContext();
   const otherPage = await other.newPage();
   await signIn(otherPage);
   await expect(otherPage.getByRole('region', { name: 'Entries' })).toBeVisible();
-  await expect(otherPage.getByTestId('entry').filter({ hasText: memo })).toHaveCount(0);
+  await expect(listedEntry(otherPage, memo)).toHaveCount(0);
 
   await owner.close();
   await other.close();

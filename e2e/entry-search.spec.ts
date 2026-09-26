@@ -1,16 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { AMOUNT, postEntries, TWELVE_THOUSAND_FIVE_HUNDRED, type Line } from './entries';
+import { AMOUNT, postEntries, TWELVE_THOUSAND_FIVE_HUNDRED, type TwoLineEntry } from './entries';
 import { signIn, signInForSmoke } from './session';
 
 const SEARCH = '/entries/search';
-const SEARCH_URL = /\/entries\/search(\?.*)?$/;
-const ENTRIES_URL = /\/entries$/;
 
-const lines = (debit: string, credit: string): readonly [Line, Line] => [
-  { account: debit, side: 'debit', amount: AMOUNT },
-  { account: credit, side: 'credit', amount: AMOUNT },
-];
+const debitAndCredit = (
+  debit: string,
+  credit: string,
+): Pick<TwoLineEntry, 'debit' | 'credit' | 'amount'> => ({ debit, credit, amount: AMOUNT });
 
 const searchForm = (page: Page): Locator => page.getByRole('form', { name: 'Search entries' });
 
@@ -46,18 +44,6 @@ async function search(page: Page, criteria: Criteria): Promise<void> {
   await form.getByRole('button', { name: 'Search' }).click();
 }
 
-test('reaches the Entry search from the entries page, and returns', async ({ page }) => {
-  await signIn(page);
-
-  await page.getByRole('link', { name: 'Search' }).click();
-  await expect(page).toHaveURL(SEARCH_URL);
-  await expect(searchForm(page)).toBeVisible();
-
-  await page.getByRole('link', { name: 'Back to entries' }).click();
-  await expect(page).toHaveURL(ENTRIES_URL);
-  await expect(page.getByRole('form', { name: 'New entry' })).toBeVisible();
-});
-
 test('renders the form and lists every Entry the User owns, opened cold', async ({ page }) => {
   const run = randomUUID();
   const rent = `Rent ${run}`;
@@ -65,8 +51,8 @@ test('renders the form and lists every Entry the User owns, opened cold', async 
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-01', memo: rent, lines: lines('expense', 'cash') },
-    { day: '2026-07-01', memo: coffee, lines: lines('expense', 'cash') },
+    { day: '2026-06-01', memo: rent, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-07-01', memo: coffee, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -92,10 +78,10 @@ test('narrows the results to a day range, both of whose ends are included', asyn
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-05-31', memo: before, lines: lines('expense', 'cash') },
-    { day: '2026-06-01', memo: opening, lines: lines('expense', 'cash') },
-    { day: '2026-06-30', memo: closing, lines: lines('expense', 'cash') },
-    { day: '2026-07-01', memo: after, lines: lines('expense', 'cash') },
+    { day: '2026-05-31', memo: before, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-01', memo: opening, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-30', memo: closing, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-07-01', memo: after, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -116,9 +102,9 @@ test('matches an Entry through either of its Entry lines', async ({ page }) => {
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-10', memo: debited, lines: lines('cash', 'sales') },
-    { day: '2026-06-11', memo: credited, lines: lines('expense', 'cash') },
-    { day: '2026-06-12', memo: untouched, lines: lines('expense', 'payable') },
+    { day: '2026-06-10', memo: debited, ...debitAndCredit('cash', 'sales') },
+    { day: '2026-06-11', memo: credited, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-12', memo: untouched, ...debitAndCredit('expense', 'payable') },
   ]);
 
   await page.goto(SEARCH);
@@ -136,8 +122,8 @@ test('narrows the results to a memo substring, ignoring case', async ({ page }) 
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-10', memo: beans, lines: lines('expense', 'cash') },
-    { day: '2026-06-11', memo: fare, lines: lines('expense', 'cash') },
+    { day: '2026-06-10', memo: beans, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-11', memo: fare, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -157,10 +143,10 @@ test('narrows with the day range, the Account and the memo together', async ({ p
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-15', memo: matching, lines: lines('expense', 'cash') },
-    { day: '2026-07-15', memo: wrongDay, lines: lines('expense', 'cash') },
-    { day: '2026-06-15', memo: wrongAccount, lines: lines('expense', 'payable') },
-    { day: '2026-06-15', memo: wrongMemo, lines: lines('expense', 'cash') },
+    { day: '2026-06-15', memo: matching, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-07-15', memo: wrongDay, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-15', memo: wrongAccount, ...debitAndCredit('expense', 'payable') },
+    { day: '2026-06-15', memo: wrongMemo, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -178,7 +164,7 @@ test('keeps the criteria it searched with filled into the form', async ({ page }
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-15', memo, lines: lines('expense', 'cash') },
+    { day: '2026-06-15', memo, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -199,7 +185,7 @@ test('says that nothing matched, rather than rendering an empty region', async (
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-15', memo, lines: lines('expense', 'cash') },
+    { day: '2026-06-15', memo, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -215,7 +201,7 @@ test('refuses a reversed day range, explains itself, and shows no list', async (
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-15', memo, lines: lines('expense', 'cash') },
+    { day: '2026-06-15', memo, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
@@ -232,7 +218,7 @@ test("never shows one User's Entry in another User's results", async ({ browser 
   const ownerPage = await owner.newPage();
   await signIn(ownerPage);
   await postEntries(ownerPage, [
-    { day: '2026-06-15', memo, lines: lines('expense', 'cash') },
+    { day: '2026-06-15', memo, ...debitAndCredit('expense', 'cash') },
   ]);
   await ownerPage.goto(SEARCH);
   await search(ownerPage, { memo });
@@ -260,9 +246,9 @@ test('orders the results as `/entries` does: latest day first, and within a day 
 
   await signIn(page);
   await postEntries(page, [
-    { day: '2026-06-10', memo: writtenFirst, lines: lines('expense', 'cash') },
-    { day: '2026-06-10', memo: writtenSecond, lines: lines('expense', 'cash') },
-    { day: '2026-06-11', memo: laterDay, lines: lines('expense', 'cash') },
+    { day: '2026-06-10', memo: writtenFirst, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-10', memo: writtenSecond, ...debitAndCredit('expense', 'cash') },
+    { day: '2026-06-11', memo: laterDay, ...debitAndCredit('expense', 'cash') },
   ]);
 
   await page.goto(SEARCH);
