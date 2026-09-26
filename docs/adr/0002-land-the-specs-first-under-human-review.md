@@ -90,7 +90,8 @@ behaviour it describes, on a milestone branch:
 4. `main` is merged into the milestone only when the milestone needs something
    from it, and not by pull request: every pull request onto a milestone is
    squashed, and a squashed sync leaves the first later edit to a file it
-   touched to conflict when the milestone meets `main`. The owner, the one bypass actor on the `milestone/**` ruleset, syncs with
+   touched to conflict when the milestone meets `main`. The owner, the one
+   bypass actor on the `milestone/**` ruleset, syncs with
    `git merge origin/main` and a push (`docs/ARCHITECTURE.md`).
 5. `milestone/<name> -> main` is the integration pull request. Every spec is
    green by then, and the owner approves it -- as they approve everything that
