@@ -59,7 +59,8 @@ Read `docs/ARCHITECTURE.md` before changing anything structural.
   code it judges is how a failing requirement gets made to pass, so the
   `Spec isolation` job fails it. The exception is a milestone meeting `main`,
   which carries both halves. A spec that is wrong is corrected in its own PR onto
-  the milestone. See ADR-0002.
+  the milestone, or onto `main` for a criterion the app already meets. See
+  ADR-0002.
 - **Review in a fresh session**, separate from the one that wrote the code,
   against the original acceptance criteria.
 
